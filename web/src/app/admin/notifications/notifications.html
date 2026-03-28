@@ -1,0 +1,51 @@
+<div class="admin-page">
+  <div class="page-header">
+    <h2>Notifications</h2>
+  </div>
+
+  <div class="settings-grid">
+    <div class="settings-card">
+      <h3><i class="fa-solid fa-bell"></i> Notification Preferences</h3>
+      <form class="settings-form" (ngSubmit)="saveNotificationSettings()">
+        <div class="preferences-grid">
+          <label class="toggle-row">
+            <span>Email Alerts</span>
+            <input type="checkbox" [(ngModel)]="notificationSettings.emailAlerts" name="emailAlerts" />
+          </label>
+          <label class="toggle-row">
+            <span>SMS Alerts</span>
+            <input type="checkbox" [(ngModel)]="notificationSettings.smsAlerts" name="smsAlerts" />
+          </label>
+          <label class="toggle-row">
+            <span>Event Reminders</span>
+            <input type="checkbox" [(ngModel)]="notificationSettings.eventReminders" name="eventReminders" />
+          </label>
+          <label class="toggle-row">
+            <span>Weekly Parent Summary</span>
+            <input type="checkbox" [(ngModel)]="notificationSettings.parentSummary" name="parentSummary" />
+          </label>
+          <label class="toggle-row">
+            <span>Admin Digest</span>
+            <input type="checkbox" [(ngModel)]="notificationSettings.adminDigest" name="adminDigest" />
+          </label>
+          <div class="form-group">
+            <label>Summary Delivery Day</label>
+            <select [(ngModel)]="notificationSettings.reportDay" name="reportDay">
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+            </select>
+          </div>
+        </div>
+
+        @if (message) {
+          <p class="form-message success">{{ message }}</p>
+        }
+
+        <button type="submit" class="save-btn">Save Notification Settings</button>
+      </form>
+    </div>
+  </div>
+</div>

@@ -14,6 +14,10 @@ import { Students } from './admin/students/students';
 import { Teachers } from './admin/teachers/teachers';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
+import { Notifications } from './admin/notifications/notifications';
+import { Roles } from './admin/roles/roles';
+import { Security } from './admin/security/security';
+import { Maintenance } from './admin/maintenance/maintenance';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
 
@@ -37,6 +41,10 @@ const routes: Routes = [
       { path: 'teachers', component: Teachers },
       { path: 'subjects', component: AdminSubjects },
       { path: 'events', component: Events },
+      { path: 'notifications', component: Notifications },
+      { path: 'roles', component: Roles },
+      { path: 'security', component: Security },
+      { path: 'maintenance', component: Maintenance },
       { path: 'settings', component: Settings },
     ]
   },

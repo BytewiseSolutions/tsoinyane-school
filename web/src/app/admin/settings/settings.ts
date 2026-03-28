@@ -20,25 +20,45 @@ export class Settings implements OnInit {
     confirmPassword: '',
   };
 
-  schoolMessage = '';
-  passwordMessage = '';
+  academicSettings = {
+    academicYear: '2026',
+    currentTerm: 'Term 1',
+    gradingScale: 'A-F',
+    passingMark: 50,
+    attendanceThreshold: 75,
+    timezone: 'Africa/Maseru',
+    language: 'English',
+  };
+
+  integrationSettings = {
+    smtpHost: 'smtp.example.com',
+    smtpPort: 587,
+    senderEmail: 'noreply@tsoinyane.co.ls',
+    smsProvider: 'None',
+    smsApiKey: '',
+  };
+
+  sectionMessage: Record<string, string> = {
+    school: '',
+    password: '',
+    academic: '',
+    integrations: '',
+  };
+
   passwordError = '';
 
   ngOnInit() {
-    const savedSchoolInfo = localStorage.getItem('tgcs_school_info');
-    if (savedSchoolInfo) {
-      this.schoolInfo = { ...this.schoolInfo, ...JSON.parse(savedSchoolInfo) };
-    }
+    this.schoolInfo = this.loadSetting('tgcs_school_info', this.schoolInfo);
+    this.academicSettings = this.loadSetting('tgcs_academic_settings', this.academicSettings);
+    this.integrationSettings = this.loadSetting('tgcs_integration_settings', this.integrationSettings);
   }
 
   saveSchoolInfo() {
-    localStorage.setItem('tgcs_school_info', JSON.stringify(this.schoolInfo));
-    this.schoolMessage = 'School information saved successfully.';
-    setTimeout(() => (this.schoolMessage = ''), 2500);
+    this.persistSetting('tgcs_school_info', this.schoolInfo, 'school', 'School information saved successfully.');
   }
 
   updatePassword() {
-    this.passwordMessage = '';
+    this.sectionMessage['password'] = '';
     this.passwordError = '';
 
     if (!this.passwordForm.currentPassword || !this.passwordForm.newPassword || !this.passwordForm.confirmPassword) {
@@ -56,8 +76,58 @@ export class Settings implements OnInit {
       return;
     }
 
+    localStorage.setItem('tgcs_password_last_updated', new Date().toISOString());
     this.passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
-    this.passwordMessage = 'Password updated successfully.';
-    setTimeout(() => (this.passwordMessage = ''), 2500);
+    this.setSectionMessage('password', 'Password updated successfully.');
+  }
+
+  saveAcademicSettings() {
+    this.persistSetting('tgcs_academic_settings', this.academicSettings, 'academic', 'Academic settings saved.');
+  }
+
+  saveIntegrationSettings() {
+    this.persistSetting('tgcs_integration_settings', this.integrationSettings, 'integrations', 'Integration settings saved.');
+  }
+
+  private loadSetting<T>(key: string, fallback: T): T {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+
+    try {
+      const parsed = JSON.parse(raw);
+
+      if (Array.isArray(fallback)) {
+        if (Array.isArray(parsed)) {
+          return parsed as T;
+        }
+
+        // Recover from older malformed saved data where arrays were stored as objects.
+        if (parsed && typeof parsed === 'object') {
+          return Object.values(parsed) as T;
+        }
+
+        return fallback;
+      }
+
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return { ...(fallback as object), ...parsed } as T;
+      }
+
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private persistSetting(key: string, data: unknown, section: string, message: string) {
+    localStorage.setItem(key, JSON.stringify(data));
+    this.setSectionMessage(section, message);
+  }
+
+  private setSectionMessage(section: string, message: string) {
+    this.sectionMessage[section] = message;
+    setTimeout(() => {
+      this.sectionMessage[section] = '';
+    }, 2500);
   }
 }

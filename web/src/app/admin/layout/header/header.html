@@ -6,9 +6,10 @@
     <h3>Admin Dashboard</h3>
   </div>
   <div class="header-right">
-    <div class="header-info">
+    <button class="notif-btn" (click)="toggleNotifications()">
       <i class="fa-solid fa-bell"></i>
-    </div>
+      <span class="notif-badge">{{ notifications.length }}</span>
+    </button>
     <div class="admin-profile">
       <i class="fa-solid fa-circle-user"></i>
       <span>Administrator</span>
@@ -19,3 +20,72 @@
     </a>
   </div>
 </header>
+
+<!-- FULL SCREEN NOTIFICATIONS -->
+@if (notificationsOpen) {
+  <div class="notifications-overlay" (click)="closeNotifications()">
+    <div class="notifications-panel" (click)="$event.stopPropagation()">
+
+      <div class="notif-header">
+        <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
+        <button class="close-btn" (click)="closeNotifications()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="notif-list">
+        @for (notif of notifications; track notif.title) {
+          <div class="notif-item">
+            <div class="notif-icon">
+              <i class="fa-solid {{ notif.icon }}"></i>
+            </div>
+            <div class="notif-content">
+              <h4>{{ notif.title }}</h4>
+              <p>{{ notif.message }}</p>
+              <span class="notif-time">{{ notif.time }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="notif-footer">
+        <button (click)="closeNotifications()">Mark all as read</button>
+      </div>
+
+      <div class="notif-preferences">
+        <h4><i class="fa-solid fa-sliders"></i> Notification Preferences</h4>
+        <div class="notif-pref-grid">
+          <div class="notif-pref-col">
+            <label class="toggle-row">
+              <span>New Student Enrolled</span>
+              <input type="checkbox" [(ngModel)]="notifPrefs.newStudent" name="newStudent" />
+            </label>
+            <label class="toggle-row">
+              <span>New Teacher Added</span>
+              <input type="checkbox" [(ngModel)]="notifPrefs.newTeacher" name="newTeacher" />
+            </label>
+            <label class="toggle-row">
+              <span>Upcoming Events</span>
+              <input type="checkbox" [(ngModel)]="notifPrefs.upcomingEvents" name="upcomingEvents" />
+            </label>
+          </div>
+          <div class="notif-pref-col">
+            <label class="toggle-row">
+              <span>System Updates</span>
+              <input type="checkbox" [(ngModel)]="notifPrefs.systemUpdates" name="systemUpdates" />
+            </label>
+            <label class="toggle-row">
+              <span>Backup Completed</span>
+              <input type="checkbox" [(ngModel)]="notifPrefs.backupCompleted" name="backupCompleted" />
+            </label>
+            <label class="toggle-row">
+              <span>Security Alerts</span>
+              <input type="checkbox" [(ngModel)]="notifPrefs.securityAlerts" name="securityAlerts" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}

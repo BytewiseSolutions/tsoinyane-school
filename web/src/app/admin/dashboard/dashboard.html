@@ -1,5 +1,9 @@
-<div class="admin-layout">
-  <app-sidebar />
+<div
+  class="admin-layout"
+  [class.mobile-open]="mobileOpen"
+  [class.sidebar-collapsed]="sidebarCollapsed"
+>
+  <app-sidebar [collapsed]="sidebarCollapsed" />
   <div class="admin-body" [class.collapsed]="sidebarCollapsed">
     <app-header />
     <div class="admin-content">

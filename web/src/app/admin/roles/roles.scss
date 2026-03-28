@@ -1,0 +1,88 @@
+.admin-page .settings-grid {
+  grid-template-columns: 1fr;
+}
+
+.form-message {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 4px;
+
+  &.success {
+    color: #2e7d32;
+  }
+
+  &.error {
+    color: #c62828;
+  }
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.list-row {
+  border: 1px solid #e0e7f0;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+
+  h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: var(--navy-blue);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  p {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: #555;
+  }
+
+  small {
+    color: #7a869a;
+    font-size: 12px;
+  }
+}
+
+.role-tag {
+  font-size: 11px;
+  font-weight: 700;
+  background-color: #e8f0fe;
+  color: var(--navy-blue);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.role-add {
+  border-top: 1px solid #e0e7f0;
+  margin-top: 8px;
+  padding-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.danger-btn {
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  background-color: #fdecea;
+  color: #c62828;
+}
+
+@media (max-width: 768px) {
+  .list-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -20,4 +20,8 @@ export class SidebarStateService {
   setCollapsed(value: boolean) {
     this.collapsed.next(value);
   }
+
+  toggleCollapsed() {
+    this.collapsed.next(!this.collapsed.value);
+  }
 }

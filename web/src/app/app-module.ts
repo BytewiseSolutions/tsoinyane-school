@@ -24,6 +24,8 @@ import { Students } from './admin/students/students';
 import { Teachers } from './admin/teachers/teachers';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
+import { Notifications } from './admin/notifications/notifications';
+import { Security } from './admin/security/security';
 import { Settings } from './admin/settings/settings';
 import { StudentForm } from './admin/students/student-form/student-form';
 import { TeacherForm } from './admin/teachers/teacher-form/teacher-form';
@@ -53,6 +55,8 @@ import { EventForm } from './admin/events/event-form/event-form';
     Teachers,
     AdminSubjects,
     Events,
+    Notifications,
+    Security,
     Settings,
     StudentForm,
     TeacherForm,

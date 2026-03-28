@@ -1,15 +1,23 @@
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  overflow: hidden;
+  overflow: visible;
 
   .admin-body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    flex: 1;
+    width: calc(100% - 260px);
+    margin-left: 260px;
     min-width: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.collapsed {
+      width: calc(100% - 72px);
+      margin-left: 72px;
+    }
 
     .admin-content {
       flex: 1;
@@ -20,6 +28,26 @@
   @media (max-width: 768px) {
     .admin-body {
       width: 100%;
+      margin-left: 0;
+
+      &.collapsed {
+        width: 100%;
+        margin-left: 0;
+      }
+    }
+
+    &.mobile-open {
+      .admin-body {
+        width: calc(100% - 260px);
+        margin-left: 260px;
+      }
+    }
+
+    &.mobile-open.sidebar-collapsed {
+      .admin-body {
+        width: calc(100% - 72px);
+        margin-left: 72px;
+      }
     }
   }
 }

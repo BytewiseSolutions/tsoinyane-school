@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, Input, OnDestroy, OnInit } from '@angular/core';
 import { SidebarStateService } from '../sidebar-state';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -13,7 +13,7 @@ export class Sidebar implements OnInit, OnDestroy {
   private isMobileView = false;
   private destroy$ = new Subject<void>();
 
-  collapsed = false;
+  @Input() collapsed = false;
   mobileOpen = false;
 
   constructor(private sidebarState: SidebarStateService) {}
@@ -27,11 +27,6 @@ export class Sidebar implements OnInit, OnDestroy {
         this.mobileOpen = open;
       });
 
-    this.sidebarState.collapsed$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(collapsed => {
-        this.collapsed = collapsed;
-      });
   }
 
   ngOnDestroy() {
@@ -45,8 +40,7 @@ export class Sidebar implements OnInit, OnDestroy {
   }
 
   toggleSidebar() {
-    this.collapsed = !this.collapsed;
-    this.sidebarState.setCollapsed(this.collapsed);
+    this.sidebarState.toggleCollapsed();
   }
 
   closeOnMobile() {

@@ -5,7 +5,12 @@
       <i class="fa-solid fa-school"></i>
       @if (!collapsed) { <h2>TGCS Admin</h2> }
     </div>
-    <button class="collapse-btn" (click)="toggleSidebar()">
+    <button
+      class="collapse-btn"
+      type="button"
+      [attr.aria-label]="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      (click)="toggleSidebar()"
+    >
       <i class="fa-solid" [class.fa-angles-left]="!collapsed" [class.fa-angles-right]="collapsed"></i>
     </button>
   </div>
@@ -46,6 +51,27 @@
     </a>
 
     @if (!collapsed) { <span class="nav-section-label">System</span> }
+
+    <a routerLink="/admin/notifications" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-bell"></i>
+      @if (!collapsed) { <span>Notifications</span> }
+      @if (collapsed) { <span class="tooltip">Notifications</span> }
+    </a>
+    <a routerLink="/admin/roles" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-users-gear"></i>
+      @if (!collapsed) { <span>Roles</span> }
+      @if (collapsed) { <span class="tooltip">Roles</span> }
+    </a>
+    <a routerLink="/admin/security" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-shield-halved"></i>
+      @if (!collapsed) { <span>Security</span> }
+      @if (collapsed) { <span class="tooltip">Security</span> }
+    </a>
+    <a routerLink="/admin/maintenance" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
+      @if (!collapsed) { <span>Maintenance</span> }
+      @if (collapsed) { <span class="tooltip">Maintenance</span> }
+    </a>
 
     <a routerLink="/admin/settings" routerLinkActive="active" (click)="closeOnMobile()">
       <i class="fa-solid fa-gear"></i>
