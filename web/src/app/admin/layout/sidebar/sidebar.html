@@ -1,0 +1,68 @@
+<aside class="admin-sidebar" [class.collapsed]="collapsed" [class.mobile-open]="mobileOpen">
+
+  <div class="sidebar-logo">
+    <div class="logo-text">
+      <i class="fa-solid fa-school"></i>
+      @if (!collapsed) { <h2>TGCS Admin</h2> }
+    </div>
+    <button class="collapse-btn" (click)="toggleSidebar()">
+      <i class="fa-solid" [class.fa-angles-left]="!collapsed" [class.fa-angles-right]="collapsed"></i>
+    </button>
+  </div>
+
+  <div class="mobile-overlay" (click)="closeOnMobile()"></div>
+
+  <nav class="sidebar-nav">
+
+    @if (!collapsed) { <span class="nav-section-label">Main</span> }
+
+    <a routerLink="/admin/dashboard" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-gauge"></i>
+      @if (!collapsed) { <span>Dashboard</span> }
+      @if (collapsed) { <span class="tooltip">Dashboard</span> }
+    </a>
+
+    @if (!collapsed) { <span class="nav-section-label">Management</span> }
+
+    <a routerLink="/admin/students" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-user-graduate"></i>
+      @if (!collapsed) { <span>Students</span> }
+      @if (collapsed) { <span class="tooltip">Students</span> }
+    </a>
+    <a routerLink="/admin/teachers" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-chalkboard-teacher"></i>
+      @if (!collapsed) { <span>Teachers</span> }
+      @if (collapsed) { <span class="tooltip">Teachers</span> }
+    </a>
+    <a routerLink="/admin/subjects" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-book-open"></i>
+      @if (!collapsed) { <span>Subjects</span> }
+      @if (collapsed) { <span class="tooltip">Subjects</span> }
+    </a>
+    <a routerLink="/admin/events" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-calendar-days"></i>
+      @if (!collapsed) { <span>Events</span> }
+      @if (collapsed) { <span class="tooltip">Events</span> }
+    </a>
+
+    @if (!collapsed) { <span class="nav-section-label">System</span> }
+
+    <a routerLink="/admin/settings" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-gear"></i>
+      @if (!collapsed) { <span>Settings</span> }
+      @if (collapsed) { <span class="tooltip">Settings</span> }
+    </a>
+
+  </nav>
+
+  <div class="sidebar-user">
+    <i class="fa-solid fa-circle-user"></i>
+    @if (!collapsed) {
+      <div class="user-info">
+        <h4>Administrator</h4>
+        <p>admin&#64;tsoinyane.co.ls</p>
+      </div>
+    }
+  </div>
+
+</aside>

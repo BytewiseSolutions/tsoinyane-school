@@ -1,0 +1,35 @@
+<section class="hero">
+  <div class="hero-content">
+    <h1>Welcome to {{ schoolName }}</h1>
+    <p>Empowering the next generation through quality education in Pitseng, Leribe.</p>
+    <a href="/about" class="hero-btn">Learn More</a>
+  </div>
+</section>
+
+<section class="stats">
+  @for (stat of stats; track stat.label) {
+    <div class="stat-card">
+      <i class="fa-solid {{ stat.icon }}"></i>
+      <h3>{{ stat.value }}</h3>
+      <p>{{ stat.label }}</p>
+    </div>
+  }
+</section>
+
+<section class="highlights">
+  <div class="highlight-card">
+    <i class="fa-solid fa-book-open"></i>
+    <h3>Quality Education</h3>
+    <p>From primary to high school, we deliver a nationally recognised curriculum that prepares students for life beyond the classroom.</p>
+  </div>
+  <div class="highlight-card">
+    <i class="fa-solid fa-people-group"></i>
+    <h3>Rooted in Community</h3>
+    <p>Serving the villages of Tsoinyane and Pitseng in Leribe, we are proud to be a cornerstone of our local community.</p>
+  </div>
+  <div class="highlight-card">
+    <i class="fa-solid fa-graduation-cap"></i>
+    <h3>Combined School</h3>
+    <p>Primary and High School share the same yard, creating a seamless and supportive learning journey from start to finish.</p>
+  </div>
+</section>

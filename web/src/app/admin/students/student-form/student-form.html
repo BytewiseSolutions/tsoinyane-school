@@ -1,0 +1,79 @@
+<div class="student-form-overlay" (click)="close()">
+  <div class="student-form-card" (click)="$event.stopPropagation()">
+
+    <div class="form-header">
+      <h3>{{ isEdit ? 'Edit Student' : 'Add Student' }}</h3>
+      <button class="close-btn" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form class="form-body" (ngSubmit)="onSubmit()">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" placeholder="Enter first name" [(ngModel)]="student.firstName" name="firstName" required />
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" placeholder="Enter last name" [(ngModel)]="student.lastName" name="lastName" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Gender</label>
+          <select [(ngModel)]="student.gender" name="gender">
+            <option value="">Select gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input type="date" [(ngModel)]="student.dob" name="dob" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>School</label>
+          <select [(ngModel)]="student.school" name="school">
+            <option value="">Select school</option>
+            <option value="Primary">Primary School</option>
+            <option value="High School">High School</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Grade</label>
+          <input type="text" placeholder="e.g. Grade 5 or Form C" [(ngModel)]="student.grade" name="grade" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Parent/Guardian Name</label>
+          <input type="text" placeholder="Enter guardian name" [(ngModel)]="student.guardian" name="guardian" />
+        </div>
+        <div class="form-group">
+          <label>Guardian Phone</label>
+          <input type="text" placeholder="+266 XXXX XXXX" [(ngModel)]="student.guardianPhone" name="guardianPhone" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Status</label>
+        <select [(ngModel)]="student.status" name="status">
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="close()">Cancel</button>
+        <button type="submit" class="submit-btn">{{ isEdit ? 'Update' : 'Add Student' }}</button>
+      </div>
+
+    </form>
+
+  </div>
+</div>

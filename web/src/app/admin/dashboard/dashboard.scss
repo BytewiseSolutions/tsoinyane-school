@@ -1,0 +1,25 @@
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  overflow: hidden;
+
+  .admin-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    flex: 1;
+    min-width: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    .admin-content {
+      flex: 1;
+      background-color: var(--white-off);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .admin-body {
+      width: 100%;
+    }
+  }
+}

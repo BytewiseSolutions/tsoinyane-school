@@ -1,0 +1,46 @@
+<div class="admin-page">
+  <div class="page-header">
+    <h2>Students</h2>
+    <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Student</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <input type="text" placeholder="Search students..." />
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>School</th>
+          <th>Grade</th>
+          <th>Gender</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (student of students; track student.firstName) {
+          <tr>
+            <td>{{ student.firstName }} {{ student.lastName }}</td>
+            <td>{{ student.school }}</td>
+            <td>{{ student.grade }}</td>
+            <td>{{ student.gender }}</td>
+            <td><span class="badge" [class.active]="student.status === 'Active'" [class.inactive]="student.status === 'Inactive'">{{ student.status }}</span></td>
+            <td class="actions">
+              <button class="edit-btn" (click)="openForm(student)"><i class="fa-solid fa-pen"></i></button>
+              <button class="delete-btn" (click)="deleteStudent(student)"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (showForm) {
+  <app-student-form
+    [existingStudent]="selectedStudent"
+    (closed)="closeForm()"
+    (saved)="onSaved($event)" />
+}

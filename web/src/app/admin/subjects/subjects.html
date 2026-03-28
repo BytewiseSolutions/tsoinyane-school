@@ -1,0 +1,46 @@
+<div class="admin-page">
+  <div class="page-header">
+    <h2>Subjects</h2>
+    <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <input type="text" placeholder="Search subjects..." />
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>School</th>
+          <th>Teacher</th>
+          <th>Students</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (subject of subjects; track subject.name) {
+          <tr>
+            <td>{{ subject.name }}</td>
+            <td>{{ subject.school }}</td>
+            <td>{{ subject.teacher }}</td>
+            <td>{{ subject.students }}</td>
+            <td><span class="badge" [class.active]="subject.status === 'Active'" [class.inactive]="subject.status === 'Inactive'">{{ subject.status }}</span></td>
+            <td class="actions">
+              <button class="edit-btn" (click)="openForm(subject)"><i class="fa-solid fa-pen"></i></button>
+              <button class="delete-btn" (click)="deleteSubject(subject)"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (showForm) {
+  <app-subject-form
+    [existingSubject]="selectedSubject"
+    (closed)="closeForm()"
+    (saved)="onSaved($event)" />
+}

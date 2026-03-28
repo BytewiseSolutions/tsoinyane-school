@@ -1,0 +1,89 @@
+// ABOUT SECTION
+.about-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  padding: 70px 40px;
+  align-items: center;
+
+  .about-text {
+    h2 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--navy-blue);
+      margin-bottom: 20px;
+      border-left: 4px solid var(--navy-blue);
+      padding-left: 14px;
+    }
+
+    p {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #444;
+      margin-bottom: 14px;
+    }
+  }
+
+  .about-image {
+    img {
+      width: 100%;
+      height: 360px;
+      object-fit: cover;
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0, 31, 91, 0.15);
+    }
+  }
+}
+
+// MISSION VISION SECTION
+.mv-section {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  padding: 60px 40px;
+  background-color: var(--white-off);
+
+  .mv-card {
+    background-color: var(--white);
+    border-top: 4px solid var(--navy-blue);
+    border-radius: 6px;
+    padding: 36px 28px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+
+    i {
+      font-size: 34px;
+      color: var(--navy-blue);
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy-blue);
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.7;
+    }
+  }
+}
+
+// RESPONSIVE
+@media (max-width: 768px) {
+  .about-section {
+    grid-template-columns: 1fr;
+    padding: 40px 20px;
+    gap: 30px;
+
+    .about-image img { height: 260px; }
+  }
+
+  .mv-section {
+    grid-template-columns: 1fr;
+    padding: 40px 20px;
+  }
+}

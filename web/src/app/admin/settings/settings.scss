@@ -1,0 +1,13 @@
+.form-message {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 4px;
+
+  &.success {
+    color: #2e7d32;
+  }
+
+  &.error {
+    color: #c62828;
+  }
+}

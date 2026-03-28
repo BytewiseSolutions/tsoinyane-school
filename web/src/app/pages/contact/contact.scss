@@ -1,0 +1,59 @@
+// CONTACT SECTION
+.contact-section {
+  padding: 70px 40px;
+
+  // INFO CARDS
+  .contact-info-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 60px;
+
+    .info-card {
+      background-color: var(--navy-blue);
+      color: var(--white);
+      border-radius: 6px;
+      padding: 36px 24px;
+      text-align: center;
+
+      i {
+        font-size: 32px;
+        margin-bottom: 14px;
+        opacity: 0.85;
+      }
+
+      h3 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      p {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+    }
+  }
+
+  // MAP
+  .map-wrapper {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 31, 91, 0.15);
+
+    iframe {
+      display: block;
+    }
+  }
+}
+
+// RESPONSIVE
+@media (max-width: 768px) {
+  .contact-section {
+    padding: 40px 20px;
+
+    .contact-info-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+}

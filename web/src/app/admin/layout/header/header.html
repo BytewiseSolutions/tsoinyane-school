@@ -1,0 +1,21 @@
+<header class="admin-header">
+  <div class="header-left">
+    <button class="mobile-menu-btn" (click)="toggleSidebar()">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <h3>Admin Dashboard</h3>
+  </div>
+  <div class="header-right">
+    <div class="header-info">
+      <i class="fa-solid fa-bell"></i>
+    </div>
+    <div class="admin-profile">
+      <i class="fa-solid fa-circle-user"></i>
+      <span>Administrator</span>
+    </div>
+    <a routerLink="/login" class="logout-btn">
+      <i class="fa-solid fa-right-from-bracket"></i>
+      <span>Logout</span>
+    </a>
+  </div>
+</header>

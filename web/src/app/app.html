@@ -1,0 +1,13 @@
+<div class="loading-bar" [class.active]="loading"></div>
+
+@if (!isAdminRoute) {
+  <app-navbar />
+}
+
+<div class="page-transition">
+  <router-outlet />
+</div>
+
+@if (!isAdminRoute) {
+  <app-footer />
+}

@@ -1,0 +1,43 @@
+<div class="student-form-overlay" (click)="close()">
+  <div class="student-form-card" (click)="$event.stopPropagation()">
+
+    <div class="form-header">
+      <h3>{{ isEdit ? 'Edit Event' : 'Add Event' }}</h3>
+      <button class="close-btn" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form class="form-body" (ngSubmit)="onSubmit()">
+
+      <div class="form-group">
+        <label>Event Name</label>
+        <input type="text" placeholder="e.g. Sports Day" [(ngModel)]="event.name" name="name" required />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" [(ngModel)]="event.date" name="date" required />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="event.status" name="status">
+            <option value="Upcoming">Upcoming</option>
+            <option value="Past">Past</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Location</label>
+        <input type="text" placeholder="e.g. School Hall" [(ngModel)]="event.location" name="location" required />
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="close()">Cancel</button>
+        <button type="submit" class="submit-btn">{{ isEdit ? 'Update' : 'Add Event' }}</button>
+      </div>
+
+    </form>
+
+  </div>
+</div>

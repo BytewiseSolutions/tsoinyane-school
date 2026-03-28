@@ -1,0 +1,71 @@
+// SUBJECTS SECTION
+.subjects-section {
+  padding: 60px 40px;
+  background-color: var(--white);
+
+  &.alt {
+    background-color: var(--white-off);
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--navy-blue);
+    margin-bottom: 32px;
+    border-left: 4px solid var(--navy-blue);
+    padding-left: 14px;
+  }
+
+  .subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+
+    .subject-card {
+      background-color: var(--white);
+      border: 1px solid #dde5f5;
+      border-radius: 6px;
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0, 31, 91, 0.12);
+        border-color: var(--navy-blue);
+      }
+
+      i {
+        font-size: 32px;
+        color: var(--navy-blue);
+        margin-bottom: 14px;
+      }
+
+      h3 {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--navy-blue);
+      }
+    }
+  }
+}
+
+// RESPONSIVE
+@media (max-width: 768px) {
+  .subjects-section {
+    padding: 40px 20px;
+
+    .subjects-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .subjects-section {
+    .subjects-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}

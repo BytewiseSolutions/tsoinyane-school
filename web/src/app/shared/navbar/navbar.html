@@ -1,0 +1,38 @@
+<div class="top-section">
+  <div class="info">
+
+    <div class="contact-info">
+      <p><i class="fa-solid fa-phone"></i> +266 59181664</p>
+      <p><i class="fa-solid fa-envelope"></i> info@tsoinyane.co.ls</p>
+      <p><i class="fa-solid fa-location-dot"></i> Tsoinyane, Pitseng, Leribe</p>
+    </div>
+
+    <div class="dropdown">
+      <button class="dropbtn" [class.open]="dropdownOpen" (click)="toggleDropdown()">Select School <i class="fa-solid fa-chevron-down"></i></button>
+      <div class="dropdown-content" [class.open]="dropdownOpen">
+        <a (click)="selectSchool('primary')">Tsoinyane Primary School</a>
+        <a (click)="selectSchool('high')">Tsoinyane High School</a>
+        <a (click)="selectSchool('combined')">Combined School</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<nav class="navbar">
+  <div class="logo">
+    <h1>{{ schoolName }}</h1>
+  </div>
+
+  <button class="hamburger" (click)="toggleMenu()">
+    <i class="fa-solid" [class.fa-bars]="!menuOpen" [class.fa-xmark]="menuOpen"></i>
+  </button>
+
+  <ul class="menu" [class.open]="menuOpen">
+    <li><a routerLink="/home" routerLinkActive="active" (click)="closeMenu()">Home</a></li>
+    <li><a routerLink="/about" routerLinkActive="active" (click)="closeMenu()">About</a></li>
+    <li><a routerLink="/subjects" routerLinkActive="active" (click)="closeMenu()">Subjects</a></li>
+    <li><a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a></li>
+    <li><button class="signin-btn" routerLink="/login" (click)="closeMenu()">Sign In</button></li>
+  </ul>
+</nav>

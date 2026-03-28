@@ -1,0 +1,31 @@
+.loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background-color: var(--white);
+  z-index: 9999;
+  transition: width 0.3s ease;
+
+  &.active {
+    width: 80%;
+    animation: loading 1s ease infinite;
+  }
+}
+
+@keyframes loading {
+  0%   { width: 0%; opacity: 1; }
+  50%  { width: 80%; opacity: 1; }
+  100% { width: 100%; opacity: 0; }
+}
+
+// PAGE TRANSITION
+.page-transition {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

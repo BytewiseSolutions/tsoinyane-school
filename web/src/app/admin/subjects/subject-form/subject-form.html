@@ -1,0 +1,54 @@
+<div class="student-form-overlay" (click)="close()">
+  <div class="student-form-card" (click)="$event.stopPropagation()">
+
+    <div class="form-header">
+      <h3>{{ isEdit ? 'Edit Subject' : 'Add Subject' }}</h3>
+      <button class="close-btn" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form class="form-body" (ngSubmit)="onSubmit()">
+
+      <div class="form-group">
+        <label>Subject Name</label>
+        <input type="text" placeholder="e.g. Mathematics" [(ngModel)]="subject.name" name="name" required />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>School</label>
+          <select [(ngModel)]="subject.school" name="school" required>
+            <option value="">Select school</option>
+            <option value="Primary">Primary School</option>
+            <option value="High School">High School</option>
+            <option value="Both">Both</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="subject.status" name="status">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teacher</label>
+          <input type="text" placeholder="Assigned teacher" [(ngModel)]="subject.teacher" name="teacher" />
+        </div>
+        <div class="form-group">
+          <label>Student Count</label>
+          <input type="number" min="0" placeholder="0" [(ngModel)]="subject.students" name="students" />
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="close()">Cancel</button>
+        <button type="submit" class="submit-btn">{{ isEdit ? 'Update' : 'Add Subject' }}</button>
+      </div>
+
+    </form>
+
+  </div>
+</div>

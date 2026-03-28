@@ -1,0 +1,10 @@
+<div class="admin-layout">
+  <app-sidebar />
+  <div class="admin-body" [class.collapsed]="sidebarCollapsed">
+    <app-header />
+    <div class="admin-content">
+      <router-outlet />
+    </div>
+    <app-admin-footer />
+  </div>
+</div>
