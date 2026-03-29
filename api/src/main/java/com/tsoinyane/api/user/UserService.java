@@ -57,12 +57,13 @@ public class UserService {
 
         Set<Role> roles = resolveRoles(request.getRoles());
         Status status = request.getStatus() != null ? request.getStatus() : Status.ACTIVE;
+        String studentId = roles.contains(Role.STUDENT) ? generateNextStudentId() : null;
 
         Set<School> schools = resolveSchools(request.getSchoolIds());
         User auditUser = userRepository.findByEmail("admin@tsoinyane.co.ls").orElse(null);
 
         User newUser = User.builder()
-                .studentId(trimToNull(request.getStudentId()))
+                .studentId(studentId)
                 .title(request.getTitle())
                 .firstName(request.getFirstName().trim())
                 .lastName(request.getLastName().trim())
@@ -120,6 +121,14 @@ public class UserService {
 
         Set<Role> roles = resolveRoles(request.getRoles());
         existingUser.setRoles(roles);
+
+        if (roles.contains(Role.STUDENT)) {
+            if (existingUser.getStudentId() == null || existingUser.getStudentId().isBlank()) {
+                existingUser.setStudentId(generateNextStudentId());
+            }
+        } else {
+            existingUser.setStudentId(null);
+        }
 
         if (request.getSchoolIds() != null) {
             existingUser.setSchools(resolveSchools(request.getSchoolIds()));
@@ -277,5 +286,18 @@ public class UserService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String generateNextStudentId() {
+        int max = userRepository.findAllStudentIds().stream()
+                .map(String::trim)
+                .map(id -> id.toUpperCase().replaceFirst("^ST", ""))
+                .filter(part -> part.matches("\\d+"))
+                .mapToInt(Integer::parseInt)
+                .max()
+                .orElse(0);
+
+        int next = max + 1;
+        return "ST" + String.format("%03d", next);
     }
 }

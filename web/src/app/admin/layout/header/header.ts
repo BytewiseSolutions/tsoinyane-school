@@ -3,6 +3,7 @@ import { SidebarStateService } from '../sidebar-state';
 import { AuthUser } from '../../../models/auth-user';
 import { BackendService } from '../../../util/backend.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { SchoolContextService } from '../school-context';
 
 interface SchoolOption {
   id: number;
@@ -41,7 +42,8 @@ export class AdminHeader {
 
   constructor(
     private sidebarState: SidebarStateService,
-    private backendService: BackendService
+    private backendService: BackendService,
+    private schoolContext: SchoolContextService
   ) {}
 
   ngOnInit() {
@@ -83,19 +85,12 @@ export class AdminHeader {
 
   onSchoolChange() {
     const school = this.schools.find(item => item.id === Number(this.selectedSchoolId));
-    const storage = this.getActiveStorage();
-    if (!storage) {
-      return;
-    }
-
     if (this.selectedSchoolId == null || !school) {
-      storage.removeItem('selectedSchoolId');
-      storage.removeItem('selectedSchoolName');
+      this.schoolContext.setSelectedSchool(null);
       return;
     }
 
-    storage.setItem('selectedSchoolId', String(school.id));
-    storage.setItem('selectedSchoolName', school.name);
+    this.schoolContext.setSelectedSchool({ id: school.id, name: school.name });
   }
 
   private formatRole(role: string): string {
@@ -107,11 +102,13 @@ export class AdminHeader {
   }
 
   private hasSystemAdminRole(user: AuthUser): boolean {
-    if ((user.role ?? '').toUpperCase() === 'SYSTEM_ADMIN') {
+    if (this.normalizeRole(user.role) === 'SYSTEM_ADMIN') {
       return true;
     }
 
-    return (user.roles ?? []).map(role => role.toUpperCase()).includes('SYSTEM_ADMIN');
+    return (user.roles ?? [])
+      .map(role => this.normalizeRole(role))
+      .includes('SYSTEM_ADMIN');
   }
 
   private resolvePrimaryRole(user: AuthUser): string {
@@ -124,6 +121,13 @@ export class AdminHeader {
     }
 
     return 'ADMINISTRATOR';
+  }
+
+  private normalizeRole(role?: string): string {
+    return (role ?? '')
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '_');
   }
 
   private loadSchoolsForContext() {
@@ -143,10 +147,9 @@ export class AdminHeader {
       return;
     }
 
-    const storage = this.getActiveStorage();
-    const savedSchoolId = storage?.getItem('selectedSchoolId');
-    if (savedSchoolId) {
-      const numericId = Number(savedSchoolId);
+    const existing = this.schoolContext.selectedSchool;
+    if (existing) {
+      const numericId = Number(existing.id);
       const exists = this.schools.some(school => school.id === numericId);
       if (exists) {
         this.selectedSchoolId = numericId;
@@ -160,15 +163,5 @@ export class AdminHeader {
 
     this.selectedSchoolId = defaultSchool.id;
     this.onSchoolChange();
-  }
-
-  private getActiveStorage(): Storage | null {
-    if (localStorage.getItem('user')) {
-      return localStorage;
-    }
-    if (sessionStorage.getItem('user')) {
-      return sessionStorage;
-    }
-    return null;
   }
 }

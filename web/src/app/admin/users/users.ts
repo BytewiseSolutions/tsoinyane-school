@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BackendService } from '../../util/backend.service';
 import { User } from './user';
 import { Role } from './role';
 import { Status } from './status';
-import { finalize } from 'rxjs';
+import { finalize, Subject, takeUntil } from 'rxjs';
+import { SchoolContextService } from '../layout/school-context';
 
 @Component({
   selector: 'app-users',
@@ -12,7 +13,8 @@ import { finalize } from 'rxjs';
   templateUrl: './users.html',
   styleUrl: './users.scss',
 })
-export class Users implements OnInit {
+export class Users implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   searchTerm = '';
   roleFilter: 'All' | 'SYSTEM_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' = 'All';
   isLoading = false;
@@ -25,12 +27,27 @@ export class Users implements OnInit {
   showStatusDialog = false;
   userToToggleStatus: User | null = null;
   pendingStatus: Status = Status.INACTIVE;
+  selectedSchoolId: number | null = null;
   users: User[] = [];
 
-  constructor(private backendService: BackendService) {}
+  constructor(
+    private backendService: BackendService,
+    private schoolContext: SchoolContextService
+  ) {}
 
   ngOnInit(): void {
+    this.schoolContext.selectedSchool$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(school => {
+        this.selectedSchoolId = school?.id ?? null;
+      });
+
     this.loadUsers();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get filteredUsers(): User[] {
@@ -38,11 +55,14 @@ export class Users implements OnInit {
     return this.users.filter(user => {
       const userRoles = this.getUserRoles(user).map(role => role.toUpperCase());
       const roleMatch = this.roleFilter === 'All' || userRoles.includes(this.roleFilter);
+      const schoolMatch = !this.selectedSchoolId
+        || !user.schoolIds?.length
+        || user.schoolIds.includes(this.selectedSchoolId);
       const queryMatch = !query
         || this.getFullName(user).toLowerCase().includes(query)
         || (user.email ?? '').toLowerCase().includes(query)
         || this.getRoleLabels(user).toLowerCase().includes(query);
-      return roleMatch && queryMatch;
+      return roleMatch && schoolMatch && queryMatch;
     });
   }
 

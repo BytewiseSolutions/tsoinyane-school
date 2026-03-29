@@ -5,6 +5,7 @@ import { User } from '../user';
 import { Role } from '../role';
 import { Status } from '../status';
 import { Title } from '../title';
+import { SchoolContextService } from '../../layout/school-context';
 
 @Component({
   selector: 'app-user-form',
@@ -41,10 +42,17 @@ export class UserForm implements OnInit {
     schoolIds: [],
   };
 
-  constructor(private backendService: BackendService) {}
+  constructor(
+    private backendService: BackendService,
+    private schoolContext: SchoolContextService
+  ) {}
 
   ngOnInit(): void {
     if (!this.existingUser) {
+      const selectedSchool = this.schoolContext.selectedSchool;
+      if (selectedSchool) {
+        this.form.schoolIds = [selectedSchool.id];
+      }
       return;
     }
 
@@ -92,7 +100,7 @@ export class UserForm implements OnInit {
       email,
       password: password || null,
       phone: this.nullIfBlank(this.form.phone),
-      studentId: this.nullIfBlank(this.form.studentId),
+      studentId: this.isStudentRoleSelected() ? (this.form.studentId ?? null) : null,
       roles: this.selectedRoles,
       schoolIds: this.form.schoolIds ?? [],
     };
@@ -128,5 +136,9 @@ export class UserForm implements OnInit {
 
     const trimmed = value.trim();
     return trimmed ? trimmed : null;
+  }
+
+  isStudentRoleSelected(): boolean {
+    return this.selectedRoles.includes(Role.STUDENT);
   }
 }

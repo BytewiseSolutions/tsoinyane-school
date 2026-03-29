@@ -17,4 +17,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("select distinct u from User u left join fetch u.schools left join fetch u.roles where u.id = :id")
     Optional<User> findWithSchoolsAndRolesById(@Param("id") Long id);
+
+    @Query("select u.studentId from User u where u.studentId is not null and upper(u.studentId) like 'ST%'")
+    List<String> findAllStudentIds();
 }
