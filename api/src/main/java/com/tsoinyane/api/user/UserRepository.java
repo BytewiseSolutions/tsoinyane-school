@@ -12,10 +12,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select u from User u where lower(u.email) = lower(:email)")
     Optional<User> findByEmail(@Param("email") String email);
 
-    @Query("select distinct u from User u left join fetch u.schools left join fetch u.roles order by u.id asc")
+    @Query("select distinct u from User u left join fetch u.schools left join fetch u.roles left join fetch u.teacherGrades order by u.id asc")
     List<User> findAllByOrderByIdAsc();
 
-    @Query("select distinct u from User u left join fetch u.schools left join fetch u.roles where u.id = :id")
+    @Query("select distinct u from User u left join fetch u.schools left join fetch u.roles left join fetch u.teacherGrades where u.id = :id")
     Optional<User> findWithSchoolsAndRolesById(@Param("id") Long id);
 
     @Query("select u.studentId from User u where u.studentId is not null and upper(u.studentId) like 'ST%'")

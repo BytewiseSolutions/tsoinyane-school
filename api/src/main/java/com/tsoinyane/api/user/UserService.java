@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -92,6 +93,7 @@ public class UserService {
                 .build();
 
         User savedUser = userRepository.save(newUser);
+        syncTeacherGradeAssignments(savedUser, roles, request.getTeacherGradeIds());
 
         if (savedUser.getCreatedBy() == null || savedUser.getUpdatedBy() == null) {
             savedUser.setCreatedBy(savedUser);
@@ -156,6 +158,7 @@ public class UserService {
         }
 
         User savedUser = userRepository.save(existingUser);
+        syncTeacherGradeAssignments(savedUser, roles, request.getTeacherGradeIds());
         syncStudentRecord(savedUser, roles, request.getGradeId());
         return toDto(savedUser);
     }
@@ -246,6 +249,10 @@ public class UserService {
                 .sorted(Comparator.naturalOrder())
                 .toList();
 
+        List<Grade> teacherGrades = user.getTeacherGrades().stream()
+                .sorted(Comparator.comparing(Grade::getId))
+                .toList();
+
         return UserDto.builder()
                 .id(user.getId())
                 .createdAt(user.getCreatedAt())
@@ -262,7 +269,50 @@ public class UserService {
                 .schoolNames(schoolNames)
                 .gradeId(student != null && student.getGrade() != null ? student.getGrade().getId() : null)
                 .gradeName(student != null && student.getGrade() != null ? student.getGrade().getName() : null)
+                .teacherGradeIds(teacherGrades.stream().map(Grade::getId).toList())
+                .teacherGradeNames(teacherGrades.stream().map(Grade::getName).toList())
                 .build();
+    }
+
+    private void syncTeacherGradeAssignments(User user, Set<Role> roles, List<Long> teacherGradeIds) {
+        if (!roles.contains(Role.TEACHER)) {
+            user.getTeacherGrades().clear();
+            userRepository.save(user);
+            return;
+        }
+
+        if (teacherGradeIds == null || teacherGradeIds.isEmpty()) {
+            user.getTeacherGrades().clear();
+            userRepository.save(user);
+            return;
+        }
+
+        Set<Long> schoolIds = user.getSchools().stream()
+                .map(School::getId)
+                .collect(Collectors.toSet());
+
+        List<Long> uniqueGradeIds = teacherGradeIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+
+        List<Grade> grades = gradeRepository.findAllById(uniqueGradeIds);
+        if (grades.size() != uniqueGradeIds.size()) {
+            Set<Long> foundIds = grades.stream().map(Grade::getId).collect(Collectors.toSet());
+            List<Long> missingIds = uniqueGradeIds.stream().filter(id -> !foundIds.contains(id)).toList();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacherGradeIds: " + missingIds);
+        }
+
+        List<Long> invalidGradeIds = grades.stream()
+                .filter(grade -> grade.getSchool() == null || !schoolIds.contains(grade.getSchool().getId()))
+                .map(Grade::getId)
+                .toList();
+        if (!invalidGradeIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected teacher grades do not belong to the user's schools: " + invalidGradeIds);
+        }
+
+        user.setTeacherGrades(new LinkedHashSet<>(grades));
+        userRepository.save(user);
     }
 
     private void syncStudentRecord(User user, Set<Role> roles, Long gradeId) {

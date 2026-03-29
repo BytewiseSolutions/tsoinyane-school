@@ -52,6 +52,12 @@
   color: #5f6e8f;
 }
 
+.state-card.success {
+  color: #1f6d43;
+  border-color: #bfe6cd;
+  background: #f3fcf6;
+}
+
 .state-card.error {
   color: #b53a3a;
   border-color: #f0c7c7;
@@ -132,6 +138,64 @@
   }
 }
 
+.assignment-card {
+  display: grid;
+  gap: 16px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  p {
+    margin: 6px 0 0;
+    color: #5f6e8f;
+    font-size: 14px;
+  }
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chip-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d7e2f4;
+  border-radius: 999px;
+  background: #f9fbff;
+  color: #243a61;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inline-note {
+  color: #667898;
+  font-size: 14px;
+}
+
+.save-btn {
+  border: 1px solid #4a74d1;
+  background: #2d5fc7;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .detail-row {
   padding: 12px 0;
   border-top: 1px solid #edf2fa;
@@ -146,5 +210,10 @@
   .summary-card,
   .details-grid {
     grid-template-columns: 1fr;
+  }
+
+  .section-heading {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

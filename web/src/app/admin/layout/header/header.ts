@@ -4,11 +4,7 @@ import { AuthUser } from '../../../models/auth-user';
 import { BackendService } from '../../../util/backend.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SchoolContextService } from '../school-context';
-
-interface SchoolOption {
-  id: number;
-  name: string;
-}
+import { SchoolOption } from '../../school-option';
 
 @Component({
   selector: 'app-header',

@@ -12,6 +12,10 @@
   } @else if (errorMessage) {
     <div class="state-card error">{{ errorMessage }}</div>
   } @else if (user) {
+    @if (saveMessage) {
+      <div class="state-card success">{{ saveMessage }}</div>
+    }
+
     <div class="summary-card">
       <div class="summary-item">
         <span>Status</span>
@@ -21,10 +25,12 @@
         <span>Roles</span>
         <strong>{{ roleLabels }}</strong>
       </div>
-      <div class="summary-item">
-        <span>Student ID</span>
-        <strong>{{ user.studentId || 'N/A' }}</strong>
-      </div>
+      @if (isStudent) {
+        <div class="summary-item">
+          <span>Student ID</span>
+          <strong>{{ user.studentId || 'N/A' }}</strong>
+        </div>
+      }
       <div class="summary-item">
         <span>Grade</span>
         <strong>{{ user.gradeName || 'N/A' }}</strong>
@@ -56,5 +62,63 @@
         </div>
       </section>
     </div>
+
+    @if (canAssignSchools) {
+      <section class="details-card assignment-card">
+        <div class="section-heading">
+          <div>
+            <h3>Assign Schools</h3>
+            <p>Select the schools this system admin can access.</p>
+          </div>
+          <button type="button" class="save-btn" [disabled]="isSavingSchools" (click)="saveSchoolAssignments()">
+            {{ isSavingSchools ? 'Saving...' : 'Save Schools' }}
+          </button>
+        </div>
+
+        <div class="chip-grid">
+          @for (school of availableSchools; track school.id) {
+            <label class="chip-option">
+              <input
+                type="checkbox"
+                [checked]="selectedSchoolIds.includes(school.id)"
+                (change)="onSchoolSelectionChange(school.id, $any($event.target).checked)"
+              />
+              <span>{{ school.name }}</span>
+            </label>
+          }
+        </div>
+      </section>
+    }
+
+    @if (canAssignTeacherGrades) {
+      <section class="details-card assignment-card">
+        <div class="section-heading">
+          <div>
+            <h3>Assign Grades</h3>
+            <p>Select the grades this teacher is responsible for.</p>
+          </div>
+          <button type="button" class="save-btn" [disabled]="isSavingTeacherGrades" (click)="saveTeacherGradeAssignments()">
+            {{ isSavingTeacherGrades ? 'Saving...' : 'Save Grades' }}
+          </button>
+        </div>
+
+        @if (filteredTeacherGrades.length) {
+          <div class="chip-grid">
+            @for (grade of filteredTeacherGrades; track grade.id) {
+              <label class="chip-option">
+                <input
+                  type="checkbox"
+                  [checked]="selectedTeacherGradeIds.includes(grade.id!)"
+                  (change)="onTeacherGradeSelectionChange(grade.id!, $any($event.target).checked)"
+                />
+                <span>{{ grade.name }}</span>
+              </label>
+            }
+          </div>
+        } @else {
+          <div class="inline-note">Assign at least one school first to make grade options available.</div>
+        }
+      </section>
+    }
   }
 </div>

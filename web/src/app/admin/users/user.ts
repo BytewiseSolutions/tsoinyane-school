@@ -20,4 +20,6 @@ export interface User {
   schoolNames?: string[];
   gradeId?: number | null;
   gradeName?: string | null;
+  teacherGradeIds?: number[];
+  teacherGradeNames?: string[];
 }
