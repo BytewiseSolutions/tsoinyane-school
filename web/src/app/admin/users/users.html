@@ -5,17 +5,10 @@
       <p>Manage System Admins, Teachers, and Students from one place.</p>
     </div>
     <div class="header-actions">
-      <input #userImportInput type="file" accept=".csv,text/csv" hidden (change)="importUsersFromFile($event)" />
-      <button class="import-btn" type="button" [disabled]="isImporting" (click)="openImportUsers(userImportInput)">
-        <i class="fa-solid fa-file-import"></i> {{ isImporting ? 'Importing...' : 'Import' }}
-      </button>
+      <a class="import-btn" routerLink="/admin/users/import"><i class="fa-solid fa-file-import"></i> Import</a>
       <button class="add-btn" type="button" (click)="openAddUserForm()"><i class="fa-solid fa-plus"></i> Add User</button>
     </div>
   </div>
-
-  @if (importMessage) {
-    <div class="import-feedback">{{ importMessage }}</div>
-  }
 
   <div class="summary-grid">
     <div class="summary-card">

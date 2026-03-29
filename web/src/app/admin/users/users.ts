@@ -4,22 +4,8 @@ import { BackendService } from '../../util/backend.service';
 import { User } from './user';
 import { Role } from './role';
 import { Status } from './status';
-import { finalize, firstValueFrom, Subject, takeUntil } from 'rxjs';
+import { finalize, Subject, takeUntil } from 'rxjs';
 import { SchoolContextService } from '../layout/school-context';
-import { Grade } from '../grades/grade';
-import { Title } from './title';
-
-interface ImportRow {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  title?: string;
-  phone?: string;
-  roles?: string;
-  status?: string;
-  grade?: string;
-}
 
 @Component({
   selector: 'app-users',
@@ -33,10 +19,8 @@ export class Users implements OnInit, OnDestroy {
   roleFilter: 'All' | 'SYSTEM_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' = 'All';
   isLoading = false;
   errorMessage = '';
-  importMessage = '';
   showUserForm = false;
   isProcessing = false;
-  isImporting = false;
   editingUser: User | null = null;
   showDeleteDialog = false;
   userToDelete: User | null = null;
@@ -196,69 +180,6 @@ export class Users implements OnInit, OnDestroy {
     this.showUserForm = true;
   }
 
-  openImportUsers(fileInput: HTMLInputElement) {
-    fileInput.value = '';
-    fileInput.click();
-  }
-
-  async importUsersFromFile(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    if (!this.selectedSchoolId) {
-      this.importMessage = 'Select the current school from the top header before importing users.';
-      return;
-    }
-
-    this.isImporting = true;
-    this.errorMessage = '';
-    this.importMessage = '';
-
-    try {
-      const text = await file.text();
-      const rows = this.parseCsv(text);
-
-      if (!rows.length) {
-        this.importMessage = 'The selected CSV file is empty.';
-        return;
-      }
-
-      const grades = await firstValueFrom(this.backendService.get<Grade[]>('grade'));
-      const schoolGrades = (grades ?? []).filter(grade => grade.schoolId === this.selectedSchoolId);
-
-      const createdUsers: User[] = [];
-      let failures = 0;
-
-      for (const row of rows) {
-        try {
-          const payload = this.mapImportRowToUser(row, schoolGrades);
-          const savedUser = await firstValueFrom(this.backendService.post<User, User>('user', payload));
-          createdUsers.unshift(savedUser);
-        } catch {
-          failures += 1;
-        }
-      }
-
-      if (createdUsers.length) {
-        const existingIds = new Set(this.users.map(user => user.id));
-        this.users = [...createdUsers.filter(user => !existingIds.has(user.id)), ...this.users];
-      }
-
-      this.importMessage = failures
-        ? `Imported ${createdUsers.length} user(s). ${failures} row(s) failed.`
-        : `Imported ${createdUsers.length} user(s) successfully.`;
-    } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Failed to import users.';
-    } finally {
-      this.isImporting = false;
-      input.value = '';
-    }
-  }
-
   closeAddUserForm() {
     this.showUserForm = false;
     this.editingUser = null;
@@ -288,148 +209,6 @@ export class Users implements OnInit, OnDestroy {
         this.isLoading = false;
       },
     });
-  }
-
-  private parseCsv(text: string): ImportRow[] {
-    const lines = text
-      .split(/\r?\n/)
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-
-    if (lines.length < 2) {
-      return [];
-    }
-
-    const headers = this.parseCsvLine(lines[0]).map(header => header.trim().toLowerCase());
-    const rows: ImportRow[] = [];
-
-    for (const line of lines.slice(1)) {
-      const values = this.parseCsvLine(line);
-      const row: Record<string, string> = {};
-
-      headers.forEach((header, index) => {
-        row[header] = (values[index] ?? '').trim();
-      });
-
-      rows.push({
-        firstName: row['firstname'] || row['first_name'] || '',
-        lastName: row['lastname'] || row['last_name'] || '',
-        email: row['email'] || '',
-        password: row['password'] || '',
-        title: row['title'] || '',
-        phone: row['phone'] || '',
-        roles: row['roles'] || row['role'] || '',
-        status: row['status'] || '',
-        grade: row['grade'] || row['gradename'] || row['grade_name'] || '',
-      });
-    }
-
-    return rows;
-  }
-
-  private parseCsvLine(line: string): string[] {
-    const values: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let index = 0; index < line.length; index += 1) {
-      const char = line[index];
-      const next = line[index + 1];
-
-      if (char === '"') {
-        if (inQuotes && next === '"') {
-          current += '"';
-          index += 1;
-        } else {
-          inQuotes = !inQuotes;
-        }
-        continue;
-      }
-
-      if (char === ',' && !inQuotes) {
-        values.push(current);
-        current = '';
-        continue;
-      }
-
-      current += char;
-    }
-
-    values.push(current);
-    return values;
-  }
-
-  private mapImportRowToUser(row: ImportRow, grades: Grade[]): User {
-    const firstName = row.firstName.trim();
-    const lastName = row.lastName.trim();
-    const email = row.email.trim().toLowerCase();
-    const password = row.password.trim();
-
-    if (!firstName || !lastName || !email || !password) {
-      throw new Error('Each import row must include firstName, lastName, email, and password.');
-    }
-
-    const roles = this.parseRoles(row.roles);
-    const isStudent = roles.includes(Role.STUDENT);
-    const gradeId = isStudent ? this.resolveGradeId(row.grade, grades) : null;
-
-    return {
-      id: 0,
-      firstName,
-      lastName,
-      email,
-      password,
-      title: this.parseTitle(row.title),
-      phone: this.nullIfBlank(row.phone),
-      roles,
-      status: this.parseStatus(row.status),
-      schoolIds: this.selectedSchoolId ? [this.selectedSchoolId] : [],
-      gradeId,
-    };
-  }
-
-  private parseRoles(value?: string): Role[] {
-    if (!value?.trim()) {
-      return [Role.STUDENT];
-    }
-
-    const roles = value
-      .split(/[|,;]+/)
-      .map(role => role.trim().toUpperCase().replace(/\s+/g, '_'))
-      .filter(role => role.length > 0)
-      .map(role => role as Role)
-      .filter(role => Object.values(Role).includes(role));
-
-    return roles.length ? Array.from(new Set(roles)) : [Role.STUDENT];
-  }
-
-  private parseStatus(value?: string): Status {
-    const normalized = value?.trim().toUpperCase() as Status | undefined;
-    return normalized && Object.values(Status).includes(normalized) ? normalized : Status.ACTIVE;
-  }
-
-  private parseTitle(value?: string): Title | null {
-    const normalized = value?.trim() as Title | undefined;
-    return normalized && Object.values(Title).includes(normalized) ? normalized : null;
-  }
-
-  private resolveGradeId(value: string | undefined, grades: Grade[]): number {
-    const gradeName = value?.trim().toLowerCase();
-    if (!gradeName) {
-      throw new Error('Student import rows must include a grade column.');
-    }
-
-    const match = grades.find(grade => grade.name.trim().toLowerCase() === gradeName);
-    if (!match?.id) {
-      throw new Error(`Grade "${value}" was not found for the selected school.`);
-    }
-
-    return match.id;
-  }
-
-  private nullIfBlank(value?: string): string | null {
-    const trimmed = value?.trim() ?? '';
-    return trimmed ? trimmed : null;
   }
 
   getFullName(user: User): string {

@@ -25,18 +25,11 @@
     gap: 10px;
   }
 
-  .import-feedback {
-    margin-bottom: 16px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: #eef3ff;
-    border: 1px solid #cad9fb;
-    color: #284b97;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
   .import-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
     border: 1px solid #ccd7ee;
     background: #fff;
     color: #2b3f66;

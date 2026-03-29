@@ -25,8 +25,10 @@ import { AdminFooter } from './admin/layout/footer/footer';
 import { Dashboard } from './admin/dashboard/dashboard';
 import { Users } from './admin/users/users';
 import { UserForm } from './admin/users/user-form/user-form';
+import { UserImportComponent } from './admin/users/import/import';
 import { AdminGrades } from './admin/grades/grades';
 import { GradeForm } from './admin/grades/grade-form/grade-form';
+import { GradeImportComponent } from './admin/grades/import/import';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
@@ -56,8 +58,10 @@ import { EventForm } from './admin/events/event-form/event-form';
     Dashboard,
     Users,
     UserForm,
+    UserImportComponent,
     AdminGrades,
     GradeForm,
+    GradeImportComponent,
     AdminSubjects,
     Events,
     Notifications,

@@ -5,18 +5,14 @@
       <p>Manage grade records for the selected school.</p>
     </div>
     <div class="header-actions">
-      <button class="import-btn" type="button" (click)="openImportGrades()">
+      <a class="import-btn" routerLink="/admin/grades/import">
         <i class="fa-solid fa-file-import"></i> Import
-      </button>
+      </a>
       <button class="add-btn" type="button" (click)="openAddGradeForm()">
         <i class="fa-solid fa-plus"></i> Add Grade
       </button>
     </div>
   </div>
-
-  @if (importMessage) {
-    <div class="import-feedback">{{ importMessage }}</div>
-  }
 
   <div class="table-card">
     @if (isLoadingSchools || isLoadingGrades) {
