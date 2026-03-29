@@ -87,6 +87,52 @@ public class UserService {
         return toDto(savedUser);
     }
 
+    public UserDto updateUser(Long id, UserDto request) {
+        User existingUser = userRepository.findWithSchoolsAndRolesById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        if (normalizedEmail.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+
+        if (request.getFirstName() == null || request.getFirstName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "First name is required");
+        }
+
+        if (request.getLastName() == null || request.getLastName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Last name is required");
+        }
+
+        userRepository.findByEmail(normalizedEmail).ifPresent(other -> {
+            if (!other.getId().equals(id)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+            }
+        });
+
+        existingUser.setStudentId(trimToNull(request.getStudentId()));
+        existingUser.setTitle(request.getTitle());
+        existingUser.setFirstName(request.getFirstName().trim());
+        existingUser.setLastName(request.getLastName().trim());
+        existingUser.setEmail(normalizedEmail);
+        existingUser.setPhone(trimToNull(request.getPhone()));
+        existingUser.setStatus(request.getStatus() != null ? request.getStatus() : existingUser.getStatus());
+
+        Set<Role> roles = resolveRoles(request.getRoles());
+        existingUser.setRoles(roles);
+
+        if (request.getSchoolIds() != null) {
+            existingUser.setSchools(resolveSchools(request.getSchoolIds()));
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        User savedUser = userRepository.save(existingUser);
+        return toDto(savedUser);
+    }
+
     @PostConstruct
     public void createDefaultAdmin() {
         User admin = userRepository.findByEmail("admin@tsoinyane.co.ls")

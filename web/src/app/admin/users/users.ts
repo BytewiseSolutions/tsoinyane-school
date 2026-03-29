@@ -17,6 +17,7 @@ export class Users implements OnInit {
   isLoading = false;
   errorMessage = '';
   showUserForm = false;
+  editingUser: User | null = null;
   users: User[] = [];
 
   constructor(private backendService: BackendService) {}
@@ -64,20 +65,27 @@ export class Users implements OnInit {
   }
 
   editUser(user: User) {
-    this.errorMessage = `Edit requested for ${this.getFullName(user)}.`;
+    this.editingUser = { ...user };
+    this.showUserForm = true;
   }
 
   openAddUserForm() {
+    this.editingUser = null;
     this.showUserForm = true;
   }
 
   closeAddUserForm() {
     this.showUserForm = false;
+    this.editingUser = null;
   }
 
   onUserSaved(user: User) {
-    this.users = [user, ...this.users.filter(item => item.id !== user.id)];
+    const exists = this.users.some(item => item.id === user.id);
+    this.users = exists
+      ? this.users.map(item => (item.id === user.id ? user : item))
+      : [user, ...this.users];
     this.showUserForm = false;
+    this.editingUser = null;
   }
 
   private loadUsers() {

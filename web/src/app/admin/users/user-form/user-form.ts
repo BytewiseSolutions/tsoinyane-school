@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BackendService } from '../../../util/backend.service';
 import { User } from '../user';
@@ -12,7 +12,8 @@ import { Title } from '../title';
   templateUrl: './user-form.html',
   styleUrl: './user-form.scss',
 })
-export class UserForm {
+export class UserForm implements OnInit {
+  @Input() existingUser: User | null = null;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<User>();
 
@@ -24,6 +25,7 @@ export class UserForm {
   readonly roleOptions = Object.values(Role);
   readonly statusOptions = Object.values(Status);
   selectedRoles: Role[] = [Role.STUDENT];
+  isEdit = false;
 
   form: User = {
     id: 0,
@@ -41,6 +43,24 @@ export class UserForm {
 
   constructor(private backendService: BackendService) {}
 
+  ngOnInit(): void {
+    if (!this.existingUser) {
+      return;
+    }
+
+    this.isEdit = true;
+    this.form = {
+      ...this.existingUser,
+      id: this.existingUser.id,
+      password: '',
+      schoolIds: this.existingUser.schoolIds ?? [],
+    };
+
+    this.selectedRoles = this.existingUser.roles?.length
+      ? this.existingUser.roles
+      : (this.existingUser.role ? [this.existingUser.role] : [Role.STUDENT]);
+  }
+
   onSubmit() {
     this.errorMessage = '';
     this.successMessage = '';
@@ -50,8 +70,10 @@ export class UserForm {
     const email = (this.form.email ?? '').trim().toLowerCase();
     const password = (this.form.password ?? '').trim();
 
-    if (!firstName || !lastName || !email || !password) {
-      this.errorMessage = 'First name, last name, email and password are required.';
+    if (!firstName || !lastName || !email || (!this.isEdit && !password)) {
+      this.errorMessage = this.isEdit
+        ? 'First name, last name and email are required.'
+        : 'First name, last name, email and password are required.';
       return;
     }
 
@@ -64,25 +86,29 @@ export class UserForm {
 
     const payload: User = {
       ...this.form,
-      id: 0,
+      id: this.isEdit ? this.form.id : 0,
       firstName,
       lastName,
       email,
-      password,
+      password: password || null,
       phone: this.nullIfBlank(this.form.phone),
       studentId: this.nullIfBlank(this.form.studentId),
       roles: this.selectedRoles,
-      schoolIds: [],
+      schoolIds: this.form.schoolIds ?? [],
     };
 
-    this.backendService.post<User, User>('users', payload).subscribe({
-      next: (createdUser) => {
-        this.successMessage = 'User created successfully.';
-        this.saved.emit(createdUser);
+    const request$ = this.isEdit
+      ? this.backendService.put<User, User>(`users/${payload.id}`, payload)
+      : this.backendService.post<User, User>('users', payload);
+
+    request$.subscribe({
+      next: (savedUser) => {
+        this.successMessage = this.isEdit ? 'User updated successfully.' : 'User created successfully.';
+        this.saved.emit(savedUser);
         this.close();
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to create user.';
+        this.errorMessage = error.error?.message || (this.isEdit ? 'Failed to update user.' : 'Failed to create user.');
         this.isSubmitting = false;
       },
       complete: () => {

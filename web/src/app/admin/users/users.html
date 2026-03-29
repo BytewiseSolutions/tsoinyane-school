@@ -102,5 +102,5 @@
 </div>
 
 @if (showUserForm) {
-  <app-user-form (closed)="closeAddUserForm()" (saved)="onUserSaved($event)"></app-user-form>
+  <app-user-form [existingUser]="editingUser" (closed)="closeAddUserForm()" (saved)="onUserSaved($event)"></app-user-form>
 }
