@@ -6,6 +6,7 @@ import { Role } from '../role';
 import { Status } from '../status';
 import { Title } from '../title';
 import { SchoolContextService } from '../../layout/school-context';
+import { Grade } from '../../grades/grade';
 
 @Component({
   selector: 'app-user-form',
@@ -27,6 +28,7 @@ export class UserForm implements OnInit {
   readonly statusOptions = Object.values(Status);
   selectedRoles: Role[] = [Role.STUDENT];
   isEdit = false;
+  availableGrades: Grade[] = [];
 
   form: User = {
     id: 0,
@@ -40,6 +42,7 @@ export class UserForm implements OnInit {
     roles: [Role.STUDENT],
     status: Status.ACTIVE,
     schoolIds: [],
+    gradeId: null,
   };
 
   constructor(
@@ -52,6 +55,7 @@ export class UserForm implements OnInit {
       const selectedSchool = this.schoolContext.selectedSchool;
       if (selectedSchool) {
         this.form.schoolIds = [selectedSchool.id];
+        this.loadGradesForSchool(selectedSchool.id);
       }
       return;
     }
@@ -62,11 +66,17 @@ export class UserForm implements OnInit {
       id: this.existingUser.id,
       password: '',
       schoolIds: this.existingUser.schoolIds ?? [],
+      gradeId: this.existingUser.gradeId ?? null,
     };
 
     this.selectedRoles = this.existingUser.roles?.length
       ? this.existingUser.roles
       : (this.existingUser.role ? [this.existingUser.role] : [Role.STUDENT]);
+
+    const schoolId = this.form.schoolIds?.[0];
+    if (schoolId) {
+      this.loadGradesForSchool(schoolId);
+    }
   }
 
   onSubmit() {
@@ -90,6 +100,11 @@ export class UserForm implements OnInit {
       return;
     }
 
+    if (this.isStudentRoleSelected() && !this.form.gradeId) {
+      this.errorMessage = 'Please select a grade for the student.';
+      return;
+    }
+
     this.isSubmitting = true;
 
     const payload: User = {
@@ -103,6 +118,7 @@ export class UserForm implements OnInit {
       studentId: this.isStudentRoleSelected() ? (this.form.studentId ?? null) : null,
       roles: this.selectedRoles,
       schoolIds: this.form.schoolIds ?? [],
+      gradeId: this.isStudentRoleSelected() ? (this.form.gradeId ?? null) : null,
     };
 
     const request$ = this.isEdit
@@ -140,5 +156,16 @@ export class UserForm implements OnInit {
 
   isStudentRoleSelected(): boolean {
     return this.selectedRoles.includes(Role.STUDENT);
+  }
+
+  private loadGradesForSchool(schoolId: number): void {
+    this.backendService.get<Grade[]>('grade').subscribe({
+      next: (grades) => {
+        this.availableGrades = (grades ?? []).filter(grade => grade.schoolId === schoolId);
+      },
+      error: () => {
+        this.availableGrades = [];
+      },
+    });
   }
 }

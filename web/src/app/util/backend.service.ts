@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
@@ -12,23 +12,26 @@ export class BackendService {
   constructor(private http: HttpClient) {}
 
   get<T>(endpoint: string, params?: HttpParams | Record<string, string | number | boolean>): Observable<T> {
-    return this.http.get<T>(this.buildUrl(endpoint), { params: this.toHttpParams(params) });
+    return this.http.get<T>(this.buildUrl(endpoint), {
+      params: this.toHttpParams(params),
+      headers: this.buildHeaders(),
+    });
   }
 
   post<T, B = unknown>(endpoint: string, body: B): Observable<T> {
-    return this.http.post<T>(this.buildUrl(endpoint), body);
+    return this.http.post<T>(this.buildUrl(endpoint), body, { headers: this.buildHeaders() });
   }
 
   put<T, B = unknown>(endpoint: string, body: B): Observable<T> {
-    return this.http.put<T>(this.buildUrl(endpoint), body);
+    return this.http.put<T>(this.buildUrl(endpoint), body, { headers: this.buildHeaders() });
   }
 
   patch<T, B = unknown>(endpoint: string, body: B): Observable<T> {
-    return this.http.patch<T>(this.buildUrl(endpoint), body);
+    return this.http.patch<T>(this.buildUrl(endpoint), body, { headers: this.buildHeaders() });
   }
 
   delete<T>(endpoint: string): Observable<T> {
-    return this.http.delete<T>(this.buildUrl(endpoint));
+    return this.http.delete<T>(this.buildUrl(endpoint), { headers: this.buildHeaders() });
   }
 
   private buildUrl(endpoint: string): string {
@@ -52,5 +55,25 @@ export class BackendService {
       httpParams = httpParams.set(key, String(params[key]));
     }
     return httpParams;
+  }
+
+  private buildHeaders(): HttpHeaders {
+    let headers = new HttpHeaders();
+    const rawUser = localStorage.getItem('user') ?? sessionStorage.getItem('user');
+
+    if (!rawUser) {
+      return headers;
+    }
+
+    try {
+      const user = JSON.parse(rawUser) as { id?: number | string };
+      if (user.id != null && String(user.id).trim() !== '') {
+        headers = headers.set('X-User-Id', String(user.id));
+      }
+    } catch {
+      return headers;
+    }
+
+    return headers;
   }
 }

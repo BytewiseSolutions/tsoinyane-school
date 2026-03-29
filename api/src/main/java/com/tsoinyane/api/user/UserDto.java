@@ -30,4 +30,6 @@ public class UserDto extends BaseDto {
 
     private List<Long> schoolIds;
     private List<String> schoolNames;
+    private Long gradeId;
+    private String gradeName;
 }

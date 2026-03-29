@@ -1,0 +1,38 @@
+<div class="grade-form-overlay" (click)="close()">
+  <div class="grade-form-card" (click)="$event.stopPropagation()">
+    <div class="form-header">
+      <h3>{{ isEdit ? 'Edit Grade' : 'Add Grade' }}</h3>
+      <button class="close-btn" type="button" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form class="form-body" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="gradeName">Grade Name</label>
+        <input
+          id="gradeName"
+          type="text"
+          [(ngModel)]="form.name"
+          name="name"
+          [placeholder]="gradePlaceholder"
+          [disabled]="isSubmitting"
+          required
+        />
+      </div>
+
+      @if (errorMessage) {
+        <div class="form-feedback error">{{ errorMessage }}</div>
+      }
+
+      @if (successMessage) {
+        <div class="form-feedback success">{{ successMessage }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="close()">Cancel</button>
+        <button type="submit" class="submit-btn" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Saving...' : (isEdit ? 'Update Grade' : 'Add Grade') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

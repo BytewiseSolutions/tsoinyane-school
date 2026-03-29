@@ -3,13 +3,18 @@ package com.tsoinyane.api.user;
 import com.tsoinyane.api.common.Role;
 import com.tsoinyane.api.common.Status;
 import com.tsoinyane.api.common.Title;
+import com.tsoinyane.api.grade.Grade;
+import com.tsoinyane.api.grade.GradeRepository;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
+import com.tsoinyane.api.student.Student;
+import com.tsoinyane.api.student.StudentRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
@@ -25,6 +30,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
+    private final StudentRepository studentRepository;
+    private final GradeRepository gradeRepository;
     private final PasswordEncoder passwordEncoder;
 
     public List<UserDto> getAllUsers() {
@@ -33,6 +40,7 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional
     public UserDto createUser(UserDto request) {
         String normalizedEmail = normalizeEmail(request.getEmail());
         if (normalizedEmail.isBlank()) {
@@ -85,9 +93,12 @@ public class UserService {
             savedUser = userRepository.save(savedUser);
         }
 
+        syncStudentRecord(savedUser, roles, request.getGradeId());
+
         return toDto(savedUser);
     }
 
+    @Transactional
     public UserDto updateUser(Long id, UserDto request) {
         User existingUser = userRepository.findWithSchoolsAndRolesById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -139,12 +150,15 @@ public class UserService {
         }
 
         User savedUser = userRepository.save(existingUser);
+        syncStudentRecord(savedUser, roles, request.getGradeId());
         return toDto(savedUser);
     }
 
+    @Transactional
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        studentRepository.findByUser_Id(id).ifPresent(studentRepository::delete);
         userRepository.delete(user);
     }
 
@@ -214,6 +228,7 @@ public class UserService {
     }
 
     private UserDto toDto(User user) {
+        Student student = studentRepository.findByUser_Id(user.getId()).orElse(null);
         List<Long> schoolIds = user.getSchools().stream()
                 .map(School::getId)
                 .sorted()
@@ -239,7 +254,50 @@ public class UserService {
                 .status(user.getStatus())
                 .schoolIds(schoolIds)
                 .schoolNames(schoolNames)
+                .gradeId(student != null && student.getGrade() != null ? student.getGrade().getId() : null)
+                .gradeName(student != null && student.getGrade() != null ? student.getGrade().getName() : null)
                 .build();
+    }
+
+    private void syncStudentRecord(User user, Set<Role> roles, Long gradeId) {
+        Student existingStudent = studentRepository.findByUser_Id(user.getId()).orElse(null);
+
+        if (!roles.contains(Role.STUDENT)) {
+            if (existingStudent != null) {
+                studentRepository.delete(existingStudent);
+            }
+            return;
+        }
+
+        if (user.getSchools() == null || user.getSchools().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student must belong to a school");
+        }
+
+        if (gradeId == null || gradeId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Grade is required for students");
+        }
+
+        School school = user.getSchools().stream()
+                .sorted(Comparator.comparing(School::getId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student must belong to a school"));
+
+        Grade grade = gradeRepository.findById(gradeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gradeId: " + gradeId));
+
+        if (grade.getSchool() == null || !grade.getSchool().getId().equals(school.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected grade does not belong to the student's school");
+        }
+
+        Student student = existingStudent != null ? existingStudent : Student.builder().build();
+        student.setUser(user);
+        student.setSchool(school);
+        student.setGrade(grade);
+        student.setStudentNumber(user.getStudentId());
+        student.setCreatedBy(user.getCreatedBy());
+        student.setUpdatedBy(user.getUpdatedBy());
+
+        studentRepository.save(student);
     }
 
     private Set<Role> resolveRoles(List<Role> requestedRoles) {

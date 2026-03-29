@@ -19,6 +19,7 @@ public class StudentDto extends BaseDto {
     private Long schoolId;
     private String schoolName;
 
-    private String grade;
+    private Long gradeId;
+    private String gradeName;
     private String studentNumber;
 }

@@ -74,14 +74,25 @@
       </div>
 
       @if (isStudentRoleSelected()) {
-        <div class="form-group">
-          <label>Student Number</label>
-          <input
-            type="text"
-            [value]="form.studentId || ''"
-            [placeholder]="isEdit ? 'Will be assigned if missing' : 'Auto-generated on save (ST001, ST002...)'"
-            readonly
-          />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Grade</label>
+            <select [(ngModel)]="form.gradeId" name="gradeId" required>
+              <option [ngValue]="null">Select grade</option>
+              @for (grade of availableGrades; track grade.id) {
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Student Number</label>
+            <input
+              type="text"
+              [value]="form.studentId || ''"
+              [placeholder]="isEdit ? 'Will be assigned if missing' : 'Auto-generated on save (ST001, ST002...)'"
+              readonly
+            />
+          </div>
         </div>
       }
 

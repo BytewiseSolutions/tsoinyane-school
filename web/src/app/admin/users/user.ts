@@ -16,4 +16,6 @@ export interface User {
   status?: Status | null;
   schoolIds?: number[];
   schoolNames?: string[];
+  gradeId?: number | null;
+  gradeName?: string | null;
 }
