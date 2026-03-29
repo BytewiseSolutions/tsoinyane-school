@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { SidebarStateService } from '../sidebar-state';
+import { AuthUser } from '../../../models/auth-user';
 
 @Component({
   selector: 'app-header',
@@ -9,6 +10,7 @@ import { SidebarStateService } from '../sidebar-state';
 })
 export class AdminHeader {
   notificationsOpen = false;
+  currentUserRole = 'Administrator';
 
   notifications = [
     { icon: 'fa-user-graduate', title: 'New Student Enrolled', message: 'Refiloe Mofokeng has been added to Form D.', time: '2 mins ago' },
@@ -29,6 +31,10 @@ export class AdminHeader {
 
   constructor(private sidebarState: SidebarStateService) {}
 
+  ngOnInit() {
+    this.loadCurrentUser();
+  }
+
   toggleSidebar() {
     this.sidebarState.toggle();
   }
@@ -39,5 +45,29 @@ export class AdminHeader {
 
   closeNotifications() {
     this.notificationsOpen = false;
+  }
+
+  private loadCurrentUser() {
+    const raw = localStorage.getItem('user') ?? sessionStorage.getItem('user');
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const user = JSON.parse(raw) as AuthUser;
+      if (user.role) {
+        this.currentUserRole = this.formatRole(user.role);
+      }
+    } catch {
+      // Keep fallback label when stored user payload is invalid.
+    }
+  }
+
+  private formatRole(role: string): string {
+    return role
+      .toLowerCase()
+      .split('_')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 }

@@ -3,7 +3,7 @@
   <div class="sidebar-logo">
     <div class="logo-text">
       <i class="fa-solid fa-school"></i>
-      @if (!collapsed) { <h2>TGCS Admin</h2> }
+      @if (!collapsed) { <h2>{{ currentUserName }}</h2> }
     </div>
     <button
       class="collapse-btn"
@@ -70,8 +70,8 @@
     <i class="fa-solid fa-circle-user"></i>
     @if (!collapsed) {
       <div class="user-info">
-        <h4>Administrator</h4>
-        <p>admin&#64;tsoinyane.co.ls</p>
+        <h4>{{ currentUserRole }}</h4>
+        <p>{{ currentUserEmail }}</p>
       </div>
     }
   </div>
