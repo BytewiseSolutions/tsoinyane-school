@@ -91,7 +91,13 @@
         }
       }
 
-      button {
+      .error-message {
+        margin: 0;
+        color: #c52828;
+        font-size: 13px;
+      }
+
+      .submit-btn {
         background-color: var(--navy-blue);
         color: var(--white);
         border: none;
@@ -104,6 +110,11 @@
 
         &:hover {
           background-color: var(--navy-blue-light);
+        }
+
+        &:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
       }
     }
