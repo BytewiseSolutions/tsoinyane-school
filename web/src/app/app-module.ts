@@ -1,5 +1,6 @@
 import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 
 import { AppRoutingModule } from './app-routing-module';
@@ -11,6 +12,7 @@ import { About } from './pages/about/about';
 import { Contact } from './pages/contact/contact';
 import { Subjects } from './pages/subjects/subjects';
 import { Login } from './pages/login/login';
+import { ForgotPassword } from './pages/forgot-password/forgot-password';
 import { NotFound } from './pages/not-found/not-found';
 import { PrivacyPolicy } from './pages/privacy-policy/privacy-policy';
 import { TermsConditions } from './pages/terms-conditions/terms-conditions';
@@ -20,15 +22,11 @@ import { AdminHeader } from './admin/layout/header/header';
 import { AdminMain } from './admin/layout/main/main';
 import { AdminFooter } from './admin/layout/footer/footer';
 import { Dashboard } from './admin/dashboard/dashboard';
-import { Students } from './admin/students/students';
-import { Teachers } from './admin/teachers/teachers';
+import { Users } from './admin/users/users';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
-import { Security } from './admin/security/security';
 import { Settings } from './admin/settings/settings';
-import { StudentForm } from './admin/students/student-form/student-form';
-import { TeacherForm } from './admin/teachers/teacher-form/teacher-form';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { EventForm } from './admin/events/event-form/event-form';
 
@@ -42,6 +40,7 @@ import { EventForm } from './admin/events/event-form/event-form';
     Contact,
     Subjects,
     Login,
+    ForgotPassword,
     NotFound,
     PrivacyPolicy,
     TermsConditions,
@@ -51,20 +50,17 @@ import { EventForm } from './admin/events/event-form/event-form';
     AdminMain,
     AdminFooter,
     Dashboard,
-    Students,
-    Teachers,
+    Users,
     AdminSubjects,
     Events,
     Notifications,
-    Security,
     Settings,
-    StudentForm,
-    TeacherForm,
     SubjectForm,
     EventForm
   ],
   imports: [
     BrowserModule,
+    HttpClientModule,
     FormsModule,
     AppRoutingModule
   ],

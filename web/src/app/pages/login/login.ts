@@ -1,5 +1,9 @@
 import { Component } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { BackendService } from '../../util/backend.service';
+import { LoginRequest } from './login-request';
+import { LoginResponse } from './login-response';
 
 @Component({
   selector: 'app-login',
@@ -8,9 +12,52 @@ import { Router } from '@angular/router';
   styleUrl: './login.scss',
 })
 export class Login {
-  constructor(private router: Router) {}
+  email = '';
+  password = '';
+  rememberMe = false;
+  isSubmitting = false;
+  errorMessage = '';
+
+  constructor(
+    private router: Router,
+    private backendService: BackendService
+  ) {}
 
   onLogin() {
-    this.router.navigate(['/admin/dashboard']);
+    this.errorMessage = '';
+
+    const payload: LoginRequest = {
+      email: this.email.trim().toLowerCase(),
+      password: this.password,
+      rememberMe: this.rememberMe,
+    };
+
+    if (!payload.email || !payload.password) {
+      this.errorMessage = 'Please enter both email and password.';
+      return;
+    }
+
+    this.isSubmitting = true;
+    this.backendService.post<LoginResponse, LoginRequest>('auth/login', payload).subscribe({
+      next: (response) => {
+        const storage = this.rememberMe ? localStorage : sessionStorage;
+        storage.setItem('accessToken', response.accessToken);
+        storage.setItem('tokenType', response.tokenType);
+        storage.setItem('expiresAt', String(response.expiresAt));
+        storage.setItem('user', JSON.stringify(response.user));
+        this.router.navigate(['/admin/dashboard']);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Invalid email or password.';
+        this.isSubmitting = false;
+      },
+      complete: () => {
+        this.isSubmitting = false;
+      }
+    });
+  }
+
+  onForgotPassword() {
+    this.router.navigate(['/forgot-password']);
   }
 }

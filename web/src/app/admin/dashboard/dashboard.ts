@@ -11,10 +11,12 @@ import { Subject, takeUntil } from 'rxjs';
 export class Dashboard implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  sidebarCollapsed = false;
+  sidebarCollapsed: boolean;
   mobileOpen = false;
 
-  constructor(private sidebarState: SidebarStateService) {}
+  constructor(private sidebarState: SidebarStateService) {
+    this.sidebarCollapsed = this.sidebarState.collapsedValue;
+  }
 
   ngOnInit() {
     this.sidebarState.collapsed$

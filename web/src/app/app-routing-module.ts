@@ -5,18 +5,16 @@ import { About } from './pages/about/about';
 import { Contact } from './pages/contact/contact';
 import { Subjects } from './pages/subjects/subjects';
 import { Login } from './pages/login/login';
+import { ForgotPassword } from './pages/forgot-password/forgot-password';
 import { PrivacyPolicy } from './pages/privacy-policy/privacy-policy';
 import { TermsConditions } from './pages/terms-conditions/terms-conditions';
 import { Accessibility } from './pages/accessibility/accessibility';
 import { Dashboard } from './admin/dashboard/dashboard';
 import { AdminMain } from './admin/layout/main/main';
-import { Students } from './admin/students/students';
-import { Teachers } from './admin/teachers/teachers';
+import { Users } from './admin/users/users';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
-import { Roles } from './admin/roles/roles';
-import { Security } from './admin/security/security';
 import { Maintenance } from './admin/maintenance/maintenance';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
@@ -28,6 +26,7 @@ const routes: Routes = [
   { path: 'contact', component: Contact },
   { path: 'subjects', component: Subjects },
   { path: 'login', component: Login },
+  { path: 'forgot-password', component: ForgotPassword },
   { path: 'privacy-policy', component: PrivacyPolicy },
   { path: 'terms-conditions', component: TermsConditions },
   { path: 'accessibility', component: Accessibility },
@@ -37,13 +36,10 @@ const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminMain },
-      { path: 'students', component: Students },
-      { path: 'teachers', component: Teachers },
+      { path: 'users', component: Users },
       { path: 'subjects', component: AdminSubjects },
       { path: 'events', component: Events },
       { path: 'notifications', component: Notifications },
-      { path: 'roles', component: Roles },
-      { path: 'security', component: Security },
       { path: 'maintenance', component: Maintenance },
       { path: 'settings', component: Settings },
     ]

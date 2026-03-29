@@ -29,15 +29,10 @@
 
     @if (!collapsed) { <span class="nav-section-label">Management</span> }
 
-    <a routerLink="/admin/students" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-user-graduate"></i>
-      @if (!collapsed) { <span>Students</span> }
-      @if (collapsed) { <span class="tooltip">Students</span> }
-    </a>
-    <a routerLink="/admin/teachers" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-chalkboard-teacher"></i>
-      @if (!collapsed) { <span>Teachers</span> }
-      @if (collapsed) { <span class="tooltip">Teachers</span> }
+    <a routerLink="/admin/users" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-users"></i>
+      @if (!collapsed) { <span>Users</span> }
+      @if (collapsed) { <span class="tooltip">Users</span> }
     </a>
     <a routerLink="/admin/subjects" routerLinkActive="active" (click)="closeOnMobile()">
       <i class="fa-solid fa-book-open"></i>
@@ -56,16 +51,6 @@
       <i class="fa-solid fa-bell"></i>
       @if (!collapsed) { <span>Notifications</span> }
       @if (collapsed) { <span class="tooltip">Notifications</span> }
-    </a>
-    <a routerLink="/admin/roles" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-users-gear"></i>
-      @if (!collapsed) { <span>Roles</span> }
-      @if (collapsed) { <span class="tooltip">Roles</span> }
-    </a>
-    <a routerLink="/admin/security" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-shield-halved"></i>
-      @if (!collapsed) { <span>Security</span> }
-      @if (collapsed) { <span class="tooltip">Security</span> }
     </a>
     <a routerLink="/admin/maintenance" routerLinkActive="active" (click)="closeOnMobile()">
       <i class="fa-solid fa-screwdriver-wrench"></i>
