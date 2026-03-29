@@ -32,6 +32,7 @@ export class AdminGrades implements OnInit, OnDestroy {
   showDeleteDialog = false;
   gradeToDelete: Grade | null = null;
   isProcessing = false;
+  importMessage = '';
 
   constructor(
     private backendService: BackendService,
@@ -70,6 +71,13 @@ export class AdminGrades implements OnInit, OnDestroy {
   openAddGradeForm(): void {
     this.editingGrade = null;
     this.showGradeForm = true;
+  }
+
+  openImportGrades(): void {
+    this.importMessage = 'Grade import will be added next.';
+    setTimeout(() => {
+      this.importMessage = '';
+    }, 2500);
   }
 
   closeAddGradeForm(): void {

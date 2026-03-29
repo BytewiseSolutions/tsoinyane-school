@@ -9,9 +9,9 @@ import java.util.Optional;
 
 public interface GradeRepository extends JpaRepository<Grade, Long> {
 
-    @Query("select g from Grade g join fetch g.school order by g.id asc")
+    @Query("select distinct g from Grade g join fetch g.school left join fetch g.createdBy left join fetch g.updatedBy order by g.id asc")
     List<Grade> findAllWithSchoolOrderByIdAsc();
 
-    @Query("select g from Grade g join fetch g.school where g.id = :id")
+    @Query("select g from Grade g join fetch g.school left join fetch g.createdBy left join fetch g.updatedBy where g.id = :id")
     Optional<Grade> findWithSchoolById(@Param("id") Long id);
 }
