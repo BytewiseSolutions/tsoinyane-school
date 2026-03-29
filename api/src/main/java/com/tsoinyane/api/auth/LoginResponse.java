@@ -19,6 +19,7 @@ public record LoginResponse(
             String lastName,
             Title title,
             Role role,
+            List<Role> roles,
             Status status,
             List<Long> schoolIds
     ) {}

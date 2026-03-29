@@ -59,7 +59,7 @@ export class AdminHeader {
         this.currentUserRole = this.formatRole(user.role);
       }
     } catch {
-      // Keep fallback label when stored user payload is invalid.
+  
     }
   }
 

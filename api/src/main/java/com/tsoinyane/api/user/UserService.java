@@ -7,12 +7,17 @@ import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,60 @@ public class UserService {
                 .toList();
     }
 
+    public UserDto createUser(UserDto request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        if (normalizedEmail.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required");
+        }
+
+        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+        }
+
+        if (request.getFirstName() == null || request.getFirstName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "First name is required");
+        }
+
+        if (request.getLastName() == null || request.getLastName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Last name is required");
+        }
+
+        Set<Role> roles = resolveRoles(request.getRoles());
+        Status status = request.getStatus() != null ? request.getStatus() : Status.ACTIVE;
+
+        Set<School> schools = resolveSchools(request.getSchoolIds());
+        User auditUser = userRepository.findByEmail("admin@tsoinyane.co.ls").orElse(null);
+
+        User newUser = User.builder()
+                .studentId(trimToNull(request.getStudentId()))
+                .title(request.getTitle())
+                .firstName(request.getFirstName().trim())
+                .lastName(request.getLastName().trim())
+                .email(normalizedEmail)
+                .phone(trimToNull(request.getPhone()))
+                .password(passwordEncoder.encode(request.getPassword()))
+                .roles(roles)
+                .status(status)
+                .schools(schools)
+                .createdBy(auditUser)
+                .updatedBy(auditUser)
+                .build();
+
+        User savedUser = userRepository.save(newUser);
+
+        if (savedUser.getCreatedBy() == null || savedUser.getUpdatedBy() == null) {
+            savedUser.setCreatedBy(savedUser);
+            savedUser.setUpdatedBy(savedUser);
+            savedUser = userRepository.save(savedUser);
+        }
+
+        return toDto(savedUser);
+    }
+
     @PostConstruct
     public void createDefaultAdmin() {
         User admin = userRepository.findByEmail("admin@tsoinyane.co.ls")
@@ -39,7 +98,7 @@ public class UserService {
                     newAdmin.setEmail("admin@tsoinyane.co.ls");
                     newAdmin.setPhone("59181664");
                     newAdmin.setPassword(passwordEncoder.encode("admin123"));
-                    newAdmin.setRole(Role.SYSTEM_ADMIN);
+                    newAdmin.setRoles(new HashSet<>(Set.of(Role.SYSTEM_ADMIN)));
                     newAdmin.setStatus(Status.ACTIVE);
                     return newAdmin;
                 });
@@ -48,6 +107,11 @@ public class UserService {
 
         if (admin.getId() == null) {
             admin = userRepository.save(admin);
+            changed = true;
+        }
+
+        if (admin.getRoles() == null || admin.getRoles().isEmpty()) {
+            admin.setRoles(new HashSet<>(Set.of(Role.SYSTEM_ADMIN)));
             changed = true;
         }
 
@@ -110,10 +174,56 @@ public class UserService {
                 .lastName(user.getLastName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .role(user.getRole())
+                .roles(user.getRoles().stream().sorted().toList())
                 .status(user.getStatus())
                 .schoolIds(schoolIds)
                 .schoolNames(schoolNames)
                 .build();
+    }
+
+    private Set<Role> resolveRoles(List<Role> requestedRoles) {
+        if (requestedRoles == null || requestedRoles.isEmpty()) {
+            return new LinkedHashSet<>(Set.of(Role.STUDENT));
+        }
+
+        return requestedRoles.stream()
+                .filter(role -> role != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private Set<School> resolveSchools(List<Long> schoolIds) {
+        if (schoolIds == null || schoolIds.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<Long> uniqueIds = schoolIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+
+        if (uniqueIds.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<School> schools = schoolRepository.findAllById(uniqueIds);
+        if (schools.size() != uniqueIds.size()) {
+            Set<Long> foundIds = schools.stream().map(School::getId).collect(Collectors.toSet());
+            List<Long> missingIds = uniqueIds.stream().filter(id -> !foundIds.contains(id)).toList();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid schoolIds: " + missingIds);
+        }
+
+        return new HashSet<>(schools);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

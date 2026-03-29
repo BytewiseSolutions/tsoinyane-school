@@ -1,0 +1,91 @@
+<div class="student-form-overlay" (click)="close()">
+  <div class="student-form-card" (click)="$event.stopPropagation()">
+    <div class="form-header">
+      <h3>Add User</h3>
+      <button class="close-btn" type="button" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form class="form-body" (ngSubmit)="onSubmit()">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Title</label>
+          <select [(ngModel)]="form.title" name="title">
+            @for (title of titleOptions; track title) {
+              <option [value]="title">{{ title }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Roles</label>
+          <ng-select
+            [items]="roleOptions"
+            [multiple]="true"
+            [searchable]="true"
+            [clearable]="false"
+            [(ngModel)]="selectedRoles"
+            name="roles"
+            required
+          >
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" [(ngModel)]="form.firstName" name="firstName" required />
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" [(ngModel)]="form.lastName" name="lastName" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" [(ngModel)]="form.email" name="email" required />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" [(ngModel)]="form.phone" name="phone" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" [(ngModel)]="form.password" name="password" required />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="form.status" name="status" required>
+            @for (status of statusOptions; track status) {
+              <option [value]="status">{{ status }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Student ID (optional)</label>
+        <input type="text" [(ngModel)]="form.studentId" name="studentId" />
+      </div>
+
+      @if (errorMessage) {
+        <div class="form-feedback error">{{ errorMessage }}</div>
+      }
+
+      @if (successMessage) {
+        <div class="form-feedback success">{{ successMessage }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" (click)="close()">Cancel</button>
+        <button type="submit" class="submit-btn" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Saving...' : 'Add User' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -10,6 +10,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    @EntityGraph(attributePaths = {"schools"})
+    @EntityGraph(attributePaths = {"schools", "roles"})
     List<User> findAllByOrderByIdAsc();
 }

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,7 +62,8 @@ public class AuthService {
                         user.getFirstName(),
                         user.getLastName(),
                         user.getTitle(),
-                        user.getRole(),
+                        user.getRoles().stream().sorted().findFirst().orElse(null),
+                        user.getRoles().stream().sorted(Comparator.naturalOrder()).toList(),
                         user.getStatus(),
                         schoolIds
                 )

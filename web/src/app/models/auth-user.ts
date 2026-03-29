@@ -5,4 +5,5 @@ export interface AuthUser {
   lastName: string;
   title?: string;
   role: string;
+  roles?: string[];
 }

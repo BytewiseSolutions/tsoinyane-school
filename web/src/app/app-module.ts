@@ -2,6 +2,7 @@ import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
@@ -23,6 +24,7 @@ import { AdminMain } from './admin/layout/main/main';
 import { AdminFooter } from './admin/layout/footer/footer';
 import { Dashboard } from './admin/dashboard/dashboard';
 import { Users } from './admin/users/users';
+import { UserForm } from './admin/users/user-form/user-form';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
@@ -51,6 +53,7 @@ import { EventForm } from './admin/events/event-form/event-form';
     AdminFooter,
     Dashboard,
     Users,
+    UserForm,
     AdminSubjects,
     Events,
     Notifications,
@@ -62,6 +65,7 @@ import { EventForm } from './admin/events/event-form/event-form';
     BrowserModule,
     HttpClientModule,
     FormsModule,
+    NgSelectModule,
     AppRoutingModule
   ],
   providers: [

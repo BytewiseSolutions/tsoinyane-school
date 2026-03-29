@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BackendService } from '../../util/backend.service';
 import { User } from './user';
+import { Role } from './role';
 import { Status } from './status';
 
 @Component({
@@ -15,6 +16,7 @@ export class Users implements OnInit {
   roleFilter: 'All' | 'SYSTEM_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' = 'All';
   isLoading = false;
   errorMessage = '';
+  showUserForm = false;
   users: User[] = [];
 
   constructor(private backendService: BackendService) {}
@@ -26,11 +28,12 @@ export class Users implements OnInit {
   get filteredUsers(): User[] {
     const query = this.searchTerm.trim().toLowerCase();
     return this.users.filter(user => {
-      const roleMatch = this.roleFilter === 'All' || (user.role ?? '').toUpperCase() === this.roleFilter;
+      const userRoles = this.getUserRoles(user).map(role => role.toUpperCase());
+      const roleMatch = this.roleFilter === 'All' || userRoles.includes(this.roleFilter);
       const queryMatch = !query
         || this.getFullName(user).toLowerCase().includes(query)
         || (user.email ?? '').toLowerCase().includes(query)
-        || this.getRoleLabel(user.role).toLowerCase().includes(query);
+        || this.getRoleLabels(user).toLowerCase().includes(query);
       return roleMatch && queryMatch;
     });
   }
@@ -40,15 +43,15 @@ export class Users implements OnInit {
   }
 
   get totalAdmins(): number {
-    return this.users.filter(user => (user.role ?? '').toUpperCase() === 'SYSTEM_ADMIN').length;
+    return this.users.filter(user => this.getUserRoles(user).includes(Role.SYSTEM_ADMIN)).length;
   }
 
   get totalTeachers(): number {
-    return this.users.filter(user => (user.role ?? '').toUpperCase() === 'TEACHER').length;
+    return this.users.filter(user => this.getUserRoles(user).includes(Role.TEACHER)).length;
   }
 
   get totalStudents(): number {
-    return this.users.filter(user => (user.role ?? '').toUpperCase() === 'STUDENT').length;
+    return this.users.filter(user => this.getUserRoles(user).includes(Role.STUDENT)).length;
   }
 
   toggleStatus(user: User) {
@@ -58,6 +61,23 @@ export class Users implements OnInit {
 
   removeUser(user: User) {
     this.users = this.users.filter(item => item.id !== user.id);
+  }
+
+  editUser(user: User) {
+    this.errorMessage = `Edit requested for ${this.getFullName(user)}.`;
+  }
+
+  openAddUserForm() {
+    this.showUserForm = true;
+  }
+
+  closeAddUserForm() {
+    this.showUserForm = false;
+  }
+
+  onUserSaved(user: User) {
+    this.users = [user, ...this.users.filter(item => item.id !== user.id)];
+    this.showUserForm = false;
   }
 
   private loadUsers() {
@@ -83,21 +103,9 @@ export class Users implements OnInit {
     return `${firstName} ${lastName}`.trim() || 'Unknown User';
   }
 
-  getRoleLabel(role?: string | null): string {
-    const normalized = (role ?? '').trim().toUpperCase();
-
-    switch (normalized) {
-      case 'SYSTEM_ADMIN':
-        return 'System Admin';
-      case 'SCHOOL_ADMIN':
-        return 'School Admin';
-      case 'TEACHER':
-        return 'Teacher';
-      case 'STUDENT':
-        return 'Student';
-      default:
-        return 'Unknown';
-    }
+  getRoleLabels(user: User): string {
+    const labels = this.getUserRoles(user).map(role => this.formatRole(role));
+    return labels.length ? labels.join(', ') : 'Unknown';
   }
 
   getStatusLabel(status?: string | null): 'Active' | 'Inactive' | 'Pending' | 'Deleted' {
@@ -114,6 +122,31 @@ export class Users implements OnInit {
         return 'Deleted';
       default:
         return 'Inactive';
+    }
+  }
+
+  private getUserRoles(user: User): Role[] {
+    if (user.roles && user.roles.length > 0) {
+      return user.roles;
+    }
+    if (user.role) {
+      return [user.role];
+    }
+    return [];
+  }
+
+  private formatRole(role: Role): string {
+    switch (role) {
+      case Role.SYSTEM_ADMIN:
+        return 'System Admin';
+      case Role.SCHOOL_ADMIN:
+        return 'School Admin';
+      case Role.TEACHER:
+        return 'Teacher';
+      case Role.STUDENT:
+        return 'Student';
+      default:
+        return 'Unknown';
     }
   }
 }

@@ -10,7 +10,9 @@ export interface User {
   lastName?: string | null;
   email?: string | null;
   phone?: string | null;
+  password?: string | null;
   role?: Role | null;
+  roles?: Role[] | null;
   status?: Status | null;
   schoolIds?: number[];
   schoolNames?: string[];
