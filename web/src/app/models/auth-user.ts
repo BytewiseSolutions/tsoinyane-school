@@ -6,4 +6,5 @@ export interface AuthUser {
   title?: string;
   role: string;
   roles?: string[];
+  schoolIds?: number[];
 }

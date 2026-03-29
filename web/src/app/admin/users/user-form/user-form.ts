@@ -98,8 +98,8 @@ export class UserForm implements OnInit {
     };
 
     const request$ = this.isEdit
-      ? this.backendService.put<User, User>(`users/${payload.id}`, payload)
-      : this.backendService.post<User, User>('users', payload);
+      ? this.backendService.put<User, User>(`user/${payload.id}`, payload)
+      : this.backendService.post<User, User>('user', payload);
 
     request$.subscribe({
       next: (savedUser) => {

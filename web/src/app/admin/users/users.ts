@@ -4,6 +4,7 @@ import { BackendService } from '../../util/backend.service';
 import { User } from './user';
 import { Role } from './role';
 import { Status } from './status';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-users',
@@ -17,7 +18,13 @@ export class Users implements OnInit {
   isLoading = false;
   errorMessage = '';
   showUserForm = false;
+  isProcessing = false;
   editingUser: User | null = null;
+  showDeleteDialog = false;
+  userToDelete: User | null = null;
+  showStatusDialog = false;
+  userToToggleStatus: User | null = null;
+  pendingStatus: Status = Status.INACTIVE;
   users: User[] = [];
 
   constructor(private backendService: BackendService) {}
@@ -56,12 +63,91 @@ export class Users implements OnInit {
   }
 
   toggleStatus(user: User) {
+    if (!user.id || this.isProcessing) {
+      return;
+    }
+
     const current = user.status;
-    user.status = current === Status.ACTIVE ? Status.INACTIVE : Status.ACTIVE;
+    this.pendingStatus = current === Status.ACTIVE ? Status.INACTIVE : Status.ACTIVE;
+    this.userToToggleStatus = user;
+    this.showStatusDialog = true;
+  }
+
+  cancelToggleStatus() {
+    this.userToToggleStatus = null;
+    this.showStatusDialog = false;
+  }
+
+  confirmToggleStatus() {
+    if (!this.userToToggleStatus?.id || this.isProcessing) {
+      return;
+    }
+
+    const targetUser = this.userToToggleStatus;
+
+    const payload: User = {
+      ...targetUser,
+      password: null,
+      status: this.pendingStatus,
+    };
+
+    this.isProcessing = true;
+    this.errorMessage = '';
+
+    this.backendService.put<User, User>(`user/${targetUser.id}`, payload)
+      .pipe(finalize(() => {
+        this.isProcessing = false;
+      }))
+      .subscribe({
+        next: (updatedUser) => {
+          this.users = this.users.map(item => (item.id === updatedUser.id ? updatedUser : item));
+          this.cancelToggleStatus();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to update user status.';
+          this.cancelToggleStatus();
+        },
+      });
   }
 
   removeUser(user: User) {
-    this.users = this.users.filter(item => item.id !== user.id);
+    if (!user.id || this.isProcessing) {
+      return;
+    }
+
+    this.userToDelete = user;
+    this.showDeleteDialog = true;
+  }
+
+  cancelDeleteUser() {
+    this.userToDelete = null;
+    this.showDeleteDialog = false;
+  }
+
+  confirmDeleteUser() {
+    if (!this.userToDelete?.id || this.isProcessing) {
+      return;
+    }
+
+    const targetUser = this.userToDelete;
+
+    this.isProcessing = true;
+    this.errorMessage = '';
+
+    this.backendService.delete<void>(`user/${targetUser.id}`)
+      .pipe(finalize(() => {
+        this.isProcessing = false;
+      }))
+      .subscribe({
+        next: () => {
+          this.users = this.users.filter(item => item.id !== targetUser.id);
+          this.cancelDeleteUser();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to remove user.';
+          this.cancelDeleteUser();
+        },
+      });
   }
 
   editUser(user: User) {
@@ -92,7 +178,7 @@ export class Users implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    this.backendService.get<User[]>('users').subscribe({
+    this.backendService.get<User[]>('user').subscribe({
       next: (response) => {
         this.users = response;
       },

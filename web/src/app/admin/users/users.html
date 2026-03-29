@@ -104,3 +104,37 @@
 @if (showUserForm) {
   <app-user-form [existingUser]="editingUser" (closed)="closeAddUserForm()" (saved)="onUserSaved($event)"></app-user-form>
 }
+
+@if (showDeleteDialog && userToDelete) {
+  <div class="confirm-overlay" (click)="cancelDeleteUser()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete User</h3>
+      <p>Are you sure you want to delete <strong>{{ getFullName(userToDelete) }}</strong>?</p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelDeleteUser()">Cancel</button>
+        <button type="button" class="delete-btn" [disabled]="isProcessing" (click)="confirmDeleteUser()">
+          {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showStatusDialog && userToToggleStatus) {
+  <div class="confirm-overlay" (click)="cancelToggleStatus()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>{{ pendingStatus === 'INACTIVE' ? 'Deactivate User' : 'Activate User' }}</h3>
+      <p>
+        Are you sure you want to
+        <strong>{{ pendingStatus === 'INACTIVE' ? 'deactivate' : 'activate' }}</strong>
+        <strong>{{ getFullName(userToToggleStatus) }}</strong>?
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelToggleStatus()">Cancel</button>
+        <button type="button" class="status-btn" [disabled]="isProcessing" (click)="confirmToggleStatus()">
+          {{ isProcessing ? 'Saving...' : (pendingStatus === 'INACTIVE' ? 'Deactivate' : 'Activate') }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

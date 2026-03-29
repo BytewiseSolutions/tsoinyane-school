@@ -1,6 +1,13 @@
 import { Component } from '@angular/core';
 import { SidebarStateService } from '../sidebar-state';
 import { AuthUser } from '../../../models/auth-user';
+import { BackendService } from '../../../util/backend.service';
+import { HttpErrorResponse } from '@angular/common/http';
+
+interface SchoolOption {
+  id: number;
+  name: string;
+}
 
 @Component({
   selector: 'app-header',
@@ -11,6 +18,9 @@ import { AuthUser } from '../../../models/auth-user';
 export class AdminHeader {
   notificationsOpen = false;
   currentUserRole = 'Administrator';
+  isSystemAdmin = false;
+  schools: SchoolOption[] = [];
+  selectedSchoolId: number | null = null;
 
   notifications = [
     { icon: 'fa-user-graduate', title: 'New Student Enrolled', message: 'Refiloe Mofokeng has been added to Form D.', time: '2 mins ago' },
@@ -29,10 +39,16 @@ export class AdminHeader {
     securityAlerts: true,
   };
 
-  constructor(private sidebarState: SidebarStateService) {}
+  constructor(
+    private sidebarState: SidebarStateService,
+    private backendService: BackendService
+  ) {}
 
   ngOnInit() {
     this.loadCurrentUser();
+    if (this.isSystemAdmin) {
+      this.loadSchoolsForContext();
+    }
   }
 
   toggleSidebar() {
@@ -55,12 +71,31 @@ export class AdminHeader {
 
     try {
       const user = JSON.parse(raw) as AuthUser;
-      if (user.role) {
-        this.currentUserRole = this.formatRole(user.role);
+      const primaryRole = this.resolvePrimaryRole(user);
+      if (primaryRole) {
+        this.currentUserRole = this.formatRole(primaryRole);
       }
+      this.isSystemAdmin = this.hasSystemAdminRole(user);
     } catch {
   
     }
+  }
+
+  onSchoolChange() {
+    const school = this.schools.find(item => item.id === Number(this.selectedSchoolId));
+    const storage = this.getActiveStorage();
+    if (!storage) {
+      return;
+    }
+
+    if (this.selectedSchoolId == null || !school) {
+      storage.removeItem('selectedSchoolId');
+      storage.removeItem('selectedSchoolName');
+      return;
+    }
+
+    storage.setItem('selectedSchoolId', String(school.id));
+    storage.setItem('selectedSchoolName', school.name);
   }
 
   private formatRole(role: string): string {
@@ -69,5 +104,71 @@ export class AdminHeader {
       .split('_')
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
+  }
+
+  private hasSystemAdminRole(user: AuthUser): boolean {
+    if ((user.role ?? '').toUpperCase() === 'SYSTEM_ADMIN') {
+      return true;
+    }
+
+    return (user.roles ?? []).map(role => role.toUpperCase()).includes('SYSTEM_ADMIN');
+  }
+
+  private resolvePrimaryRole(user: AuthUser): string {
+    if (user.role) {
+      return user.role;
+    }
+
+    if (user.roles && user.roles.length > 0) {
+      return user.roles[0];
+    }
+
+    return 'ADMINISTRATOR';
+  }
+
+  private loadSchoolsForContext() {
+    this.backendService.get<SchoolOption[]>('school').subscribe({
+      next: (schools) => {
+        this.schools = schools ?? [];
+        this.selectDefaultSchool();
+      },
+      error: (_: HttpErrorResponse) => {
+        this.schools = [];
+      },
+    });
+  }
+
+  private selectDefaultSchool() {
+    if (!this.schools.length) {
+      return;
+    }
+
+    const storage = this.getActiveStorage();
+    const savedSchoolId = storage?.getItem('selectedSchoolId');
+    if (savedSchoolId) {
+      const numericId = Number(savedSchoolId);
+      const exists = this.schools.some(school => school.id === numericId);
+      if (exists) {
+        this.selectedSchoolId = numericId;
+        return;
+      }
+    }
+
+    const defaultSchool = this.schools.find(
+      school => school.name.trim().toLowerCase() === 'tsoinyane primary school'
+    ) ?? this.schools[0];
+
+    this.selectedSchoolId = defaultSchool.id;
+    this.onSchoolChange();
+  }
+
+  private getActiveStorage(): Storage | null {
+    if (localStorage.getItem('user')) {
+      return localStorage;
+    }
+    if (sessionStorage.getItem('user')) {
+      return sessionStorage;
+    }
+    return null;
   }
 }

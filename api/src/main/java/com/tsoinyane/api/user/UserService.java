@@ -133,6 +133,12 @@ public class UserService {
         return toDto(savedUser);
     }
 
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        userRepository.delete(user);
+    }
+
     @PostConstruct
     public void createDefaultAdmin() {
         User admin = userRepository.findByEmail("admin@tsoinyane.co.ls")
