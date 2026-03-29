@@ -26,6 +26,7 @@ import { Dashboard } from './admin/dashboard/dashboard';
 import { Users } from './admin/users/users';
 import { UserForm } from './admin/users/user-form/user-form';
 import { UserImportComponent } from './admin/users/import/import';
+import { UserDetails } from './admin/users/user-details/user-details';
 import { AdminGrades } from './admin/grades/grades';
 import { GradeForm } from './admin/grades/grade-form/grade-form';
 import { GradeImportComponent } from './admin/grades/import/import';
@@ -59,6 +60,7 @@ import { EventForm } from './admin/events/event-form/event-form';
     Users,
     UserForm,
     UserImportComponent,
+    UserDetails,
     AdminGrades,
     GradeForm,
     GradeImportComponent,

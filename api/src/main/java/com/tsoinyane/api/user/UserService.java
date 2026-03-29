@@ -40,6 +40,12 @@ public class UserService {
                 .toList();
     }
 
+    public UserDto getUserById(Long id) {
+        User user = userRepository.findWithSchoolsAndRolesById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        return toDto(user);
+    }
+
     @Transactional
     public UserDto createUser(UserDto request) {
         String normalizedEmail = normalizeEmail(request.getEmail());

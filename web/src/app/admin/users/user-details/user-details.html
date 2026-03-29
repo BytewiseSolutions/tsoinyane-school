@@ -1,0 +1,60 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back to Users</button>
+      <h2>{{ fullName }}</h2>
+      <p>View the selected user's details in one place.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading user details...</div>
+  } @else if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  } @else if (user) {
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Status</span>
+        <strong [class]="'status ' + statusLabel.toLowerCase()">{{ statusLabel }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Roles</span>
+        <strong>{{ roleLabels }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Student ID</span>
+        <strong>{{ user.studentId || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Grade</span>
+        <strong>{{ user.gradeName || 'N/A' }}</strong>
+      </div>
+    </div>
+
+    <div class="details-grid">
+      <section class="details-card">
+        <h3>Personal Information</h3>
+        <div class="detail-row">
+          <span>Name</span>
+          <strong>{{ displayName }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Phone</span>
+          <strong>{{ user.phone || 'N/A' }}</strong>
+        </div>
+      </section>
+
+      <section class="details-card">
+        <h3>Account Information</h3>
+        <div class="detail-row">
+          <span>Email</span>
+          <strong>{{ user.email || 'N/A' }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Schools</span>
+          <strong>{{ user.schoolNames?.length ? user.schoolNames?.join(', ') : 'N/A' }}</strong>
+        </div>
+      </section>
+    </div>
+  }
+</div>

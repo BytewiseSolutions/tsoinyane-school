@@ -4,6 +4,8 @@ import { Title } from './title';
 
 export interface User {
   id: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   studentId?: string | null;
   title?: Title | null;
   firstName?: string | null;
