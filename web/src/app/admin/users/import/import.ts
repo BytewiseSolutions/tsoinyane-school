@@ -11,6 +11,7 @@ import { Status } from '../status';
 import { Title } from '../title';
 
 interface ImportRow {
+  rowNumber: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -28,6 +29,7 @@ interface ValidationResult {
   firstName: string;
   lastName: string;
   cellphone: string;
+  location: string;
   message: string;
 }
 
@@ -176,21 +178,24 @@ export class UserImportComponent implements OnInit, OnDestroy {
           const payload = this.mapImportRowToUser(row, schoolGrades);
           this.pendingUsers.push(payload);
           this.validationResults.push({
-            rowNumber: index + 2,
+            rowNumber: row.rowNumber,
             status: 'valid',
             firstName: row.firstName.trim(),
             lastName: row.lastName.trim(),
             cellphone: row.phone?.trim() || '',
+            location: 'OK',
             message: 'Ready to import.',
           });
         } catch (error) {
+          const details = this.normalizeValidationError(error);
           this.validationResults.push({
-            rowNumber: index + 2,
+            rowNumber: row.rowNumber,
             status: 'invalid',
             firstName: row.firstName.trim(),
             lastName: row.lastName.trim(),
             cellphone: row.phone?.trim() || '',
-            message: error instanceof Error ? error.message : 'Validation failed.',
+            location: details.location,
+            message: details.message,
           });
         }
       });
@@ -250,12 +255,13 @@ export class UserImportComponent implements OnInit, OnDestroy {
     const worksheet = workbook.Sheets[firstSheetName];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
 
-    return rows.map(row => {
+    return rows.map((row, index) => {
       const normalized = Object.fromEntries(
         Object.entries(row).map(([key, value]) => [key.trim().toLowerCase(), String(value ?? '').trim()])
       );
 
       return {
+        rowNumber: index + 2,
         firstName: normalized['firstname'] || normalized['first_name'] || '',
         lastName: normalized['lastname'] || normalized['last_name'] || '',
         email: normalized['email'] || '',
@@ -275,13 +281,35 @@ export class UserImportComponent implements OnInit, OnDestroy {
     const email = row.email.trim().toLowerCase();
     const password = row.password.trim();
 
-    if (!firstName || !lastName || !email || !password) {
-      throw new Error('Each import row must include firstName, lastName, email, and password.');
+    const requiredErrors: string[] = [];
+    const locations: string[] = [];
+
+    if (!firstName) {
+      requiredErrors.push('First Name is required');
+      locations.push(this.cellRef('A', row.rowNumber));
+    }
+    if (!lastName) {
+      requiredErrors.push('Last Name is required');
+      locations.push(this.cellRef('B', row.rowNumber));
+    }
+    if (!email) {
+      requiredErrors.push('Email is required');
+      locations.push(this.cellRef('C', row.rowNumber));
+    }
+    if (!password) {
+      requiredErrors.push('Password is required');
+      locations.push(this.cellRef('D', row.rowNumber));
+    }
+
+    if (requiredErrors.length) {
+      throw this.validationError(locations, requiredErrors.join('. '));
     }
 
     const roles = this.parseRoles(row.roles);
     const isStudent = roles.includes(Role.STUDENT);
-    const gradeId = isStudent ? this.resolveGradeId(row.grade, grades) : null;
+    const isTeacher = roles.includes(Role.TEACHER);
+    const gradeId = isStudent ? this.resolveStudentGradeId(row.grade, grades, row.rowNumber) : null;
+    const teacherGradeIds = isTeacher ? this.resolveTeacherGradeIds(row.grade, grades, row.rowNumber) : [];
 
     return {
       id: 0,
@@ -295,6 +323,7 @@ export class UserImportComponent implements OnInit, OnDestroy {
       status: this.parseStatus(row.status),
       schoolIds: this.selectedSchoolId ? [this.selectedSchoolId] : [],
       gradeId,
+      teacherGradeIds,
     };
   }
 
@@ -303,38 +332,118 @@ export class UserImportComponent implements OnInit, OnDestroy {
       return [Role.STUDENT];
     }
 
-    const roles = value
+    const rawRoles = value
       .split(/[|,;]+/)
       .map(role => role.trim().toUpperCase().replace(/\s+/g, '_'))
-      .filter(role => role.length > 0)
-      .map(role => role as Role)
-      .filter(role => Object.values(Role).includes(role));
+      .filter(role => role.length > 0);
+
+    const invalidRoles = rawRoles.filter(role => !Object.values(Role).includes(role as Role));
+    if (invalidRoles.length) {
+      throw this.validationError(['G'], `Invalid role value(s): ${invalidRoles.join(', ')}`);
+    }
+
+    const roles = rawRoles.map(role => role as Role);
 
     return roles.length ? Array.from(new Set(roles)) : [Role.STUDENT];
   }
 
   private parseStatus(value?: string): Status {
-    const normalized = value?.trim().toUpperCase() as Status | undefined;
-    return normalized && Object.values(Status).includes(normalized) ? normalized : Status.ACTIVE;
+    if (!value?.trim()) {
+      return Status.ACTIVE;
+    }
+
+    const normalized = value.trim().toUpperCase() as Status;
+    if (!Object.values(Status).includes(normalized)) {
+      throw this.validationError(['H'], `Invalid status "${value}"`);
+    }
+
+    return normalized;
   }
 
   private parseTitle(value?: string): Title | null {
-    const normalized = value?.trim() as Title | undefined;
-    return normalized && Object.values(Title).includes(normalized) ? normalized : null;
+    if (!value?.trim()) {
+      return null;
+    }
+
+    const normalized = value.trim() as Title;
+    if (!Object.values(Title).includes(normalized)) {
+      throw this.validationError(['E'], `Invalid title "${value}"`);
+    }
+
+    return normalized;
   }
 
-  private resolveGradeId(value: string | undefined, grades: Grade[]): number {
+  private resolveStudentGradeId(value: string | undefined, grades: Grade[], rowNumber: number): number {
     const gradeName = value?.trim().toLowerCase();
     if (!gradeName) {
-      throw new Error('Student import rows must include a grade column.');
+      throw this.validationError([this.cellRef('I', rowNumber)], 'Student rows must include a grade');
     }
 
     const match = grades.find(grade => grade.name.trim().toLowerCase() === gradeName);
     if (!match?.id) {
-      throw new Error(`Grade "${value}" was not found for the selected school.`);
+      throw this.validationError([this.cellRef('I', rowNumber)], `Grade "${value}" was not found for the selected school`);
     }
 
     return match.id;
+  }
+
+  private resolveTeacherGradeIds(value: string | undefined, grades: Grade[], rowNumber: number): number[] {
+    const rawValue = value?.trim() ?? '';
+    if (!rawValue) {
+      throw this.validationError([this.cellRef('I', rowNumber)], 'Teacher rows must include at least one grade');
+    }
+
+    const requestedGrades = rawValue
+      .split(/[|,;]+/)
+      .map(item => item.trim())
+      .filter(item => item.length > 0);
+
+    if (!requestedGrades.length) {
+      throw this.validationError([this.cellRef('I', rowNumber)], 'Teacher rows must include at least one grade');
+    }
+
+    const resolvedGradeIds: number[] = [];
+    const missingGrades: string[] = [];
+
+    for (const requestedGrade of requestedGrades) {
+      const match = grades.find(grade => grade.name.trim().toLowerCase() === requestedGrade.toLowerCase());
+      if (!match?.id) {
+        missingGrades.push(requestedGrade);
+      } else {
+        resolvedGradeIds.push(match.id);
+      }
+    }
+
+    if (missingGrades.length) {
+      throw this.validationError(
+        [this.cellRef('I', rowNumber)],
+        `Teacher grade(s) not found for the selected school: ${missingGrades.join(', ')}`
+      );
+    }
+
+    return Array.from(new Set(resolvedGradeIds));
+  }
+
+  private validationError(locations: string[] | string, message: string): Error {
+    const values = Array.isArray(locations) ? locations : [locations];
+    return new Error(`${values.join(', ')}::${message}`);
+  }
+
+  private normalizeValidationError(error: unknown): { location: string; message: string } {
+    if (!(error instanceof Error)) {
+      return { location: '-', message: 'Validation failed.' };
+    }
+
+    const [location, message] = error.message.split('::', 2);
+    if (!message) {
+      return { location: '-', message: error.message };
+    }
+
+    return { location, message };
+  }
+
+  private cellRef(column: string, rowNumber: number): string {
+    return `${column}${rowNumber}`;
   }
 
   private nullIfBlank(value?: string): string | null {

@@ -15,8 +15,11 @@ import { SchoolContextService } from '../layout/school-context';
 })
 export class Users implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
+  readonly pageSizeOptions = [10, 25, 50];
   searchTerm = '';
   roleFilter: 'All' | 'SYSTEM_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' = 'All';
+  pageSize = 10;
+  currentPage = 1;
   isLoading = false;
   errorMessage = '';
   showUserForm = false;
@@ -64,6 +67,31 @@ export class Users implements OnInit, OnDestroy {
         || this.getRoleLabels(user).toLowerCase().includes(query);
       return roleMatch && schoolMatch && queryMatch;
     });
+  }
+
+  get paginatedUsers(): User[] {
+    const start = (this.safeCurrentPage - 1) * this.pageSize;
+    return this.filteredUsers.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredUsers.length / this.pageSize));
+  }
+
+  get safeCurrentPage(): number {
+    return Math.min(this.currentPage, this.totalPages);
+  }
+
+  get pageStart(): number {
+    if (!this.filteredUsers.length) {
+      return 0;
+    }
+
+    return (this.safeCurrentPage - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.safeCurrentPage * this.pageSize, this.filteredUsers.length);
   }
 
   get totalUsers(): number {
@@ -192,6 +220,26 @@ export class Users implements OnInit, OnDestroy {
       : [user, ...this.users];
     this.showUserForm = false;
     this.editingUser = null;
+  }
+
+  onFiltersChanged(): void {
+    this.currentPage = 1;
+  }
+
+  onPageSizeChanged(): void {
+    this.currentPage = 1;
+  }
+
+  goToPreviousPage(): void {
+    if (this.safeCurrentPage > 1) {
+      this.currentPage = this.safeCurrentPage - 1;
+    }
+  }
+
+  goToNextPage(): void {
+    if (this.safeCurrentPage < this.totalPages) {
+      this.currentPage = this.safeCurrentPage + 1;
+    }
   }
 
   private loadUsers() {
