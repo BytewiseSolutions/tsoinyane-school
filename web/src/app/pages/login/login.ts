@@ -8,9 +8,15 @@ import { Router } from '@angular/router';
   styleUrl: './login.scss',
 })
 export class Login {
+  rememberMe = false;
+
   constructor(private router: Router) {}
 
   onLogin() {
     this.router.navigate(['/admin/dashboard']);
+  }
+
+  onForgotPassword() {
+    this.router.navigate(['/forgot-password']);
   }
 }

@@ -5,6 +5,7 @@ import { About } from './pages/about/about';
 import { Contact } from './pages/contact/contact';
 import { Subjects } from './pages/subjects/subjects';
 import { Login } from './pages/login/login';
+import { ForgotPassword } from './pages/forgot-password/forgot-password';
 import { PrivacyPolicy } from './pages/privacy-policy/privacy-policy';
 import { TermsConditions } from './pages/terms-conditions/terms-conditions';
 import { Accessibility } from './pages/accessibility/accessibility';
@@ -28,6 +29,7 @@ const routes: Routes = [
   { path: 'contact', component: Contact },
   { path: 'subjects', component: Subjects },
   { path: 'login', component: Login },
+  { path: 'forgot-password', component: ForgotPassword },
   { path: 'privacy-policy', component: PrivacyPolicy },
   { path: 'terms-conditions', component: TermsConditions },
   { path: 'accessibility', component: Accessibility },

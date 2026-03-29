@@ -12,6 +12,14 @@
         <label>Password</label>
         <input type="password" placeholder="Enter your password" />
       </div>
+
+      <div class="form-options">
+        <label class="remember-me">
+          <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
+          <span>Remember Me</span>
+        </label>
+        <button type="button" class="forgot-password" (click)="onForgotPassword()">Forgot Password?</button>
+      </div>
       <button type="submit">Sign In</button>
     </form>
   </div>

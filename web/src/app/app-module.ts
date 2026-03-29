@@ -11,6 +11,7 @@ import { About } from './pages/about/about';
 import { Contact } from './pages/contact/contact';
 import { Subjects } from './pages/subjects/subjects';
 import { Login } from './pages/login/login';
+import { ForgotPassword } from './pages/forgot-password/forgot-password';
 import { NotFound } from './pages/not-found/not-found';
 import { PrivacyPolicy } from './pages/privacy-policy/privacy-policy';
 import { TermsConditions } from './pages/terms-conditions/terms-conditions';
@@ -42,6 +43,7 @@ import { EventForm } from './admin/events/event-form/event-form';
     Contact,
     Subjects,
     Login,
+    ForgotPassword,
     NotFound,
     PrivacyPolicy,
     TermsConditions,
