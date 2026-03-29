@@ -1,0 +1,81 @@
+<div class="admin-page">
+  <div class="page-header">
+    <h2>Users</h2>
+    <p>Manage System Admins, Teachers, and Students from one place.</p>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Users</h4>
+      <p>{{ totalUsers }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Admins</h4>
+      <p>{{ totalAdmins }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Teachers</h4>
+      <p>{{ totalTeachers }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Students</h4>
+      <p>{{ totalStudents }}</p>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="toolbar">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        name="searchTerm"
+        placeholder="Search by name, email or role..."
+      />
+      <select [(ngModel)]="roleFilter" name="roleFilter">
+        <option value="All">All Roles</option>
+        <option value="System Admin">System Admin</option>
+        <option value="Teacher">Teacher</option>
+        <option value="Student">Student</option>
+      </select>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Full Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of filteredUsers; track user.id) {
+          <tr>
+            <td>{{ user.fullName }}</td>
+            <td>{{ user.email }}</td>
+            <td><span class="role-tag">{{ user.role }}</span></td>
+            <td>
+              <span class="badge" [class.active]="user.status === 'Active'" [class.inactive]="user.status === 'Inactive'">
+                {{ user.status }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="action-btn" type="button" (click)="toggleStatus(user)">
+                {{ user.status === 'Active' ? 'Deactivate' : 'Activate' }}
+              </button>
+              <button class="action-btn danger" type="button" (click)="removeUser(user)">
+                Remove
+              </button>
+            </td>
+          </tr>
+        }
+        @if (filteredUsers.length === 0) {
+          <tr>
+            <td colspan="5" class="empty-state">No users found for the selected filter.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

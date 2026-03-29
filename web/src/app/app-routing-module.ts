@@ -11,13 +11,10 @@ import { TermsConditions } from './pages/terms-conditions/terms-conditions';
 import { Accessibility } from './pages/accessibility/accessibility';
 import { Dashboard } from './admin/dashboard/dashboard';
 import { AdminMain } from './admin/layout/main/main';
-import { Students } from './admin/students/students';
-import { Teachers } from './admin/teachers/teachers';
+import { Users } from './admin/users/users';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
-import { Roles } from './admin/roles/roles';
-import { Security } from './admin/security/security';
 import { Maintenance } from './admin/maintenance/maintenance';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
@@ -39,13 +36,10 @@ const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminMain },
-      { path: 'students', component: Students },
-      { path: 'teachers', component: Teachers },
+      { path: 'users', component: Users },
       { path: 'subjects', component: AdminSubjects },
       { path: 'events', component: Events },
       { path: 'notifications', component: Notifications },
-      { path: 'roles', component: Roles },
-      { path: 'security', component: Security },
       { path: 'maintenance', component: Maintenance },
       { path: 'settings', component: Settings },
     ]

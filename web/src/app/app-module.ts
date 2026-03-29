@@ -22,15 +22,11 @@ import { AdminHeader } from './admin/layout/header/header';
 import { AdminMain } from './admin/layout/main/main';
 import { AdminFooter } from './admin/layout/footer/footer';
 import { Dashboard } from './admin/dashboard/dashboard';
-import { Students } from './admin/students/students';
-import { Teachers } from './admin/teachers/teachers';
+import { Users } from './admin/users/users';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
-import { Security } from './admin/security/security';
 import { Settings } from './admin/settings/settings';
-import { StudentForm } from './admin/students/student-form/student-form';
-import { TeacherForm } from './admin/teachers/teacher-form/teacher-form';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { EventForm } from './admin/events/event-form/event-form';
 
@@ -54,15 +50,11 @@ import { EventForm } from './admin/events/event-form/event-form';
     AdminMain,
     AdminFooter,
     Dashboard,
-    Students,
-    Teachers,
+    Users,
     AdminSubjects,
     Events,
     Notifications,
-    Security,
     Settings,
-    StudentForm,
-    TeacherForm,
     SubjectForm,
     EventForm
   ],

@@ -69,8 +69,6 @@ public class AuthService {
     }
 
     public String forgotPassword(ForgotPasswordRequest request) {
-        // Future enhancement: generate and email reset token.
-        // Keep response generic to avoid user enumeration.
         return "If this email exists, reset instructions have been sent.";
     }
 }
