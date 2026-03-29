@@ -25,6 +25,7 @@ export class Login {
 
   onLogin() {
     this.errorMessage = '';
+    this.clearStoredAuth();
 
     const payload: LoginRequest = {
       email: this.email.trim().toLowerCase(),
@@ -59,5 +60,14 @@ export class Login {
 
   onForgotPassword() {
     this.router.navigate(['/forgot-password']);
+  }
+
+  private clearStoredAuth() {
+    for (const storage of [localStorage, sessionStorage]) {
+      storage.removeItem('accessToken');
+      storage.removeItem('tokenType');
+      storage.removeItem('expiresAt');
+      storage.removeItem('user');
+    }
   }
 }

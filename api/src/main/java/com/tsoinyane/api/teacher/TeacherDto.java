@@ -18,4 +18,6 @@ public class TeacherDto extends BaseDto {
     private String userFullName;
     private String userEmail;
     private String userPhone;
+    private java.util.List<Long> gradeIds;
+    private java.util.List<String> gradeNames;
 }

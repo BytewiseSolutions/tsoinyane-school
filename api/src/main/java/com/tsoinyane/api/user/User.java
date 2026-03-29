@@ -4,7 +4,6 @@ import com.tsoinyane.api.common.BaseEntity;
 import com.tsoinyane.api.common.Role;
 import com.tsoinyane.api.common.Status;
 import com.tsoinyane.api.common.Title;
-import com.tsoinyane.api.grade.Grade;
 import com.tsoinyane.api.school.School;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,8 +18,8 @@ import java.util.Set;
 @NoArgsConstructor
 @Entity
 @SuperBuilder
-@ToString(callSuper = true, exclude = {"schools", "teacherGrades"})
-@EqualsAndHashCode(callSuper = true, exclude = {"schools", "teacherGrades"})
+@ToString(callSuper = true, exclude = "schools")
+@EqualsAndHashCode(callSuper = true, exclude = "schools")
 public class User extends BaseEntity {
 
     private String studentId;
@@ -52,15 +51,6 @@ public class User extends BaseEntity {
     )
     @Builder.Default
     private Set<School> schools = new HashSet<>();
-
-    @ManyToMany
-    @JoinTable(
-            name = "teacher_grade",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "grade_id")
-    )
-    @Builder.Default
-    private Set<Grade> teacherGrades = new HashSet<>();
 
     public String getDisplayName() {
         return (this.title != null ? this.title + " " : "")
