@@ -1,6 +1,10 @@
 .admin-page {
   .page-header {
     margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
 
     h2 {
       margin: 0;
@@ -13,6 +17,26 @@
       color: #5f6e8f;
       font-size: 14px;
     }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .import-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    border: 1px solid #ccd7ee;
+    background: #fff;
+    color: #2b3f66;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   .summary-grid {
@@ -113,6 +137,16 @@
     color: #c03636;
   }
 
+  .badge.pending {
+    background: #fff4de;
+    color: #9b6400;
+  }
+
+  .badge.deleted {
+    background: #ece8ef;
+    color: #6b5a79;
+  }
+
   .role-tag {
     display: inline-block;
     border-radius: 999px;
@@ -121,6 +155,68 @@
     font-weight: 700;
     background: #eef3ff;
     color: #29488f;
+  }
+
+  .grade-info {
+    color: #405372;
+    max-width: 240px;
+  }
+
+  .pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-top: 1px solid #edf2fa;
+    background: #fbfcff;
+  }
+
+  .pagination-summary,
+  .page-indicator,
+  .page-size span {
+    color: #5f6e8f;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .page-size {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    select {
+      border: 1px solid #ccd6f0;
+      border-radius: 6px;
+      padding: 7px 10px;
+      background: #fff;
+      color: #2f3f63;
+      font-size: 13px;
+      outline: none;
+    }
+  }
+
+  .page-btn {
+    border: 1px solid #ccd7ee;
+    background: #fff;
+    color: #2b3f66;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .page-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .actions {
@@ -137,6 +233,7 @@
     border: 1px solid #ccd6f0;
     background: var(--white);
     color: #2f3f63;
+    text-decoration: none;
     border-radius: 6px;
     padding: 5px 10px;
     font-size: 12px;
@@ -149,10 +246,87 @@
     color: #b32f2f;
   }
 
+  .table-card .actions .action-btn.edit {
+    border-color: #c8d8ff;
+    color: #1f4db6;
+  }
+
   .empty-state {
     text-align: center;
     color: #6d7a97;
     padding: 20px;
+  }
+}
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 24, 46, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.confirm-card {
+  width: min(420px, 100%);
+  background: #ffffff;
+  border: 1px solid #d9e2f2;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(11, 24, 46, 0.22);
+  padding: 18px;
+
+  h3 {
+    margin: 0 0 8px;
+    color: #1f2f52;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0;
+    color: #4c5c7f;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+}
+
+.confirm-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  button {
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .cancel-btn {
+    border: 1px solid #ccd7ee;
+    background: #fff;
+    color: #2b3f66;
+  }
+
+  .delete-btn {
+    border: 1px solid #d87a7a;
+    background: #b83636;
+    color: #fff;
+  }
+
+  .status-btn {
+    border: 1px solid #4a74d1;
+    background: #2d5fc7;
+    color: #fff;
+  }
+
+  .delete-btn:disabled,
+  .status-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 }
 
@@ -166,6 +340,16 @@
 
 @media (max-width: 640px) {
   .admin-page {
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .header-actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
     .summary-grid {
       grid-template-columns: 1fr;
     }
@@ -173,6 +357,11 @@
     .toolbar {
       flex-direction: column;
       align-items: stretch;
+    }
+
+    .pagination-bar {
+      flex-direction: column;
+      align-items: flex-start;
     }
 
     .actions {

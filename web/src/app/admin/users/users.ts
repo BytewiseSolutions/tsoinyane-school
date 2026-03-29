@@ -1,14 +1,11 @@
-import { Component } from '@angular/core';
-
-type UserRole = 'System Admin' | 'Teacher' | 'Student';
-
-interface UserRow {
-  id: number;
-  fullName: string;
-  email: string;
-  role: UserRole;
-  status: 'Active' | 'Inactive';
-}
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { BackendService } from '../../util/backend.service';
+import { User } from './user';
+import { Role } from './role';
+import { Status } from './status';
+import { finalize, Subject, takeUntil } from 'rxjs';
+import { SchoolContextService } from '../layout/school-context';
 
 @Component({
   selector: 'app-users',
@@ -16,29 +13,85 @@ interface UserRow {
   templateUrl: './users.html',
   styleUrl: './users.scss',
 })
-export class Users {
+export class Users implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+  readonly pageSizeOptions = [10, 25, 50];
   searchTerm = '';
-  roleFilter: 'All' | UserRole = 'All';
+  roleFilter: 'All' | 'SYSTEM_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' = 'All';
+  pageSize = 10;
+  currentPage = 1;
+  isLoading = false;
+  errorMessage = '';
+  showUserForm = false;
+  isProcessing = false;
+  editingUser: User | null = null;
+  showDeleteDialog = false;
+  userToDelete: User | null = null;
+  showStatusDialog = false;
+  userToToggleStatus: User | null = null;
+  pendingStatus: Status = Status.INACTIVE;
+  selectedSchoolId: number | null = null;
+  users: User[] = [];
 
-  users: UserRow[] = [
-    { id: 1, fullName: 'Lebohang Monamane', email: 'admin@tsoinyane.co.ls', role: 'System Admin', status: 'Active' },
-    { id: 2, fullName: 'Thabo Mokoena', email: 'thabo.mokoena@tsoinyane.co.ls', role: 'Teacher', status: 'Active' },
-    { id: 3, fullName: 'Mpho Pheko', email: 'mpho.pheko@tsoinyane.co.ls', role: 'Teacher', status: 'Inactive' },
-    { id: 4, fullName: 'Lineo Letsie', email: 'lineo.letsie@tsoinyane.co.ls', role: 'Student', status: 'Active' },
-    { id: 5, fullName: 'Mpho Nkosi', email: 'mpho.nkosi@tsoinyane.co.ls', role: 'Student', status: 'Inactive' },
-    { id: 6, fullName: 'Refiloe Mofokeng', email: 'refiloe.mofokeng@tsoinyane.co.ls', role: 'Student', status: 'Active' },
-  ];
+  constructor(
+    private backendService: BackendService,
+    private schoolContext: SchoolContextService
+  ) {}
 
-  get filteredUsers(): UserRow[] {
+  ngOnInit(): void {
+    this.schoolContext.selectedSchool$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(school => {
+        this.selectedSchoolId = school?.id ?? null;
+      });
+
+    this.loadUsers();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  get filteredUsers(): User[] {
     const query = this.searchTerm.trim().toLowerCase();
     return this.users.filter(user => {
-      const roleMatch = this.roleFilter === 'All' || user.role === this.roleFilter;
+      const userRoles = this.getUserRoles(user).map(role => role.toUpperCase());
+      const roleMatch = this.roleFilter === 'All' || userRoles.includes(this.roleFilter);
+      const schoolMatch = !this.selectedSchoolId
+        || !user.schoolIds?.length
+        || user.schoolIds.includes(this.selectedSchoolId);
       const queryMatch = !query
-        || user.fullName.toLowerCase().includes(query)
-        || user.email.toLowerCase().includes(query)
-        || user.role.toLowerCase().includes(query);
-      return roleMatch && queryMatch;
+        || this.getFullName(user).toLowerCase().includes(query)
+        || (user.email ?? '').toLowerCase().includes(query)
+        || this.getRoleLabels(user).toLowerCase().includes(query);
+      return roleMatch && schoolMatch && queryMatch;
     });
+  }
+
+  get paginatedUsers(): User[] {
+    const start = (this.safeCurrentPage - 1) * this.pageSize;
+    return this.filteredUsers.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredUsers.length / this.pageSize));
+  }
+
+  get safeCurrentPage(): number {
+    return Math.min(this.currentPage, this.totalPages);
+  }
+
+  get pageStart(): number {
+    if (!this.filteredUsers.length) {
+      return 0;
+    }
+
+    return (this.safeCurrentPage - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.safeCurrentPage * this.pageSize, this.filteredUsers.length);
   }
 
   get totalUsers(): number {
@@ -46,22 +99,231 @@ export class Users {
   }
 
   get totalAdmins(): number {
-    return this.users.filter(user => user.role === 'System Admin').length;
+    return this.users.filter(user => this.getUserRoles(user).includes(Role.SYSTEM_ADMIN)).length;
   }
 
   get totalTeachers(): number {
-    return this.users.filter(user => user.role === 'Teacher').length;
+    return this.users.filter(user => this.getUserRoles(user).includes(Role.TEACHER)).length;
   }
 
   get totalStudents(): number {
-    return this.users.filter(user => user.role === 'Student').length;
+    return this.users.filter(user => this.getUserRoles(user).includes(Role.STUDENT)).length;
   }
 
-  toggleStatus(user: UserRow) {
-    user.status = user.status === 'Active' ? 'Inactive' : 'Active';
+  toggleStatus(user: User) {
+    if (!user.id || this.isProcessing) {
+      return;
+    }
+
+    const current = user.status;
+    this.pendingStatus = current === Status.ACTIVE ? Status.INACTIVE : Status.ACTIVE;
+    this.userToToggleStatus = user;
+    this.showStatusDialog = true;
   }
 
-  removeUser(user: UserRow) {
-    this.users = this.users.filter(item => item.id !== user.id);
+  cancelToggleStatus() {
+    this.userToToggleStatus = null;
+    this.showStatusDialog = false;
+  }
+
+  confirmToggleStatus() {
+    if (!this.userToToggleStatus?.id || this.isProcessing) {
+      return;
+    }
+
+    const targetUser = this.userToToggleStatus;
+
+    const payload: User = {
+      ...targetUser,
+      password: null,
+      status: this.pendingStatus,
+    };
+
+    this.isProcessing = true;
+    this.errorMessage = '';
+
+    this.backendService.put<User, User>(`user/${targetUser.id}`, payload)
+      .pipe(finalize(() => {
+        this.isProcessing = false;
+      }))
+      .subscribe({
+        next: (updatedUser) => {
+          this.users = this.users.map(item => (item.id === updatedUser.id ? updatedUser : item));
+          this.cancelToggleStatus();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to update user status.';
+          this.cancelToggleStatus();
+        },
+      });
+  }
+
+  removeUser(user: User) {
+    if (!user.id || this.isProcessing) {
+      return;
+    }
+
+    this.userToDelete = user;
+    this.showDeleteDialog = true;
+  }
+
+  cancelDeleteUser() {
+    this.userToDelete = null;
+    this.showDeleteDialog = false;
+  }
+
+  confirmDeleteUser() {
+    if (!this.userToDelete?.id || this.isProcessing) {
+      return;
+    }
+
+    const targetUser = this.userToDelete;
+
+    this.isProcessing = true;
+    this.errorMessage = '';
+
+    this.backendService.delete<void>(`user/${targetUser.id}`)
+      .pipe(finalize(() => {
+        this.isProcessing = false;
+      }))
+      .subscribe({
+        next: () => {
+          this.users = this.users.filter(item => item.id !== targetUser.id);
+          this.cancelDeleteUser();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to remove user.';
+          this.cancelDeleteUser();
+        },
+      });
+  }
+
+  editUser(user: User) {
+    this.editingUser = { ...user };
+    this.showUserForm = true;
+  }
+
+  openAddUserForm() {
+    this.editingUser = null;
+    this.showUserForm = true;
+  }
+
+  closeAddUserForm() {
+    this.showUserForm = false;
+    this.editingUser = null;
+  }
+
+  onUserSaved(user: User) {
+    const exists = this.users.some(item => item.id === user.id);
+    this.users = exists
+      ? this.users.map(item => (item.id === user.id ? user : item))
+      : [user, ...this.users];
+    this.showUserForm = false;
+    this.editingUser = null;
+  }
+
+  onFiltersChanged(): void {
+    this.currentPage = 1;
+  }
+
+  onPageSizeChanged(): void {
+    this.currentPage = 1;
+  }
+
+  goToPreviousPage(): void {
+    if (this.safeCurrentPage > 1) {
+      this.currentPage = this.safeCurrentPage - 1;
+    }
+  }
+
+  goToNextPage(): void {
+    if (this.safeCurrentPage < this.totalPages) {
+      this.currentPage = this.safeCurrentPage + 1;
+    }
+  }
+
+  private loadUsers() {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.backendService.get<User[]>('user').subscribe({
+      next: (response) => {
+        this.users = response;
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to load users.';
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  getFullName(user: User): string {
+    const firstName = (user.firstName ?? '').trim();
+    const lastName = (user.lastName ?? '').trim();
+    return `${firstName} ${lastName}`.trim() || 'Unknown User';
+  }
+
+  getRoleLabels(user: User): string {
+    const labels = this.getUserRoles(user).map(role => this.formatRole(role));
+    return labels.length ? labels.join(', ') : 'Unknown';
+  }
+
+  getGradeInfo(user: User): string {
+    const roles = this.getUserRoles(user);
+
+    if (roles.includes(Role.STUDENT)) {
+      return user.gradeName?.trim() || 'N/A';
+    }
+
+    if (roles.includes(Role.TEACHER)) {
+      const teacherGrades = user.teacherGradeNames?.filter(name => (name ?? '').trim().length > 0) ?? [];
+      return teacherGrades.length ? teacherGrades.join(', ') : 'N/A';
+    }
+
+    return 'N/A';
+  }
+
+  getStatusLabel(status?: string | null): 'Active' | 'Inactive' | 'Pending' | 'Deleted' {
+    const normalized = (status ?? '').trim().toUpperCase();
+
+    switch (normalized) {
+      case 'ACTIVE':
+        return 'Active';
+      case 'INACTIVE':
+        return 'Inactive';
+      case 'PENDING':
+        return 'Pending';
+      case 'DELETED':
+        return 'Deleted';
+      default:
+        return 'Inactive';
+    }
+  }
+
+  private getUserRoles(user: User): Role[] {
+    if (user.roles && user.roles.length > 0) {
+      return user.roles;
+    }
+    if (user.role) {
+      return [user.role];
+    }
+    return [];
+  }
+
+  private formatRole(role: Role): string {
+    switch (role) {
+      case Role.SYSTEM_ADMIN:
+        return 'System Admin';
+      case Role.SCHOOL_ADMIN:
+        return 'School Admin';
+      case Role.TEACHER:
+        return 'Teacher';
+      case Role.STUDENT:
+        return 'Student';
+      default:
+        return 'Unknown';
+    }
   }
 }

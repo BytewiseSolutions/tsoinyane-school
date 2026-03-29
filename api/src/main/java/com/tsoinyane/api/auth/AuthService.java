@@ -1,6 +1,7 @@
 package com.tsoinyane.api.auth;
 
 import com.tsoinyane.api.common.Status;
+import com.tsoinyane.api.security.TokenService;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.user.User;
@@ -12,9 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +23,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
     @Value("${app.security.jwt.expiration-ms:86400000}")
     private long defaultExpirationMs;
     @Value("${app.security.jwt.refresh-expiration-ms:604800000}")
@@ -48,8 +49,7 @@ public class AuthService {
         long expirationMs = request.rememberMe() ? rememberMeExpirationMs : defaultExpirationMs;
         long expiresAt = now + expirationMs;
 
-        String rawToken = user.getId() + ":" + user.getEmail() + ":" + expiresAt + ":" + UUID.randomUUID();
-        String accessToken = Base64.getUrlEncoder().withoutPadding().encodeToString(rawToken.getBytes());
+        String accessToken = tokenService.generateAccessToken(user, expiresAt);
 
         return new LoginResponse(
                 accessToken,
@@ -61,7 +61,8 @@ public class AuthService {
                         user.getFirstName(),
                         user.getLastName(),
                         user.getTitle(),
-                        user.getRole(),
+                        user.getRoles().stream().sorted().findFirst().orElse(null),
+                        user.getRoles().stream().sorted(Comparator.naturalOrder()).toList(),
                         user.getStatus(),
                         schoolIds
                 )

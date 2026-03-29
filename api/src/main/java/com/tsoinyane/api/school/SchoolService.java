@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.util.Arrays;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -14,6 +15,12 @@ public class SchoolService {
 
     private final SchoolRepository schoolRepository;
     private final UserRepository userRepository;
+
+    public List<SchoolDto> getAllSchools() {
+        return schoolRepository.findAll().stream()
+                .map(this::toDto)
+                .toList();
+    }
 
     @PostConstruct
     public void createDefaultSchools() {
@@ -50,5 +57,18 @@ public class SchoolService {
 
             System.out.println("Default schools created and admin assigned");
         }
+    }
+
+    private SchoolDto toDto(School school) {
+        return SchoolDto.builder()
+                .id(school.getId())
+                .createdAt(school.getCreatedAt())
+                .updatedAt(school.getUpdatedAt())
+                .code(school.getCode())
+                .name(school.getName())
+                .email(school.getEmail())
+                .phone(school.getPhone())
+                .type(school.getType())
+                .build();
     }
 }

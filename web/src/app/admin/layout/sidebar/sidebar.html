@@ -34,6 +34,11 @@
       @if (!collapsed) { <span>Users</span> }
       @if (collapsed) { <span class="tooltip">Users</span> }
     </a>
+    <a routerLink="/admin/grades" routerLinkActive="active" (click)="closeOnMobile()">
+      <i class="fa-solid fa-layer-group"></i>
+      @if (!collapsed) { <span>Grades</span> }
+      @if (collapsed) { <span class="tooltip">Grades</span> }
+    </a>
     <a routerLink="/admin/subjects" routerLinkActive="active" (click)="closeOnMobile()">
       <i class="fa-solid fa-book-open"></i>
       @if (!collapsed) { <span>Subjects</span> }

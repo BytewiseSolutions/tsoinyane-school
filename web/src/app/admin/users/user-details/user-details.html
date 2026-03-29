@@ -1,0 +1,198 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back to Users</button>
+      <h2>{{ fullName }}</h2>
+      <p>View the selected user's details in one place.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading user details...</div>
+  } @else if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  } @else if (user) {
+    @if (saveMessage) {
+      <div class="state-card success">{{ saveMessage }}</div>
+    }
+
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Status</span>
+        <strong [class]="'status ' + statusLabel.toLowerCase()">{{ statusLabel }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Roles</span>
+        <strong>{{ roleLabels }}</strong>
+      </div>
+      @if (isStudent) {
+        <div class="summary-item">
+          <span>Student ID</span>
+          <strong>{{ user.studentId || 'N/A' }}</strong>
+        </div>
+      }
+      @if (isStudent) {
+        <div class="summary-item">
+          <span>Grade</span>
+          <strong>{{ user.gradeName || 'N/A' }}</strong>
+        </div>
+      }
+      @if (isTeacher) {
+        <div class="summary-item">
+          <span>Assigned Grades</span>
+          <strong>{{ teacherGradeSummary }}</strong>
+        </div>
+      }
+    </div>
+
+    <div class="details-grid">
+      <section class="details-card">
+        <div class="card-header">
+          <h3>Personal Information</h3>
+          @if (!isEditingPersonal) {
+            <button type="button" class="edit-btn" (click)="startEditPersonal()">Edit</button>
+          }
+        </div>
+
+        @if (isEditingPersonal) {
+          <div class="edit-grid">
+            <div class="form-group">
+              <label>Title</label>
+              <select [(ngModel)]="personalForm.title" name="personalTitle">
+                @for (title of titleOptions; track title) {
+                  <option [ngValue]="title">{{ title }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>First Name</label>
+              <input type="text" [(ngModel)]="personalForm.firstName" name="personalFirstName" />
+            </div>
+            <div class="form-group">
+              <label>Last Name</label>
+              <input type="text" [(ngModel)]="personalForm.lastName" name="personalLastName" />
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" [(ngModel)]="personalForm.phone" name="personalPhone" />
+            </div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="secondary-btn" (click)="cancelEditPersonal()">Cancel</button>
+            <button type="button" class="save-btn" [disabled]="isSavingPersonal" (click)="savePersonalInformation()">
+              {{ isSavingPersonal ? 'Saving...' : 'Save' }}
+            </button>
+          </div>
+        } @else {
+          <div class="detail-row">
+            <span>Name</span>
+            <strong>{{ displayName }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Phone</span>
+            <strong>{{ user.phone || 'N/A' }}</strong>
+          </div>
+        }
+      </section>
+
+      <section class="details-card">
+        <div class="card-header">
+          <h3>Account Information</h3>
+          @if (!isEditingAccount) {
+            <button type="button" class="edit-btn" (click)="startEditAccount()">Edit</button>
+          }
+        </div>
+
+        @if (isEditingAccount) {
+          <div class="edit-grid">
+            <div class="form-group full-width">
+              <label>Email</label>
+              <input type="email" [(ngModel)]="accountForm.email" name="accountEmail" />
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select [(ngModel)]="accountForm.status" name="accountStatus">
+                @for (status of statusOptions; track status) {
+                  <option [ngValue]="status">{{ status }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="secondary-btn" (click)="cancelEditAccount()">Cancel</button>
+            <button type="button" class="save-btn" [disabled]="isSavingAccount" (click)="saveAccountInformation()">
+              {{ isSavingAccount ? 'Saving...' : 'Save' }}
+            </button>
+          </div>
+        } @else {
+          <div class="detail-row">
+            <span>Email</span>
+            <strong>{{ user.email || 'N/A' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Schools</span>
+            <strong>{{ user.schoolNames?.length ? user.schoolNames?.join(', ') : 'N/A' }}</strong>
+          </div>
+        }
+      </section>
+    </div>
+
+    @if (canAssignSchools) {
+      <section class="details-card assignment-card">
+        <div class="section-heading">
+          <div>
+            <h3>Assign Schools</h3>
+            <p>Select the schools this system admin can access.</p>
+          </div>
+          <button type="button" class="save-btn" [disabled]="isSavingSchools" (click)="saveSchoolAssignments()">
+            {{ isSavingSchools ? 'Saving...' : 'Save Schools' }}
+          </button>
+        </div>
+
+        <div class="chip-grid">
+          @for (school of availableSchools; track school.id) {
+            <label class="chip-option">
+              <input
+                type="checkbox"
+                [checked]="selectedSchoolIds.includes(school.id)"
+                (change)="onSchoolSelectionChange(school.id, $any($event.target).checked)"
+              />
+              <span>{{ school.name }}</span>
+            </label>
+          }
+        </div>
+      </section>
+    }
+
+    @if (canAssignTeacherGrades) {
+      <section class="details-card assignment-card">
+        <div class="section-heading">
+          <div>
+            <h3>Assign Grades</h3>
+            <p>Select the grades this teacher is responsible for.</p>
+          </div>
+          <button type="button" class="save-btn" [disabled]="isSavingTeacherGrades" (click)="saveTeacherGradeAssignments()">
+            {{ isSavingTeacherGrades ? 'Saving...' : 'Save Grades' }}
+          </button>
+        </div>
+
+        @if (filteredTeacherGrades.length) {
+          <div class="chip-grid">
+            @for (grade of filteredTeacherGrades; track grade.id) {
+              <label class="chip-option">
+                <input
+                  type="checkbox"
+                  [checked]="selectedTeacherGradeIds.includes(grade.id!)"
+                  (change)="onTeacherGradeSelectionChange(grade.id!, $any($event.target).checked)"
+                />
+                <span>{{ grade.name }}</span>
+              </label>
+            }
+          </div>
+        } @else {
+          <div class="inline-note">Assign at least one school first to make grade options available.</div>
+        }
+      </section>
+    }
+  }
+</div>

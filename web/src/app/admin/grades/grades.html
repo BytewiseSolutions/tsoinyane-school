@@ -1,0 +1,83 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>Grades</h2>
+      <p>Manage grade records for the selected school.</p>
+    </div>
+    <div class="header-actions">
+      <a class="import-btn" routerLink="/admin/grades/import">
+        <i class="fa-solid fa-file-import"></i> Import
+      </a>
+      <button class="add-btn" type="button" (click)="openAddGradeForm()">
+        <i class="fa-solid fa-plus"></i> Add Grade
+      </button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    @if (isLoadingSchools || isLoadingGrades) {
+      <div class="empty-state">Loading grades...</div>
+    }
+
+    @if (errorMessage) {
+      <div class="empty-state">{{ errorMessage }}</div>
+    }
+
+    @if (!isLoadingSchools && !isLoadingGrades && !errorMessage) {
+      @if (showActionMessage) {
+        <div class="action-feedback">{{ actionMessage }}</div>
+      }
+
+      @if (visibleGrades.length) {
+        <table>
+          <thead>
+            <tr>
+              <th>Grade</th>
+              <th>School</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (grade of visibleGrades; track grade.id ?? grade.name) {
+              <tr>
+                <td>{{ grade.name }}</td>
+                <td>{{ grade.schoolName || selectedSchoolName }}</td>
+                <td class="actions">
+                  <button class="action-btn view" type="button" (click)="viewGrade(grade)">View</button>
+                  <button class="action-btn edit" type="button" (click)="editGrade(grade)">Edit</button>
+                  <button class="action-btn danger" type="button" (click)="removeGrade(grade)">Remove</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <div class="empty-state">No grades found for the selected school.</div>
+      }
+    }
+  </div>
+</div>
+
+@if (showGradeForm) {
+  <app-grade-form
+    [existingGrade]="editingGrade"
+    [selectedSchoolId]="selectedSchoolId"
+    (closed)="closeAddGradeForm()"
+    (saved)="onGradeSaved($event)"
+  ></app-grade-form>
+}
+
+@if (showDeleteDialog && gradeToDelete) {
+  <div class="confirm-overlay" (click)="cancelDeleteGrade()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete Grade</h3>
+      <p>Are you sure you want to delete <strong>{{ gradeToDelete.name }}</strong>?</p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelDeleteGrade()">Cancel</button>
+        <button type="button" class="delete-btn" [disabled]="isProcessing" (click)="confirmDeleteGrade()">
+          {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

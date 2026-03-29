@@ -36,6 +36,35 @@
     align-items: center;
     gap: 20px;
 
+    .school-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      label {
+        color: #42557c;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      select {
+        border: 1px solid #cdd8ee;
+        border-radius: 8px;
+        padding: 7px 10px;
+        font-size: 13px;
+        color: var(--navy-blue);
+        background: var(--white);
+        min-width: 220px;
+        outline: none;
+      }
+
+      select:focus {
+        border-color: #2f67d6;
+      }
+    }
+
     .notif-btn {
       position: relative;
       background: none;
@@ -101,6 +130,10 @@
 
     .header-right {
       gap: 12px;
+
+      .school-selector {
+        display: none;
+      }
 
       .admin-profile span { display: none; }
       .logout-btn span { display: none; }

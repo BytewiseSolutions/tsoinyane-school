@@ -12,7 +12,11 @@ import { Accessibility } from './pages/accessibility/accessibility';
 import { Dashboard } from './admin/dashboard/dashboard';
 import { AdminMain } from './admin/layout/main/main';
 import { Users } from './admin/users/users';
+import { UserImportComponent } from './admin/users/import/import';
+import { UserDetails } from './admin/users/user-details/user-details';
 import { AdminSubjects } from './admin/subjects/subjects';
+import { AdminGrades } from './admin/grades/grades';
+import { GradeImportComponent } from './admin/grades/import/import';
 import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
 import { Maintenance } from './admin/maintenance/maintenance';
@@ -37,6 +41,10 @@ const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminMain },
       { path: 'users', component: Users },
+      { path: 'users/import', component: UserImportComponent },
+      { path: 'users/:id', component: UserDetails },
+      { path: 'grades', component: AdminGrades },
+      { path: 'grades/import', component: GradeImportComponent },
       { path: 'subjects', component: AdminSubjects },
       { path: 'events', component: Events },
       { path: 'notifications', component: Notifications },

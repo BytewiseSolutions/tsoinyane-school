@@ -3,6 +3,16 @@
   padding: 28px;
   background-color: var(--white-off);
 
+  .school-context {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #4a5d84;
+
+    strong {
+      color: var(--navy-blue);
+    }
+  }
+
   // STATS
   .admin-stats {
     display: grid;

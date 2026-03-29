@@ -6,6 +6,16 @@
     <h3>Admin Dashboard</h3>
   </div>
   <div class="header-right">
+    @if (isSystemAdmin) {
+      <div class="school-selector">
+        <label for="schoolContext">School</label>
+        <select id="schoolContext" [(ngModel)]="selectedSchoolId" name="schoolContext" (ngModelChange)="onSchoolChange()">
+          @for (school of schools; track school.id) {
+            <option [ngValue]="school.id">{{ school.name }}</option>
+          }
+        </select>
+      </div>
+    }
     <button class="notif-btn" (click)="toggleNotifications()">
       <i class="fa-solid fa-bell"></i>
       <span class="notif-badge">{{ notifications.length }}</span>

@@ -4,6 +4,7 @@ import com.tsoinyane.api.common.BaseDto;
 import com.tsoinyane.api.common.Role;
 import com.tsoinyane.api.common.Status;
 import com.tsoinyane.api.common.Title;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -22,9 +23,15 @@ public class UserDto extends BaseDto {
     private String lastName;
     private String email;
     private String phone;
-    private Role role;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String password;
+    private List<Role> roles;
     private Status status;
 
     private List<Long> schoolIds;
     private List<String> schoolNames;
+    private Long gradeId;
+    private String gradeName;
+    private List<Long> teacherGradeIds;
+    private List<String> teacherGradeNames;
 }
