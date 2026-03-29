@@ -18,7 +18,8 @@ import java.util.Set;
 @NoArgsConstructor
 @Entity
 @SuperBuilder
-@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true, exclude = "schools")
+@EqualsAndHashCode(callSuper = true, exclude = "schools")
 public class User extends BaseEntity {
 
     private String studentId;

@@ -5,6 +5,7 @@ import com.tsoinyane.api.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
@@ -16,11 +17,13 @@ import java.time.Instant;
 @AllArgsConstructor
 @MappedSuperclass
 @SuperBuilder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(exclude = {"createdBy", "updatedBy"})
 public class BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(nullable = false, updatable = false)

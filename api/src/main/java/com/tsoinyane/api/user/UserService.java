@@ -43,11 +43,8 @@ public class UserService {
         }
 
         List<School> schools = schoolRepository.findAll();
-        if (admin.getSchools() == null) {
-            admin.setSchools(new HashSet<>());
-            changed = true;
-        }
-        if (!schools.isEmpty() && admin.getSchools().addAll(schools)) {
+        if (!schools.isEmpty()) {
+            admin.setSchools(new HashSet<>(schools));
             changed = true;
         }
 
@@ -63,6 +60,22 @@ public class UserService {
         if (changed) {
             userRepository.save(admin);
             System.out.println("Default system admin synced with schools and audit fields");
+        }
+
+        boolean schoolsChanged = false;
+        for (School school : schools) {
+            if (school.getCreatedBy() == null) {
+                school.setCreatedBy(admin);
+                schoolsChanged = true;
+            }
+            if (school.getUpdatedBy() == null) {
+                school.setUpdatedBy(admin);
+                schoolsChanged = true;
+            }
+        }
+        if (schoolsChanged) {
+            schoolRepository.saveAll(schools);
+            System.out.println("Default schools audit fields synced to system admin");
         }
     }
 }

@@ -15,7 +15,8 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true, exclude = "users")
+@EqualsAndHashCode(callSuper = true, exclude = "users")
 public class School extends BaseEntity {
 
     private String code;
