@@ -36,11 +36,20 @@
       />
       <select [(ngModel)]="roleFilter" name="roleFilter">
         <option value="All">All Roles</option>
-        <option value="System Admin">System Admin</option>
-        <option value="Teacher">Teacher</option>
-        <option value="Student">Student</option>
+        <option value="SYSTEM_ADMIN">System Admin</option>
+        <option value="SCHOOL_ADMIN">School Admin</option>
+        <option value="TEACHER">Teacher</option>
+        <option value="STUDENT">Student</option>
       </select>
     </div>
+
+    @if (isLoading) {
+      <div class="empty-state">Loading users...</div>
+    }
+
+    @if (errorMessage) {
+      <div class="empty-state">{{ errorMessage }}</div>
+    }
 
     <table>
       <thead>
@@ -55,17 +64,23 @@
       <tbody>
         @for (user of filteredUsers; track user.id) {
           <tr>
-            <td>{{ user.fullName }}</td>
+            <td>{{ getFullName(user) }}</td>
             <td>{{ user.email }}</td>
-            <td><span class="role-tag">{{ user.role }}</span></td>
+            <td><span class="role-tag">{{ getRoleLabel(user.role) }}</span></td>
             <td>
-              <span class="badge" [class.active]="user.status === 'Active'" [class.inactive]="user.status === 'Inactive'">
-                {{ user.status }}
+              <span
+                class="badge"
+                [class.active]="getStatusLabel(user.status) === 'Active'"
+                [class.inactive]="getStatusLabel(user.status) === 'Inactive'"
+                [class.pending]="getStatusLabel(user.status) === 'Pending'"
+                [class.deleted]="getStatusLabel(user.status) === 'Deleted'"
+              >
+                {{ getStatusLabel(user.status) }}
               </span>
             </td>
             <td class="actions">
               <button class="action-btn" type="button" (click)="toggleStatus(user)">
-                {{ user.status === 'Active' ? 'Deactivate' : 'Activate' }}
+                {{ getStatusLabel(user.status) === 'Active' ? 'Deactivate' : 'Activate' }}
               </button>
               <button class="action-btn danger" type="button" (click)="removeUser(user)">
                 Remove

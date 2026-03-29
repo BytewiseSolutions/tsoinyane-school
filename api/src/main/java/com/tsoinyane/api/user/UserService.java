@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,12 @@ public class UserService {
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
     private final PasswordEncoder passwordEncoder;
+
+    public List<UserDto> getAllUsers() {
+        return userRepository.findAllByOrderByIdAsc().stream()
+                .map(this::toDto)
+                .toList();
+    }
 
     @PostConstruct
     public void createDefaultAdmin() {
@@ -79,5 +86,34 @@ public class UserService {
             schoolRepository.saveAll(schools);
             System.out.println("Default schools audit fields synced to system admin");
         }
+    }
+
+    private UserDto toDto(User user) {
+        List<Long> schoolIds = user.getSchools().stream()
+                .map(School::getId)
+                .sorted()
+                .toList();
+
+        List<String> schoolNames = user.getSchools().stream()
+                .map(School::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .sorted(Comparator.naturalOrder())
+                .toList();
+
+        return UserDto.builder()
+                .id(user.getId())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .studentId(user.getStudentId())
+                .title(user.getTitle())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .role(user.getRole())
+                .status(user.getStatus())
+                .schoolIds(schoolIds)
+                .schoolNames(schoolNames)
+                .build();
     }
 }

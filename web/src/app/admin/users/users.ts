@@ -1,14 +1,8 @@
-import { Component } from '@angular/core';
-
-type UserRole = 'System Admin' | 'Teacher' | 'Student';
-
-interface UserRow {
-  id: number;
-  fullName: string;
-  email: string;
-  role: UserRole;
-  status: 'Active' | 'Inactive';
-}
+import { Component, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { BackendService } from '../../util/backend.service';
+import { User } from './user';
+import { Status } from './status';
 
 @Component({
   selector: 'app-users',
@@ -16,27 +10,27 @@ interface UserRow {
   templateUrl: './users.html',
   styleUrl: './users.scss',
 })
-export class Users {
+export class Users implements OnInit {
   searchTerm = '';
-  roleFilter: 'All' | UserRole = 'All';
+  roleFilter: 'All' | 'SYSTEM_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' = 'All';
+  isLoading = false;
+  errorMessage = '';
+  users: User[] = [];
 
-  users: UserRow[] = [
-    { id: 1, fullName: 'Lebohang Monamane', email: 'admin@tsoinyane.co.ls', role: 'System Admin', status: 'Active' },
-    { id: 2, fullName: 'Thabo Mokoena', email: 'thabo.mokoena@tsoinyane.co.ls', role: 'Teacher', status: 'Active' },
-    { id: 3, fullName: 'Mpho Pheko', email: 'mpho.pheko@tsoinyane.co.ls', role: 'Teacher', status: 'Inactive' },
-    { id: 4, fullName: 'Lineo Letsie', email: 'lineo.letsie@tsoinyane.co.ls', role: 'Student', status: 'Active' },
-    { id: 5, fullName: 'Mpho Nkosi', email: 'mpho.nkosi@tsoinyane.co.ls', role: 'Student', status: 'Inactive' },
-    { id: 6, fullName: 'Refiloe Mofokeng', email: 'refiloe.mofokeng@tsoinyane.co.ls', role: 'Student', status: 'Active' },
-  ];
+  constructor(private backendService: BackendService) {}
 
-  get filteredUsers(): UserRow[] {
+  ngOnInit(): void {
+    this.loadUsers();
+  }
+
+  get filteredUsers(): User[] {
     const query = this.searchTerm.trim().toLowerCase();
     return this.users.filter(user => {
-      const roleMatch = this.roleFilter === 'All' || user.role === this.roleFilter;
+      const roleMatch = this.roleFilter === 'All' || (user.role ?? '').toUpperCase() === this.roleFilter;
       const queryMatch = !query
-        || user.fullName.toLowerCase().includes(query)
-        || user.email.toLowerCase().includes(query)
-        || user.role.toLowerCase().includes(query);
+        || this.getFullName(user).toLowerCase().includes(query)
+        || (user.email ?? '').toLowerCase().includes(query)
+        || this.getRoleLabel(user.role).toLowerCase().includes(query);
       return roleMatch && queryMatch;
     });
   }
@@ -46,22 +40,80 @@ export class Users {
   }
 
   get totalAdmins(): number {
-    return this.users.filter(user => user.role === 'System Admin').length;
+    return this.users.filter(user => (user.role ?? '').toUpperCase() === 'SYSTEM_ADMIN').length;
   }
 
   get totalTeachers(): number {
-    return this.users.filter(user => user.role === 'Teacher').length;
+    return this.users.filter(user => (user.role ?? '').toUpperCase() === 'TEACHER').length;
   }
 
   get totalStudents(): number {
-    return this.users.filter(user => user.role === 'Student').length;
+    return this.users.filter(user => (user.role ?? '').toUpperCase() === 'STUDENT').length;
   }
 
-  toggleStatus(user: UserRow) {
-    user.status = user.status === 'Active' ? 'Inactive' : 'Active';
+  toggleStatus(user: User) {
+    const current = user.status;
+    user.status = current === Status.ACTIVE ? Status.INACTIVE : Status.ACTIVE;
   }
 
-  removeUser(user: UserRow) {
+  removeUser(user: User) {
     this.users = this.users.filter(item => item.id !== user.id);
+  }
+
+  private loadUsers() {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.backendService.get<User[]>('users').subscribe({
+      next: (response) => {
+        this.users = response;
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to load users.';
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  getFullName(user: User): string {
+    const firstName = (user.firstName ?? '').trim();
+    const lastName = (user.lastName ?? '').trim();
+    return `${firstName} ${lastName}`.trim() || 'Unknown User';
+  }
+
+  getRoleLabel(role?: string | null): string {
+    const normalized = (role ?? '').trim().toUpperCase();
+
+    switch (normalized) {
+      case 'SYSTEM_ADMIN':
+        return 'System Admin';
+      case 'SCHOOL_ADMIN':
+        return 'School Admin';
+      case 'TEACHER':
+        return 'Teacher';
+      case 'STUDENT':
+        return 'Student';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  getStatusLabel(status?: string | null): 'Active' | 'Inactive' | 'Pending' | 'Deleted' {
+    const normalized = (status ?? '').trim().toUpperCase();
+
+    switch (normalized) {
+      case 'ACTIVE':
+        return 'Active';
+      case 'INACTIVE':
+        return 'Inactive';
+      case 'PENDING':
+        return 'Pending';
+      case 'DELETED':
+        return 'Deleted';
+      default:
+        return 'Inactive';
+    }
   }
 }

@@ -113,6 +113,16 @@
     color: #c03636;
   }
 
+  .badge.pending {
+    background: #fff4de;
+    color: #9b6400;
+  }
+
+  .badge.deleted {
+    background: #ece8ef;
+    color: #6b5a79;
+  }
+
   .role-tag {
     display: inline-block;
     border-radius: 999px;
