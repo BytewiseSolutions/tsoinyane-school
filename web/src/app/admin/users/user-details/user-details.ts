@@ -6,6 +6,8 @@ import { User } from '../user';
 import { Role } from '../role';
 import { Grade } from '../../grades/grade';
 import { SchoolOption } from '../../school-option';
+import { Title } from '../title';
+import { Status } from '../status';
 
 @Component({
   selector: 'app-user-details',
@@ -14,16 +16,33 @@ import { SchoolOption } from '../../school-option';
   styleUrls: ['./user-details.scss'],
 })
 export class UserDetails implements OnInit {
+  readonly titleOptions = Object.values(Title);
+  readonly statusOptions = Object.values(Status);
+
   user: User | null = null;
   isLoading = true;
   errorMessage = '';
   saveMessage = '';
   isSavingSchools = false;
   isSavingTeacherGrades = false;
+  isEditingPersonal = false;
+  isEditingAccount = false;
+  isSavingPersonal = false;
+  isSavingAccount = false;
   availableSchools: SchoolOption[] = [];
   availableGrades: Grade[] = [];
   selectedSchoolIds: number[] = [];
   selectedTeacherGradeIds: number[] = [];
+  personalForm = {
+    title: Title.Mr as Title | null,
+    firstName: '',
+    lastName: '',
+    phone: '',
+  };
+  accountForm = {
+    email: '',
+    status: Status.ACTIVE as Status | null,
+  };
 
   constructor(
     private route: ActivatedRoute,
@@ -166,6 +185,116 @@ export class UserDetails implements OnInit {
     this.selectedTeacherGradeIds = this.selectedTeacherGradeIds.filter(id => id !== gradeId);
   }
 
+  startEditPersonal(): void {
+    if (!this.user) {
+      return;
+    }
+
+    this.personalForm = {
+      title: this.user.title ?? Title.Mr,
+      firstName: this.user.firstName ?? '',
+      lastName: this.user.lastName ?? '',
+      phone: this.user.phone ?? '',
+    };
+    this.isEditingPersonal = true;
+    this.errorMessage = '';
+    this.saveMessage = '';
+  }
+
+  cancelEditPersonal(): void {
+    this.isEditingPersonal = false;
+  }
+
+  savePersonalInformation(): void {
+    if (!this.user?.id || this.isSavingPersonal) {
+      return;
+    }
+
+    const firstName = this.personalForm.firstName.trim();
+    const lastName = this.personalForm.lastName.trim();
+
+    if (!firstName || !lastName) {
+      this.errorMessage = 'First name and last name are required.';
+      this.saveMessage = '';
+      return;
+    }
+
+    this.isSavingPersonal = true;
+    this.errorMessage = '';
+    this.saveMessage = '';
+
+    this.backendService.put<User, User>(`user/${this.user.id}`, this.buildUpdatePayload({
+      title: this.personalForm.title,
+      firstName,
+      lastName,
+      phone: this.nullIfBlank(this.personalForm.phone),
+    })).subscribe({
+      next: (response) => {
+        this.applyUserResponse(response);
+        this.isEditingPersonal = false;
+        this.saveMessage = 'Personal information updated successfully.';
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to update personal information.';
+      },
+      complete: () => {
+        this.isSavingPersonal = false;
+      },
+    });
+  }
+
+  startEditAccount(): void {
+    if (!this.user) {
+      return;
+    }
+
+    this.accountForm = {
+      email: this.user.email ?? '',
+      status: this.user.status ?? Status.ACTIVE,
+    };
+    this.isEditingAccount = true;
+    this.errorMessage = '';
+    this.saveMessage = '';
+  }
+
+  cancelEditAccount(): void {
+    this.isEditingAccount = false;
+  }
+
+  saveAccountInformation(): void {
+    if (!this.user?.id || this.isSavingAccount) {
+      return;
+    }
+
+    const email = this.accountForm.email.trim().toLowerCase();
+    if (!email) {
+      this.errorMessage = 'Email is required.';
+      this.saveMessage = '';
+      return;
+    }
+
+    this.isSavingAccount = true;
+    this.errorMessage = '';
+    this.saveMessage = '';
+
+    this.backendService.put<User, User>(`user/${this.user.id}`, this.buildUpdatePayload({
+      email,
+      status: this.accountForm.status,
+    })).subscribe({
+      next: (response) => {
+        this.applyUserResponse(response);
+        this.isEditingAccount = false;
+        this.saveMessage = 'Account information updated successfully.';
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to update account information.';
+      },
+      complete: () => {
+        this.isSavingAccount = false;
+      },
+    });
+  }
+
   saveSchoolAssignments(): void {
     if (!this.user?.id || this.isSavingSchools) {
       return;
@@ -261,6 +390,15 @@ export class UserDetails implements OnInit {
       .join(' ');
   }
 
+  private nullIfBlank(value?: string | null): string | null {
+    if (value == null) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+
   private hasRole(role: Role): boolean {
     const roles = this.user?.roles ?? [];
     return roles.includes(role);
@@ -283,5 +421,15 @@ export class UserDetails implements OnInit {
     this.user = user;
     this.selectedSchoolIds = [...(user.schoolIds ?? [])];
     this.selectedTeacherGradeIds = [...(user.teacherGradeIds ?? [])];
+    this.personalForm = {
+      title: user.title ?? Title.Mr,
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      phone: user.phone ?? '',
+    };
+    this.accountForm = {
+      email: user.email ?? '',
+      status: user.status ?? Status.ACTIVE,
+    };
   }
 }

@@ -1,6 +1,7 @@
 package com.tsoinyane.api.teacher;
 
 import com.tsoinyane.api.common.Role;
+import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.user.User;
@@ -17,11 +18,12 @@ public class TeacherService {
     private final TeacherRepository teacherRepository;
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
+    private final CurrentUserService currentUserService;
 
-    public TeacherDto createTeacher(TeacherDto request, Long actorUserId) {
+    public TeacherDto createTeacher(TeacherDto request) {
         User user = resolveTeacherUser(request.getUserId());
         School school = resolveSchool(request.getSchoolId());
-        User actor = resolveActor(actorUserId);
+        User actor = currentUserService.getCurrentUser();
 
         if (teacherRepository.findByUser_Id(user.getId()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Teacher already exists for this user");
@@ -65,15 +67,6 @@ public class TeacherService {
 
         return schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid schoolId: " + schoolId));
-    }
-
-    private User resolveActor(Long actorUserId) {
-        if (actorUserId == null || actorUserId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Logged in user is required");
-        }
-
-        return userRepository.findById(actorUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid logged in user"));
     }
 
     private TeacherDto toDto(Teacher teacher) {

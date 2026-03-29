@@ -1,5 +1,6 @@
 package com.tsoinyane.api.grade;
 
+import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.user.User;
@@ -17,7 +18,7 @@ public class GradeService {
 
     private final GradeRepository gradeRepository;
     private final SchoolRepository schoolRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     public List<GradeDto> getAllGrades() {
         return gradeRepository.findAllWithSchoolOrderByIdAsc().stream()
@@ -25,14 +26,14 @@ public class GradeService {
                 .toList();
     }
 
-    public GradeDto createGrade(GradeDto request, Long actorUserId) {
+    public GradeDto createGrade(GradeDto request) {
         String name = normalizeName(request.getName());
         if (name.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Grade name is required");
         }
 
         School school = resolveSchool(request.getSchoolId());
-        User actor = resolveActor(actorUserId);
+        User actor = currentUserService.getCurrentUser();
 
         Grade grade = Grade.builder()
                 .name(name)
@@ -44,7 +45,7 @@ public class GradeService {
         return toDto(gradeRepository.save(grade));
     }
 
-    public GradeDto updateGrade(Long id, GradeDto request, Long actorUserId) {
+    public GradeDto updateGrade(Long id, GradeDto request) {
         Grade existingGrade = gradeRepository.findWithSchoolById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grade not found"));
 
@@ -54,7 +55,7 @@ public class GradeService {
         }
 
         School school = resolveSchool(request.getSchoolId());
-        User actor = resolveActor(actorUserId);
+        User actor = currentUserService.getCurrentUser();
 
         existingGrade.setName(name);
         existingGrade.setSchool(school);
@@ -80,15 +81,6 @@ public class GradeService {
 
     private String normalizeName(String name) {
         return name == null ? "" : name.trim();
-    }
-
-    private User resolveActor(Long actorUserId) {
-        if (actorUserId == null || actorUserId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Logged in user is required");
-        }
-
-        return userRepository.findById(actorUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid logged in user"));
     }
 
     private GradeDto toDto(Grade grade) {

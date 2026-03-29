@@ -47,27 +47,93 @@
 
     <div class="details-grid">
       <section class="details-card">
-        <h3>Personal Information</h3>
-        <div class="detail-row">
-          <span>Name</span>
-          <strong>{{ displayName }}</strong>
+        <div class="card-header">
+          <h3>Personal Information</h3>
+          @if (!isEditingPersonal) {
+            <button type="button" class="edit-btn" (click)="startEditPersonal()">Edit</button>
+          }
         </div>
-        <div class="detail-row">
-          <span>Phone</span>
-          <strong>{{ user.phone || 'N/A' }}</strong>
-        </div>
+
+        @if (isEditingPersonal) {
+          <div class="edit-grid">
+            <div class="form-group">
+              <label>Title</label>
+              <select [(ngModel)]="personalForm.title" name="personalTitle">
+                @for (title of titleOptions; track title) {
+                  <option [ngValue]="title">{{ title }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>First Name</label>
+              <input type="text" [(ngModel)]="personalForm.firstName" name="personalFirstName" />
+            </div>
+            <div class="form-group">
+              <label>Last Name</label>
+              <input type="text" [(ngModel)]="personalForm.lastName" name="personalLastName" />
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" [(ngModel)]="personalForm.phone" name="personalPhone" />
+            </div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="secondary-btn" (click)="cancelEditPersonal()">Cancel</button>
+            <button type="button" class="save-btn" [disabled]="isSavingPersonal" (click)="savePersonalInformation()">
+              {{ isSavingPersonal ? 'Saving...' : 'Save' }}
+            </button>
+          </div>
+        } @else {
+          <div class="detail-row">
+            <span>Name</span>
+            <strong>{{ displayName }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Phone</span>
+            <strong>{{ user.phone || 'N/A' }}</strong>
+          </div>
+        }
       </section>
 
       <section class="details-card">
-        <h3>Account Information</h3>
-        <div class="detail-row">
-          <span>Email</span>
-          <strong>{{ user.email || 'N/A' }}</strong>
+        <div class="card-header">
+          <h3>Account Information</h3>
+          @if (!isEditingAccount) {
+            <button type="button" class="edit-btn" (click)="startEditAccount()">Edit</button>
+          }
         </div>
-        <div class="detail-row">
-          <span>Schools</span>
-          <strong>{{ user.schoolNames?.length ? user.schoolNames?.join(', ') : 'N/A' }}</strong>
-        </div>
+
+        @if (isEditingAccount) {
+          <div class="edit-grid">
+            <div class="form-group full-width">
+              <label>Email</label>
+              <input type="email" [(ngModel)]="accountForm.email" name="accountEmail" />
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select [(ngModel)]="accountForm.status" name="accountStatus">
+                @for (status of statusOptions; track status) {
+                  <option [ngValue]="status">{{ status }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="secondary-btn" (click)="cancelEditAccount()">Cancel</button>
+            <button type="button" class="save-btn" [disabled]="isSavingAccount" (click)="saveAccountInformation()">
+              {{ isSavingAccount ? 'Saving...' : 'Save' }}
+            </button>
+          </div>
+        } @else {
+          <div class="detail-row">
+            <span>Email</span>
+            <strong>{{ user.email || 'N/A' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Schools</span>
+            <strong>{{ user.schoolNames?.length ? user.schoolNames?.join(', ') : 'N/A' }}</strong>
+          </div>
+        }
       </section>
     </div>
 

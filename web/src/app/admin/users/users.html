@@ -60,6 +60,7 @@
           <th>Full Name</th>
           <th>Email</th>
           <th>Role</th>
+          <th>Grade Info</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -70,6 +71,7 @@
             <td>{{ getFullName(user) }}</td>
             <td>{{ user.email }}</td>
             <td><span class="role-tag">{{ getRoleLabels(user) }}</span></td>
+            <td class="grade-info">{{ getGradeInfo(user) }}</td>
             <td>
               <span
                 class="badge"
@@ -97,7 +99,7 @@
         }
         @if (filteredUsers.length === 0) {
           <tr>
-            <td colspan="5" class="empty-state">No users found for the selected filter.</td>
+            <td colspan="6" class="empty-state">No users found for the selected filter.</td>
           </tr>
         }
       </tbody>

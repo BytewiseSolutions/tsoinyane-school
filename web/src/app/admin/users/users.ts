@@ -222,6 +222,21 @@ export class Users implements OnInit, OnDestroy {
     return labels.length ? labels.join(', ') : 'Unknown';
   }
 
+  getGradeInfo(user: User): string {
+    const roles = this.getUserRoles(user);
+
+    if (roles.includes(Role.STUDENT)) {
+      return user.gradeName?.trim() || 'N/A';
+    }
+
+    if (roles.includes(Role.TEACHER)) {
+      const teacherGrades = user.teacherGradeNames?.filter(name => (name ?? '').trim().length > 0) ?? [];
+      return teacherGrades.length ? teacherGrades.join(', ') : 'N/A';
+    }
+
+    return 'N/A';
+  }
+
   getStatusLabel(status?: string | null): 'Active' | 'Inactive' | 'Pending' | 'Deleted' {
     const normalized = (status ?? '').trim().toUpperCase();
 

@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,20 +25,13 @@ public class GradeController {
     }
 
     @PostMapping
-    public GradeDto createGrade(
-            @RequestBody GradeDto request,
-            @RequestHeader("X-User-Id") Long actorUserId
-    ) {
-        return gradeService.createGrade(request, actorUserId);
+    public GradeDto createGrade(@RequestBody GradeDto request) {
+        return gradeService.createGrade(request);
     }
 
     @PutMapping("/{id}")
-    public GradeDto updateGrade(
-            @PathVariable("id") Long id,
-            @RequestBody GradeDto request,
-            @RequestHeader("X-User-Id") Long actorUserId
-    ) {
-        return gradeService.updateGrade(id, request, actorUserId);
+    public GradeDto updateGrade(@PathVariable("id") Long id, @RequestBody GradeDto request) {
+        return gradeService.updateGrade(id, request);
     }
 
     @DeleteMapping("/{id}")

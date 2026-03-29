@@ -5,6 +5,7 @@ import com.tsoinyane.api.common.Status;
 import com.tsoinyane.api.common.Title;
 import com.tsoinyane.api.grade.Grade;
 import com.tsoinyane.api.grade.GradeRepository;
+import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.student.Student;
@@ -23,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
-import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,6 +37,7 @@ public class UserService {
     private final TeacherRepository teacherRepository;
     private final GradeRepository gradeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CurrentUserService currentUserService;
 
     public List<UserDto> getAllUsers() {
         return userRepository.findAllByOrderByIdAsc().stream()
@@ -78,7 +79,7 @@ public class UserService {
         String studentId = roles.contains(Role.STUDENT) ? generateNextStudentId() : null;
 
         Set<School> schools = resolveSchools(request.getSchoolIds());
-        User auditUser = userRepository.findByEmail("admin@tsoinyane.co.ls").orElse(null);
+        User actor = currentUserService.getCurrentUser();
 
         User newUser = User.builder()
                 .studentId(studentId)
@@ -91,16 +92,16 @@ public class UserService {
                 .roles(roles)
                 .status(status)
                 .schools(schools)
-                .createdBy(auditUser)
-                .updatedBy(auditUser)
+                .createdBy(actor)
+                .updatedBy(actor)
                 .build();
 
         User savedUser = userRepository.save(newUser);
         syncTeacherGradeAssignments(savedUser, roles, request.getTeacherGradeIds());
 
         if (savedUser.getCreatedBy() == null || savedUser.getUpdatedBy() == null) {
-            savedUser.setCreatedBy(savedUser);
-            savedUser.setUpdatedBy(savedUser);
+            savedUser.setCreatedBy(actor);
+            savedUser.setUpdatedBy(actor);
             savedUser = userRepository.save(savedUser);
         }
 
@@ -141,6 +142,7 @@ public class UserService {
         existingUser.setEmail(normalizedEmail);
         existingUser.setPhone(trimToNull(request.getPhone()));
         existingUser.setStatus(request.getStatus() != null ? request.getStatus() : existingUser.getStatus());
+        existingUser.setUpdatedBy(currentUserService.getCurrentUser());
 
         Set<Role> roles = resolveRoles(request.getRoles());
         existingUser.setRoles(roles);

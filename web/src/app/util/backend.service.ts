@@ -59,21 +59,12 @@ export class BackendService {
 
   private buildHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
-    const rawUser = localStorage.getItem('user') ?? sessionStorage.getItem('user');
+    const accessToken = localStorage.getItem('accessToken') ?? sessionStorage.getItem('accessToken');
 
-    if (!rawUser) {
+    if (!accessToken) {
       return headers;
     }
 
-    try {
-      const user = JSON.parse(rawUser) as { id?: number | string };
-      if (user.id != null && String(user.id).trim() !== '') {
-        headers = headers.set('X-User-Id', String(user.id));
-      }
-    } catch {
-      return headers;
-    }
-
-    return headers;
+    return headers.set('Authorization', `Bearer ${accessToken}`);
   }
 }
