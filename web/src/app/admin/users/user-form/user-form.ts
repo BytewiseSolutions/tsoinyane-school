@@ -43,6 +43,7 @@ export class UserForm implements OnInit {
     status: Status.ACTIVE,
     schoolIds: [],
     gradeId: null,
+    teacherGradeIds: [],
   };
 
   constructor(
@@ -67,6 +68,7 @@ export class UserForm implements OnInit {
       password: '',
       schoolIds: this.existingUser.schoolIds ?? [],
       gradeId: this.existingUser.gradeId ?? null,
+      teacherGradeIds: this.existingUser.teacherGradeIds ?? [],
     };
 
     this.selectedRoles = this.existingUser.roles?.length
@@ -105,6 +107,11 @@ export class UserForm implements OnInit {
       return;
     }
 
+    if (this.isTeacherRoleSelected() && !(this.form.teacherGradeIds?.length ?? 0)) {
+      this.errorMessage = 'Please select at least one grade for the teacher.';
+      return;
+    }
+
     this.isSubmitting = true;
 
     const payload: User = {
@@ -119,6 +126,7 @@ export class UserForm implements OnInit {
       roles: this.selectedRoles,
       schoolIds: this.form.schoolIds ?? [],
       gradeId: this.isStudentRoleSelected() ? (this.form.gradeId ?? null) : null,
+      teacherGradeIds: this.isTeacherRoleSelected() ? (this.form.teacherGradeIds ?? []) : [],
     };
 
     const request$ = this.isEdit
@@ -156,6 +164,10 @@ export class UserForm implements OnInit {
 
   isStudentRoleSelected(): boolean {
     return this.selectedRoles.includes(Role.STUDENT);
+  }
+
+  isTeacherRoleSelected(): boolean {
+    return this.selectedRoles.includes(Role.TEACHER);
   }
 
   private loadGradesForSchool(schoolId: number): void {

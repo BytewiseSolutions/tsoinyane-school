@@ -81,6 +81,15 @@ export class UserDetails implements OnInit {
     return this.hasRole(Role.STUDENT);
   }
 
+  get isTeacher(): boolean {
+    return this.hasRole(Role.TEACHER);
+  }
+
+  get teacherGradeSummary(): string {
+    const gradeNames = this.user?.teacherGradeNames ?? [];
+    return gradeNames.length ? gradeNames.join(', ') : 'N/A';
+  }
+
   get filteredTeacherGrades(): Grade[] {
     if (!this.selectedSchoolIds.length) {
       return [];

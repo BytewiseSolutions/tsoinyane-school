@@ -9,6 +9,8 @@ import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentRepository;
+import com.tsoinyane.api.teacher.Teacher;
+import com.tsoinyane.api.teacher.TeacherRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
     private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
     private final GradeRepository gradeRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -101,6 +104,7 @@ public class UserService {
             savedUser = userRepository.save(savedUser);
         }
 
+        syncTeacherRecord(savedUser, roles);
         syncStudentRecord(savedUser, roles, request.getGradeId());
 
         return toDto(savedUser);
@@ -159,6 +163,7 @@ public class UserService {
 
         User savedUser = userRepository.save(existingUser);
         syncTeacherGradeAssignments(savedUser, roles, request.getTeacherGradeIds());
+        syncTeacherRecord(savedUser, roles);
         syncStudentRecord(savedUser, roles, request.getGradeId());
         return toDto(savedUser);
     }
@@ -168,6 +173,7 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         studentRepository.findByUser_Id(id).ifPresent(studentRepository::delete);
+        teacherRepository.findByUser_Id(id).ifPresent(teacherRepository::delete);
         userRepository.delete(user);
     }
 
@@ -313,6 +319,34 @@ public class UserService {
 
         user.setTeacherGrades(new LinkedHashSet<>(grades));
         userRepository.save(user);
+    }
+
+    private void syncTeacherRecord(User user, Set<Role> roles) {
+        Teacher existingTeacher = teacherRepository.findByUser_Id(user.getId()).orElse(null);
+
+        if (!roles.contains(Role.TEACHER)) {
+            if (existingTeacher != null) {
+                teacherRepository.delete(existingTeacher);
+            }
+            return;
+        }
+
+        if (user.getSchools() == null || user.getSchools().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Teacher must belong to a school");
+        }
+
+        School school = user.getSchools().stream()
+                .sorted(Comparator.comparing(School::getId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Teacher must belong to a school"));
+
+        Teacher teacher = existingTeacher != null ? existingTeacher : Teacher.builder().build();
+        teacher.setUser(user);
+        teacher.setSchool(school);
+        teacher.setCreatedBy(user.getCreatedBy());
+        teacher.setUpdatedBy(user.getUpdatedBy());
+
+        teacherRepository.save(teacher);
     }
 
     private void syncStudentRecord(User user, Set<Role> roles, Long gradeId) {

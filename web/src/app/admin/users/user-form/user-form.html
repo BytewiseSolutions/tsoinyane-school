@@ -96,6 +96,26 @@
         </div>
       }
 
+      @if (isTeacherRoleSelected()) {
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label>Grades</label>
+            <ng-select
+              [items]="availableGrades"
+              bindLabel="name"
+              bindValue="id"
+              [multiple]="true"
+              [searchable]="true"
+              [clearable]="true"
+              [(ngModel)]="form.teacherGradeIds"
+              name="teacherGradeIds"
+              placeholder="Select teacher grades"
+            >
+            </ng-select>
+          </div>
+        </div>
+      }
+
       @if (errorMessage) {
         <div class="form-feedback error">{{ errorMessage }}</div>
       }

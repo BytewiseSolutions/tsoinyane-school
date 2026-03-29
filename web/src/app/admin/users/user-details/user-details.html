@@ -31,10 +31,18 @@
           <strong>{{ user.studentId || 'N/A' }}</strong>
         </div>
       }
-      <div class="summary-item">
-        <span>Grade</span>
-        <strong>{{ user.gradeName || 'N/A' }}</strong>
-      </div>
+      @if (isStudent) {
+        <div class="summary-item">
+          <span>Grade</span>
+          <strong>{{ user.gradeName || 'N/A' }}</strong>
+        </div>
+      }
+      @if (isTeacher) {
+        <div class="summary-item">
+          <span>Assigned Grades</span>
+          <strong>{{ teacherGradeSummary }}</strong>
+        </div>
+      }
     </div>
 
     <div class="details-grid">
