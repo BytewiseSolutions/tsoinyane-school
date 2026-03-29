@@ -24,16 +24,18 @@ public class UserService {
     @PostConstruct
     public void createDefaultAdmin() {
         User admin = userRepository.findByEmail("admin@tsoinyane.co.ls")
-                .orElseGet(() -> User.builder()
-                    .title(Title.Mr)
-                    .firstName("Lebohang")
-                    .lastName("Monamane")
-                    .email("admin@tsoinyane.co.ls")
-                    .phone("59181664")
-                    .password(passwordEncoder.encode("admin123"))
-                    .role(Role.SYSTEM_ADMIN)
-                    .status(Status.ACTIVE)
-                    .build());
+                .orElseGet(() -> {
+                    User newAdmin = new User();
+                    newAdmin.setTitle(Title.Mr);
+                    newAdmin.setFirstName("Lebohang");
+                    newAdmin.setLastName("Monamane");
+                    newAdmin.setEmail("admin@tsoinyane.co.ls");
+                    newAdmin.setPhone("59181664");
+                    newAdmin.setPassword(passwordEncoder.encode("admin123"));
+                    newAdmin.setRole(Role.SYSTEM_ADMIN);
+                    newAdmin.setStatus(Status.ACTIVE);
+                    return newAdmin;
+                });
 
         boolean changed = false;
 
