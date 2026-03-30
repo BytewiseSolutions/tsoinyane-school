@@ -14,4 +14,7 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
 
     @Query("select g from Grade g join fetch g.school left join fetch g.createdBy left join fetch g.updatedBy where g.id = :id")
     Optional<Grade> findWithSchoolById(@Param("id") Long id);
+
+    @Query("select count(g) from Grade g where (:schoolId is null or g.school.id = :schoolId)")
+    long countBySchoolId(@Param("schoolId") Long schoolId);
 }

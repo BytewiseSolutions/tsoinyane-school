@@ -4,6 +4,10 @@
     <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Event</button>
   </div>
 
+  @if (errorMessage) {
+    <div class="table-card">{{ errorMessage }}</div>
+  }
+
   <div class="table-card">
     <div class="table-toolbar">
       <input type="text" placeholder="Search events..." />
@@ -19,7 +23,12 @@
         </tr>
       </thead>
       <tbody>
-        @for (event of events; track event.name) {
+        @if (isLoading) {
+          <tr>
+            <td colspan="5">Loading events...</td>
+          </tr>
+        }
+        @for (event of events; track event.id ?? event.name) {
           <tr>
             <td>{{ event.name }}</td>
             <td>{{ event.date | date: 'MMM d, y' }}</td>
@@ -31,6 +40,11 @@
             </td>
           </tr>
         }
+        @if (!isLoading && events.length === 0) {
+          <tr>
+            <td colspan="5">No events found.</td>
+          </tr>
+        }
       </tbody>
     </table>
   </div>
@@ -39,6 +53,7 @@
 @if (showForm) {
   <app-event-form
     [existingEvent]="selectedEvent"
+    [schoolId]="selectedSchoolId"
     (closed)="closeForm()"
     (saved)="onSaved($event)" />
 }

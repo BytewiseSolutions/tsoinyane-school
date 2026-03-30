@@ -8,4 +8,6 @@ import java.util.List;
 @Repository
 public interface SchoolRepository extends JpaRepository<School, Long> {
     List<School> findAllByUsers_Id(Long userId);
+
+    long countById(Long id);
 }
