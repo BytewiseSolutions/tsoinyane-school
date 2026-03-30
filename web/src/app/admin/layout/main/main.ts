@@ -1,13 +1,10 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, takeUntil } from 'rxjs';
 import { SchoolContextService } from '../school-context';
-
-interface DashboardStudent {
-  name: string;
-  school: string;
-  grade: string;
-  status: 'Active' | 'Inactive';
-}
+import { BackendService } from '../../../util/backend.service';
+import { DashboardRecentStudent, DashboardStats } from './dashboard-stats';
+import { SchoolEvent } from '../../events/school-event';
 
 @Component({
   selector: 'app-main',
@@ -18,38 +15,28 @@ interface DashboardStudent {
 export class AdminMain implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
-  selectedSchoolName = 'Tsoinyane Primary School';
-  totalStudents = 500;
-  totalTeachers = 30;
-  totalSubjects = 15;
-  totalEvents = 4;
-  recentStudents: DashboardStudent[] = [];
+  selectedSchoolName = 'All Schools';
+  totalStudents = 0;
+  totalTeachers = 0;
+  totalGrades = 0;
+  recentStudents: DashboardRecentStudent[] = [];
+  upcomingEvents: SchoolEvent[] = [];
+  isLoading = false;
+  errorMessage = '';
 
-  private primaryStudents: DashboardStudent[] = [
-    { name: 'Thabo Mokoena', school: 'Primary', grade: 'Grade 5', status: 'Active' },
-    { name: 'Mpho Nkosi', school: 'Primary', grade: 'Grade 3', status: 'Active' },
-    { name: 'Lerato Thabane', school: 'Primary', grade: 'Grade 6', status: 'Active' },
-    { name: 'Paballo Nkoe', school: 'Primary', grade: 'Grade 4', status: 'Inactive' },
-  ];
-
-  private highStudents: DashboardStudent[] = [
-    { name: 'Lineo Letsie', school: 'High School', grade: 'Form C', status: 'Active' },
-    { name: 'Palesa Sithole', school: 'High School', grade: 'Form E', status: 'Inactive' },
-    { name: 'Mosa Selebalo', school: 'High School', grade: 'Form B', status: 'Active' },
-    { name: 'Neo Mphuthi', school: 'High School', grade: 'Form D', status: 'Active' },
-  ];
-
-  constructor(private schoolContext: SchoolContextService) {}
+  constructor(
+    private schoolContext: SchoolContextService,
+    private backendService: BackendService
+  ) {}
 
   ngOnInit(): void {
     this.schoolContext.selectedSchool$
       .pipe(takeUntil(this.destroy$))
       .subscribe(school => {
-        this.selectedSchoolName = school?.name ?? 'Tsoinyane Primary School';
-        this.applySchoolDashboard(this.selectedSchoolName);
+        this.selectedSchoolName = school?.name ?? 'All Schools';
+        this.loadDashboardStats(school?.id ?? null);
+        this.loadUpcomingEvents(school?.id ?? null);
       });
-
-    this.applySchoolDashboard(this.selectedSchoolName);
   }
 
   ngOnDestroy(): void {
@@ -57,23 +44,41 @@ export class AdminMain implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private applySchoolDashboard(schoolName: string) {
-    const normalized = schoolName.trim().toLowerCase();
-    const isHigh = normalized.includes('high');
+  private loadDashboardStats(schoolId: number | null): void {
+    this.isLoading = true;
+    this.errorMessage = '';
 
-    if (isHigh) {
-      this.totalStudents = 320;
-      this.totalTeachers = 24;
-      this.totalSubjects = 17;
-      this.totalEvents = 5;
-      this.recentStudents = this.highStudents;
-      return;
-    }
+    this.backendService.get<DashboardStats>('dashboard', schoolId ? { schoolId } : undefined).subscribe({
+      next: (response) => {
+        this.totalStudents = response.totalStudents ?? 0;
+        this.totalTeachers = response.totalTeachers ?? 0;
+        this.totalGrades = response.totalGrades ?? 0;
+        this.recentStudents = response.recentStudents ?? [];
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to load dashboard statistics.';
+        this.totalStudents = 0;
+        this.totalTeachers = 0;
+        this.totalGrades = 0;
+        this.recentStudents = [];
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
 
-    this.totalStudents = 500;
-    this.totalTeachers = 30;
-    this.totalSubjects = 15;
-    this.totalEvents = 4;
-    this.recentStudents = this.primaryStudents;
+  private loadUpcomingEvents(schoolId: number | null): void {
+    this.backendService.get<SchoolEvent[]>('event', {
+      ...(schoolId ? { schoolId } : {}),
+      upcoming: true,
+    }).subscribe({
+      next: (events) => {
+        this.upcomingEvents = events ?? [];
+      },
+      error: () => {
+        this.upcomingEvents = [];
+      },
+    });
   }
 }

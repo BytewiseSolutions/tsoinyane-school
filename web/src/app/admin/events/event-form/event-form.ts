@@ -1,11 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-
-export interface SchoolEvent {
-  name: string;
-  date: string;
-  location: string;
-  status: string;
-}
+import { SchoolEvent } from '../school-event';
 
 @Component({
   selector: 'app-event-form',
@@ -15,12 +9,14 @@ export interface SchoolEvent {
 })
 export class EventForm implements OnInit {
   @Input() existingEvent: SchoolEvent | null = null;
+  @Input() schoolId: number | null = null;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<SchoolEvent>();
 
   isEdit = false;
 
   event: SchoolEvent = {
+    schoolId: null,
     name: '',
     date: '',
     location: '',
@@ -31,7 +27,10 @@ export class EventForm implements OnInit {
     if (this.existingEvent) {
       this.isEdit = true;
       this.event = { ...this.existingEvent };
+      return;
     }
+
+    this.event.schoolId = this.schoolId;
   }
 
   onSubmit() {

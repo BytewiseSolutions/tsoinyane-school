@@ -1,39 +1,34 @@
 <main class="admin-main">
   <p class="school-context">Current School: <strong>{{ selectedSchoolName }}</strong></p>
 
-  <!-- STATS -->
+  @if (errorMessage) {
+    <div class="dashboard-state error">{{ errorMessage }}</div>
+  }
+
   <div class="admin-stats">
     <div class="stat-card">
       <div class="stat-icon"><i class="fa-solid fa-user-graduate"></i></div>
       <div class="stat-info">
         <h4>Total Students</h4>
-        <h2>{{ totalStudents }}</h2>
+        <h2>{{ isLoading ? '...' : totalStudents }}</h2>
       </div>
     </div>
     <div class="stat-card">
       <div class="stat-icon"><i class="fa-solid fa-chalkboard-teacher"></i></div>
       <div class="stat-info">
         <h4>Total Teachers</h4>
-        <h2>{{ totalTeachers }}</h2>
+        <h2>{{ isLoading ? '...' : totalTeachers }}</h2>
       </div>
     </div>
     <div class="stat-card">
       <div class="stat-icon"><i class="fa-solid fa-book-open"></i></div>
       <div class="stat-info">
-        <h4>Subjects</h4>
-        <h2>{{ totalSubjects }}</h2>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon"><i class="fa-solid fa-calendar-days"></i></div>
-      <div class="stat-info">
-        <h4>Events</h4>
-        <h2>{{ totalEvents }}</h2>
+        <h4>Total Grades</h4>
+        <h2>{{ isLoading ? '...' : totalGrades }}</h2>
       </div>
     </div>
   </div>
 
-  <!-- RECENT ACTIVITY -->
   <div class="admin-panels">
     <div class="panel">
       <h3>Recent Students</h3>
@@ -47,12 +42,25 @@
           </tr>
         </thead>
         <tbody>
-          @for (student of recentStudents; track student.name) {
+          @for (student of recentStudents; track student.id) {
             <tr>
               <td>{{ student.name }}</td>
               <td>{{ student.school }}</td>
               <td>{{ student.grade }}</td>
-              <td><span class="badge" [class.active]="student.status === 'Active'" [class.inactive]="student.status === 'Inactive'">{{ student.status }}</span></td>
+              <td>
+                <span
+                  class="badge"
+                  [class.active]="student.status === 'Active'"
+                  [class.inactive]="student.status === 'Inactive'"
+                >
+                  {{ student.status }}
+                </span>
+              </td>
+            </tr>
+          }
+          @if (!isLoading && recentStudents.length === 0) {
+            <tr>
+              <td colspan="4" class="empty-state">No recent students found for this school.</td>
             </tr>
           }
         </tbody>
@@ -62,34 +70,23 @@
     <div class="panel">
       <h3>Upcoming Events</h3>
       <ul class="events-list">
-        <li>
-          <div class="event-date">Jan 20</div>
-          <div class="event-info">
-            <h4>Term 1 Begins</h4>
-            <p>All students report to school</p>
-          </div>
-        </li>
-        <li>
-          <div class="event-date">Mar 15</div>
-          <div class="event-info">
-            <h4>Sports Day</h4>
-            <p>Annual inter-school sports event</p>
-          </div>
-        </li>
-        <li>
-          <div class="event-date">Apr 5</div>
-          <div class="event-info">
-            <h4>Parent Meeting</h4>
-            <p>Term 1 results discussion</p>
-          </div>
-        </li>
-        <li>
-          <div class="event-date">Jun 10</div>
-          <div class="event-info">
-            <h4>Mid-Year Exams</h4>
-            <p>High school mid-year examinations</p>
-          </div>
-        </li>
+        @for (event of upcomingEvents; track event.id ?? event.name) {
+          <li>
+            <div class="event-date">{{ event.date | date: 'MMM d' }}</div>
+            <div class="event-info">
+              <h4>{{ event.name }}</h4>
+              <p>{{ event.location }}</p>
+            </div>
+          </li>
+        }
+        @if (!upcomingEvents.length) {
+          <li>
+            <div class="event-info">
+              <h4>No upcoming events</h4>
+              <p>There are no scheduled events for this school yet.</p>
+            </div>
+          </li>
+        }
       </ul>
     </div>
   </div>
