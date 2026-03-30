@@ -68,6 +68,10 @@ export class UserDetails implements OnInit {
     this.router.navigate(['/admin/users']);
   }
 
+  closeSaveMessage(): void {
+    this.saveMessage = '';
+  }
+
   get fullName(): string {
     if (!this.user) {
       return 'User Details';
@@ -77,7 +81,7 @@ export class UserDetails implements OnInit {
   }
 
   get roleLabels(): string {
-    const roles = this.user?.roles ?? [];
+    const roles = this.getUserRoles();
     if (!roles.length) {
       return 'Unknown';
     }
@@ -400,8 +404,19 @@ export class UserDetails implements OnInit {
   }
 
   private hasRole(role: Role): boolean {
-    const roles = this.user?.roles ?? [];
-    return roles.includes(role);
+    return this.getUserRoles().includes(role);
+  }
+
+  private getUserRoles(): Role[] {
+    if (this.user?.roles?.length) {
+      return this.user.roles;
+    }
+
+    if (this.user?.role) {
+      return [this.user.role];
+    }
+
+    return [];
   }
 
   private buildUpdatePayload(overrides: Partial<User>): User {

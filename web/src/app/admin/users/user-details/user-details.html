@@ -9,11 +9,11 @@
 
   @if (isLoading) {
     <div class="state-card">Loading user details...</div>
-  } @else if (errorMessage) {
+  } @else if (errorMessage && !user) {
     <div class="state-card error">{{ errorMessage }}</div>
   } @else if (user) {
-    @if (saveMessage) {
-      <div class="state-card success">{{ saveMessage }}</div>
+    @if (errorMessage) {
+      <div class="state-card error">{{ errorMessage }}</div>
     }
 
     <div class="summary-card">
@@ -196,3 +196,20 @@
     }
   }
 </div>
+
+@if (saveMessage) {
+  <div class="confirm-overlay" (click)="closeSaveMessage()">
+    <div class="confirm-card success-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Success</h3>
+        <button type="button" class="modal-close-btn" (click)="closeSaveMessage()" aria-label="Close success message">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p>{{ saveMessage }}</p>
+      <div class="confirm-actions">
+        <button type="button" class="status-btn" (click)="closeSaveMessage()">Close</button>
+      </div>
+    </div>
+  </div>
+}
