@@ -34,4 +34,12 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
             order by t.id asc
             """)
     List<Teacher> findAllBySchoolId(@Param("schoolId") Long schoolId);
+
+    @Query("""
+            select t from Teacher t
+            join fetch t.user
+            join fetch t.school
+            where t.id = :id
+            """)
+    Optional<Teacher> findWithUserAndSchoolById(@Param("id") Long id);
 }

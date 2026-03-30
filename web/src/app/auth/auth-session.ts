@@ -1,4 +1,28 @@
+function hasUsableToken(storage: Storage): boolean {
+  const accessToken = storage.getItem('accessToken');
+  const expiresAtRaw = storage.getItem('expiresAt');
+  const expiresAt = Number(expiresAtRaw);
+
+  if (!accessToken || !accessToken.trim()) {
+    return false;
+  }
+
+  if (!expiresAtRaw || Number.isNaN(expiresAt)) {
+    return true;
+  }
+
+  return Date.now() < expiresAt;
+}
+
 export function getActiveAuthStorage(): Storage | null {
+  if (hasUsableToken(sessionStorage)) {
+    return sessionStorage;
+  }
+
+  if (hasUsableToken(localStorage)) {
+    return localStorage;
+  }
+
   if (localStorage.getItem('accessToken')) {
     return localStorage;
   }

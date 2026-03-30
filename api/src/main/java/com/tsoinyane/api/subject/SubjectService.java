@@ -12,6 +12,7 @@ import com.tsoinyane.api.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -24,6 +25,7 @@ public class SubjectService {
     private final TeacherRepository teacherRepository;
     private final CurrentUserService currentUserService;
 
+    @Transactional
     public SubjectDto createSubject(SubjectDto request) {
         String code = normalize(request.getCode());
         String name = normalize(request.getName());
@@ -83,7 +85,7 @@ public class SubjectService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Teacher is required");
         }
 
-        Teacher teacher = teacherRepository.findById(teacherId)
+        Teacher teacher = teacherRepository.findWithUserAndSchoolById(teacherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacherId: " + teacherId));
 
         if (teacher.getSchool() == null || !teacher.getSchool().getId().equals(schoolId)) {
