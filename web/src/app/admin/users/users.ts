@@ -99,7 +99,10 @@ export class Users implements OnInit, OnDestroy {
   }
 
   get totalAdmins(): number {
-    return this.users.filter(user => this.getUserRoles(user).includes(Role.SYSTEM_ADMIN)).length;
+    return this.users.filter(user => {
+      const roles = this.getUserRoles(user);
+      return roles.includes(Role.SYSTEM_ADMIN) || roles.includes(Role.SCHOOL_ADMIN);
+    }).length;
   }
 
   get totalTeachers(): number {
