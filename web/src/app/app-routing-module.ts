@@ -22,6 +22,7 @@ import { Notifications } from './admin/notifications/notifications';
 import { Maintenance } from './admin/maintenance/maintenance';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
+import { AuthGuard } from './auth/auth-guard';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -37,6 +38,7 @@ const routes: Routes = [
   {
     path: 'admin',
     component: Dashboard,
+    canActivate: [AuthGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminMain },

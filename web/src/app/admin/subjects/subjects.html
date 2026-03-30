@@ -1,36 +1,53 @@
 <div class="admin-page">
   <div class="page-header">
-    <h2>Subjects</h2>
+    <div>
+      <h2>Subjects</h2>
+      <p>Manage subjects for the currently selected school.</p>
+    </div>
     <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Subject</button>
   </div>
 
+  @if (errorMessage) {
+    <div class="table-card">{{ errorMessage }}</div>
+  }
+
   <div class="table-card">
     <div class="table-toolbar">
-      <input type="text" placeholder="Search subjects..." />
+      <input type="text" placeholder="Search by code, name, grade or teacher..." [(ngModel)]="searchTerm" name="searchSubjects" />
     </div>
     <table>
       <thead>
         <tr>
+          <th>Code</th>
           <th>Subject</th>
-          <th>School</th>
+          <th>Grade</th>
           <th>Teacher</th>
-          <th>Students</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        @for (subject of subjects; track subject.name) {
+        @if (isLoading) {
           <tr>
+            <td colspan="6">Loading subject options...</td>
+          </tr>
+        }
+        @for (subject of filteredSubjects; track subject.id ?? (subject.code + subject.name)) {
+          <tr>
+            <td>{{ subject.code }}</td>
             <td>{{ subject.name }}</td>
-            <td>{{ subject.school }}</td>
-            <td>{{ subject.teacher }}</td>
-            <td>{{ subject.students }}</td>
-            <td><span class="badge" [class.active]="subject.status === 'Active'" [class.inactive]="subject.status === 'Inactive'">{{ subject.status }}</span></td>
+            <td>{{ subject.gradeName || 'N/A' }}</td>
+            <td>{{ subject.teacherName || 'N/A' }}</td>
+            <td><span class="badge" [class.active]="getStatusLabel(subject.status) === 'Active'" [class.inactive]="getStatusLabel(subject.status) === 'Inactive'">{{ getStatusLabel(subject.status) }}</span></td>
             <td class="actions">
               <button class="edit-btn" (click)="openForm(subject)"><i class="fa-solid fa-pen"></i></button>
               <button class="delete-btn" (click)="deleteSubject(subject)"><i class="fa-solid fa-trash"></i></button>
             </td>
+          </tr>
+        }
+        @if (!isLoading && filteredSubjects.length === 0) {
+          <tr>
+            <td colspan="6">No subjects yet for the current school.</td>
           </tr>
         }
       </tbody>
@@ -41,6 +58,10 @@
 @if (showForm) {
   <app-subject-form
     [existingSubject]="selectedSubject"
+    [schoolId]="selectedSchoolId"
+    [schoolName]="selectedSchoolName"
+    [gradeOptions]="availableGrades"
+    [teacherOptions]="teacherOptions"
     (closed)="closeForm()"
     (saved)="onSaved($event)" />
 }

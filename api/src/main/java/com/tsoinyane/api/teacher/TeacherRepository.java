@@ -24,4 +24,14 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
             order by t.createdAt desc
             """)
     List<Teacher> findRecentForNotifications(@Param("schoolId") Long schoolId, Pageable pageable);
+
+    @Query("""
+            select distinct t from Teacher t
+            join fetch t.user
+            join fetch t.school
+            left join fetch t.grades
+            where (:schoolId is null or t.school.id = :schoolId)
+            order by t.id asc
+            """)
+    List<Teacher> findAllBySchoolId(@Param("schoolId") Long schoolId);
 }

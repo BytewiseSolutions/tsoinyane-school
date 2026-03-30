@@ -7,6 +7,16 @@
     </div>
 
     <form class="form-body" (ngSubmit)="onSubmit()">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Subject Code</label>
+          <input type="text" placeholder="e.g. MATH-01" [(ngModel)]="subject.code" name="code" required />
+        </div>
+        <div class="form-group">
+          <label>School</label>
+          <input type="text" [value]="schoolName || 'Current school required'" readonly />
+        </div>
+      </div>
 
       <div class="form-group">
         <label>Subject Name</label>
@@ -15,32 +25,32 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label>School</label>
-          <select [(ngModel)]="subject.school" name="school" required>
-            <option value="">Select school</option>
-            <option value="Primary">Primary School</option>
-            <option value="High School">High School</option>
-            <option value="Both">Both</option>
+          <label>Grade</label>
+          <select [(ngModel)]="subject.gradeId" name="gradeId" required>
+            <option [ngValue]="null">Select grade</option>
+            @for (grade of gradeOptions; track grade.id) {
+              <option [ngValue]="grade.id">{{ grade.name }}</option>
+            }
           </select>
         </div>
         <div class="form-group">
           <label>Status</label>
           <select [(ngModel)]="subject.status" name="status">
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
+            @for (status of statusOptions; track status) {
+              <option [ngValue]="status">{{ status }}</option>
+            }
           </select>
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>Teacher</label>
-          <input type="text" placeholder="Assigned teacher" [(ngModel)]="subject.teacher" name="teacher" />
-        </div>
-        <div class="form-group">
-          <label>Student Count</label>
-          <input type="number" min="0" placeholder="0" [(ngModel)]="subject.students" name="students" />
-        </div>
+      <div class="form-group">
+        <label>Teacher</label>
+        <select [(ngModel)]="subject.teacherId" name="teacherId" required>
+          <option [ngValue]="null">Select teacher</option>
+          @for (teacher of teacherOptions; track teacher.id) {
+            <option [ngValue]="teacher.id">{{ teacher.name }}</option>
+          }
+        </select>
       </div>
 
       <div class="form-actions">

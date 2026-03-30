@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { getStoredAccessToken } from '../auth/auth-session';
 
 @Injectable({
   providedIn: 'root',
@@ -59,7 +60,7 @@ export class BackendService {
 
   private buildHeaders(): HttpHeaders {
     let headers = new HttpHeaders();
-    const accessToken = localStorage.getItem('accessToken') ?? sessionStorage.getItem('accessToken');
+    const accessToken = getStoredAccessToken();
 
     if (!accessToken) {
       return headers;
