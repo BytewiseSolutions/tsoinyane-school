@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { SidebarStateService } from '../sidebar-state';
 import { AuthUser } from '../../../models/auth-user';
 import { BackendService } from '../../../util/backend.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SchoolContextService } from '../school-context';
 import { SchoolOption } from '../../school-option';
+import { NotificationItem } from './notification-item';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -12,20 +14,17 @@ import { SchoolOption } from '../../school-option';
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })
-export class AdminHeader {
+export class AdminHeader implements OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+
   notificationsOpen = false;
   currentUserRole = 'Administrator';
   isSystemAdmin = false;
   schools: SchoolOption[] = [];
   selectedSchoolId: number | null = null;
-
-  notifications = [
-    { icon: 'fa-user-graduate', title: 'New Student Enrolled', message: 'Refiloe Mofokeng has been added to Form D.', time: '2 mins ago' },
-    { icon: 'fa-chalkboard-teacher', title: 'New Teacher Added', message: 'Mr. Retselisitsoe Phoofolo joined the Geography department.', time: '1 hour ago' },
-    { icon: 'fa-calendar-days', title: 'Upcoming Event', message: 'Sports Day is scheduled for March 15, 2026.', time: '3 hours ago' },
-    { icon: 'fa-book-open', title: 'Subject Updated', message: 'Physics subject details have been updated.', time: 'Yesterday' },
-    { icon: 'fa-gear', title: 'Settings Changed', message: 'School contact information was updated.', time: '2 days ago' },
-  ];
+  notifications: NotificationItem[] = [];
+  notificationsLoading = false;
+  notificationsError = '';
 
   notifPrefs = {
     newStudent: true,
@@ -44,9 +43,21 @@ export class AdminHeader {
 
   ngOnInit() {
     this.loadCurrentUser();
+    this.schoolContext.selectedSchool$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(school => {
+        this.selectedSchoolId = school?.id ?? null;
+        this.loadNotifications();
+      });
+
     if (this.isSystemAdmin) {
       this.loadSchoolsForContext();
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   toggleSidebar() {
@@ -59,6 +70,36 @@ export class AdminHeader {
 
   closeNotifications() {
     this.notificationsOpen = false;
+  }
+
+  getNotificationTime(timestamp?: string): string {
+    if (!timestamp) {
+      return 'Just now';
+    }
+
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return 'Just now';
+    }
+
+    const diffMs = date.getTime() - Date.now();
+    const diffMinutes = Math.round(diffMs / 60000);
+
+    if (Math.abs(diffMinutes) < 1) {
+      return 'Just now';
+    }
+
+    if (Math.abs(diffMinutes) < 60) {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(diffMinutes, 'minute');
+    }
+
+    const diffHours = Math.round(diffMinutes / 60);
+    if (Math.abs(diffHours) < 24) {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(diffHours, 'hour');
+    }
+
+    const diffDays = Math.round(diffHours / 24);
+    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(diffDays, 'day');
   }
 
   private loadCurrentUser() {
@@ -134,6 +175,24 @@ export class AdminHeader {
       },
       error: (_: HttpErrorResponse) => {
         this.schools = [];
+      },
+    });
+  }
+
+  private loadNotifications() {
+    this.notificationsLoading = true;
+    this.notificationsError = '';
+
+    this.backendService.get<NotificationItem[]>('notification', this.selectedSchoolId ? { schoolId: this.selectedSchoolId } : undefined).subscribe({
+      next: (notifications) => {
+        this.notifications = notifications ?? [];
+      },
+      error: (error: HttpErrorResponse) => {
+        this.notifications = [];
+        this.notificationsError = error.error?.message || 'Failed to load notifications.';
+      },
+      complete: () => {
+        this.notificationsLoading = false;
       },
     });
   }

@@ -198,6 +198,17 @@
       overflow-y: auto;
       padding: 12px 0;
 
+      .notif-state {
+        padding: 24px;
+        text-align: center;
+        color: #5f6e8f;
+        font-size: 14px;
+      }
+
+      .notif-state.error {
+        color: #b53a3a;
+      }
+
       .notif-item {
         display: flex;
         gap: 16px;

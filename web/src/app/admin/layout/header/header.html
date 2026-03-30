@@ -44,7 +44,14 @@
       </div>
 
       <div class="notif-list">
-        @for (notif of notifications; track notif.title) {
+        @if (notificationsLoading) {
+          <div class="notif-state">Loading notifications...</div>
+        } @else if (notificationsError) {
+          <div class="notif-state error">{{ notificationsError }}</div>
+        } @else if (!notifications.length) {
+          <div class="notif-state">No notifications yet.</div>
+        } @else {
+        @for (notif of notifications; track notif.title + notif.timestamp) {
           <div class="notif-item">
             <div class="notif-icon">
               <i class="fa-solid {{ notif.icon }}"></i>
@@ -52,14 +59,15 @@
             <div class="notif-content">
               <h4>{{ notif.title }}</h4>
               <p>{{ notif.message }}</p>
-              <span class="notif-time">{{ notif.time }}</span>
+              <span class="notif-time">{{ getNotificationTime(notif.timestamp) }}</span>
             </div>
           </div>
+        }
         }
       </div>
 
       <div class="notif-footer">
-        <button (click)="closeNotifications()">Mark all as read</button>
+        <button (click)="closeNotifications()">Close</button>
       </div>
 
       <div class="notif-preferences">
