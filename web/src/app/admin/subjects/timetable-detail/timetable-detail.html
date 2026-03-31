@@ -3,7 +3,7 @@
     <div>
       <button class="back-link" type="button" (click)="goBack()">Back to Subject</button>
       <h2>Timetable Details</h2>
-      <p>View the selected timetable entry and the students it applies to.</p>
+      <p>View the selected timetable entry and manage its lesson sessions.</p>
     </div>
   </div>
 
@@ -36,13 +36,87 @@
         <button class="tab-btn" [class.active]="activeTab === 'lessons'" (click)="activeTab = 'lessons'">Lessons</button>
         <button class="tab-btn" [class.active]="activeTab === 'students'" (click)="activeTab = 'students'">Students</button>
       </div>
+
       <div class="tab-content">
         @if (activeTab === 'lessons') {
-          <p class="empty-state">No lessons recorded yet.</p>
+          <div class="tab-header">
+            <div>
+              <h3>Lessons</h3>
+              <p>These lesson sessions are generated from this timetable.</p>
+            </div>
+          </div>
+
+          @if (lessonsError) {
+            <p class="empty-state error-text">{{ lessonsError }}</p>
+          }
+
+          @if (isLoadingLessons) {
+            <p class="empty-state">Loading lessons...</p>
+          } @else if (lessons.length > 0) {
+            <table class="students-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (lesson of lessons; track lesson.id) {
+                  <tr [class.selected-row]="lesson.id === selectedLessonId" (click)="selectLesson(lesson.id ?? null)">
+                    <td>{{ $index + 1 }}</td>
+                    <td>{{ formatLessonDate(lesson.date) }}</td>
+                    <td>{{ formatLessonTime(lesson.startTime) }}</td>
+                    <td>{{ formatLessonTime(lesson.endTime) }}</td>
+                    <td>{{ lesson.status || 'PENDING' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="empty-state">No lessons generated yet.</p>
+          }
         }
 
         @if (activeTab === 'students') {
-          @if (timetableStudents.length > 0) {
+          <div class="tab-header">
+            <div>
+              <h3>Students</h3>
+              <p>
+                @if (selectedLesson) {
+                  Students added to the selected lesson on {{ formatLessonDate(selectedLesson.date) }}.
+                } @else {
+                  Select a lesson first to manage students.
+                }
+              </p>
+            </div>
+            <button class="primary-btn" type="button" [disabled]="!selectedLesson" (click)="openStudentForm()">Add Student</button>
+          </div>
+
+          @if (lessons.length > 1) {
+            <div class="lesson-picker">
+              <label for="selectedLessonId">Lesson</label>
+              <select id="selectedLessonId" [ngModel]="selectedLessonId" (ngModelChange)="selectLesson($event)" name="selectedLessonId">
+                @for (lesson of lessons; track lesson.id) {
+                  <option [ngValue]="lesson.id">
+                    {{ formatLessonDate(lesson.date) }} | {{ formatLessonTime(lesson.startTime) }} - {{ formatLessonTime(lesson.endTime) }}
+                  </option>
+                }
+              </select>
+            </div>
+          }
+
+          @if (studentsError) {
+            <p class="empty-state error-text">{{ studentsError }}</p>
+          }
+
+          @if (!selectedLesson) {
+            <p class="empty-state">No lesson selected yet.</p>
+          } @else if (isLoadingStudentLessons) {
+            <p class="empty-state">Loading lesson students...</p>
+          } @else if (studentRows.length > 0) {
             <table class="students-table">
               <thead>
                 <tr>
@@ -51,25 +125,61 @@
                   <th>Name</th>
                   <th>Email</th>
                   <th>Phone</th>
+                  <th>Attendance</th>
+                  <th>Homework</th>
                 </tr>
               </thead>
               <tbody>
-                @for (student of timetableStudents; track student.id) {
+                @for (student of studentRows; track student.id) {
                   <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ student.studentId ? '#' + student.studentId : 'N/A' }}</td>
                     <td>{{ student.displayName }}</td>
                     <td>{{ student.email || 'N/A' }}</td>
                     <td>{{ student.phone || 'N/A' }}</td>
+                    <td>{{ student.attendanceStatus || 'PENDING' }}</td>
+                    <td>{{ student.homeworkStatus || 'PENDING' }}</td>
                   </tr>
                 }
               </tbody>
             </table>
           } @else {
-            <p class="empty-state">No students are linked to this timetable entry.</p>
+            <p class="empty-state">No students are linked to this lesson yet.</p>
           }
         }
       </div>
     </div>
   }
 </div>
+
+@if (showStudentForm) {
+  <div class="dialog-overlay" (click)="closeStudentForm()">
+    <div class="dialog-card" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <h3>Add Student</h3>
+        <button class="close-btn" type="button" (click)="closeStudentForm()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="form-group">
+          <label>Student</label>
+          <select [(ngModel)]="studentLessonForm.studentId" name="studentLessonStudentId">
+            <option [ngValue]="null">Select a student...</option>
+            @for (student of availableStudentsForLesson; track student.id) {
+              <option [ngValue]="student.id">
+                {{ student.displayName }}{{ student.studentId ? ' (#' + student.studentId + ')' : '' }}
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-btn" type="button" (click)="closeStudentForm()">Cancel</button>
+        <button class="primary-btn" type="button" [disabled]="isSavingStudentLesson || !availableStudentsForLesson.length" (click)="saveStudentLesson()">
+          {{ isSavingStudentLesson ? 'Saving...' : 'Add Student' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

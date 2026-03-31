@@ -9,14 +9,19 @@ import {
 import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { clearStoredAuth } from './auth-session';
+import { clearStoredAuth, getStoredAccessToken } from './auth-session';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   constructor(private router: Router) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    return next.handle(req).pipe(
+    const accessToken = getStoredAccessToken();
+    const authReq = accessToken
+      ? req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })
+      : req;
+
+    return next.handle(authReq).pipe(
       catchError((error: HttpErrorResponse) => {
         if ((error.status === 401 || error.status === 403) && !req.url.includes('/auth/login')) {
           clearStoredAuth();

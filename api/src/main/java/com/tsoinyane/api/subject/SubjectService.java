@@ -12,7 +12,9 @@ import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentDto;
 import com.tsoinyane.api.student.StudentRepository;
 import com.tsoinyane.api.user.User;
-import com.tsoinyane.api.user.UserRepository;
+import com.tsoinyane.api.timetable.TimetableRepository;
+import com.tsoinyane.api.lesson.LessonRepository;
+import com.tsoinyane.api.lesson.StudentLessonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,9 @@ public class SubjectService {
     private final GradeRepository gradeRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
+    private final TimetableRepository timetableRepository;
+    private final LessonRepository lessonRepository;
+    private final StudentLessonRepository studentLessonRepository;
     private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
@@ -154,6 +159,28 @@ public class SubjectService {
         if (!subjectRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + id);
         }
+
+        List<Long> timetableIds = timetableRepository.findAllBySubjectId(id)
+                .stream().map(t -> t.getId()).toList();
+
+        if (!timetableIds.isEmpty()) {
+            List<Long> lessonIds = lessonRepository.findAll().stream()
+                    .filter(l -> l.getTimetable() != null && timetableIds.contains(l.getTimetable().getId()))
+                    .map(l -> l.getId())
+                    .toList();
+
+            if (!lessonIds.isEmpty()) {
+                lessonIds.forEach(lessonId ->
+                        studentLessonRepository.deleteAll(
+                                studentLessonRepository.findAllByLessonId(lessonId)
+                        )
+                );
+                lessonRepository.deleteAllById(lessonIds);
+            }
+
+            timetableRepository.deleteAllById(timetableIds);
+        }
+
         subjectRepository.deleteById(id);
     }
 
