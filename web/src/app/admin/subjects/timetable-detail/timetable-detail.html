@@ -1,0 +1,75 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back to Subject</button>
+      <h2>Timetable Details</h2>
+      <p>View the selected timetable entry and the students it applies to.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading timetable details...</div>
+  } @else if (errorMessage || !timetable) {
+    <div class="state-card error">{{ errorMessage || 'Timetable not found.' }}</div>
+  } @else {
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Subject</span>
+        <strong>{{ timetable.subjectName || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Day</span>
+        <strong>{{ getDayLabel(timetable.dayOfWeek) }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Time</span>
+        <strong>{{ formatTimeRange() }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Students</span>
+        <strong>{{ timetableStudents.length }}</strong>
+      </div>
+    </div>
+
+    <div class="details-card tabs-card">
+      <div class="tab-bar">
+        <button class="tab-btn" [class.active]="activeTab === 'lessons'" (click)="activeTab = 'lessons'">Lessons</button>
+        <button class="tab-btn" [class.active]="activeTab === 'students'" (click)="activeTab = 'students'">Students</button>
+      </div>
+      <div class="tab-content">
+        @if (activeTab === 'lessons') {
+          <p class="empty-state">No lessons recorded yet.</p>
+        }
+
+        @if (activeTab === 'students') {
+          @if (timetableStudents.length > 0) {
+            <table class="students-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Student Number</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (student of timetableStudents; track student.id) {
+                  <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td>{{ student.studentId ? '#' + student.studentId : 'N/A' }}</td>
+                    <td>{{ student.displayName }}</td>
+                    <td>{{ student.email || 'N/A' }}</td>
+                    <td>{{ student.phone || 'N/A' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="empty-state">No students are linked to this timetable entry.</p>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

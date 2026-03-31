@@ -36,6 +36,7 @@ import { Notifications } from './admin/notifications/notifications';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
+import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
 import { EventForm } from './admin/events/event-form/event-form';
 import { AuthInterceptor } from './auth/auth.interceptor';
 
@@ -72,6 +73,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     Settings,
     SubjectForm,
     SubjectDetail,
+    TimetableDetail,
     EventForm
   ],
   imports: [

@@ -281,6 +281,65 @@
   gap: 16px;
 }
 
+.timetable-section {
+  display: grid;
+  gap: 16px;
+}
+
+.timetable-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+
+  h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--navy-blue);
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: #5f6e8f;
+    font-size: 14px;
+  }
+
+  .add-timetable-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--navy-blue);
+    color: var(--white);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 31, 91, 0.15);
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+
+    &::before {
+      content: '+';
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    &:hover {
+      background-color: var(--navy-blue-light);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 31, 91, 0.2);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+}
+
 .bulk-actions {
   display: flex;
   justify-content: space-between;
@@ -312,6 +371,36 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.sort-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--navy-blue);
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 4px;
+
+  select {
+    min-width: 140px;
+    border: 1px solid #c5d5f8;
+    background: #fff;
+    color: var(--navy-blue);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+  }
+}
+
+.assigned-count-summary {
+  margin: -4px 0 0;
+  color: #5f6f8e;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .section-heading h4 {
@@ -449,6 +538,107 @@
   }
 }
 
+.timetable-table {
+  td.actions {
+    white-space: nowrap;
+  }
+}
+
+.timetable-modal {
+  max-width: 700px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-group {
+  p {
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #dbe5f5;
+    border-radius: 8px;
+    background: #f8faff;
+    color: #5f6e8f;
+    font-size: 14px;
+  }
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px 14px;
+  border: 1px solid #ccd6f0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--navy-blue);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid #edf2fa;
+  background: #fbfcff;
+}
+
+.pagination-summary,
+.page-indicator,
+.page-size span {
+  color: #5f6e8f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  select {
+    border: 1px solid #ccd6f0;
+    border-radius: 6px;
+    padding: 7px 10px;
+    background: #fff;
+    color: #2f3f63;
+    font-size: 13px;
+    outline: none;
+  }
+}
+
+.page-btn {
+  border: 1px solid #ccd7ee;
+  background: #fff;
+  color: #2b3f66;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.page-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 900px) {
   .bulk-actions {
     flex-direction: column;
@@ -458,4 +648,27 @@
   .bulk-buttons {
     justify-content: flex-start;
   }
+
+  .sort-control {
+    margin-left: 0;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .timetable-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.full-width {
+    grid-column: auto;
+  }
+
 }

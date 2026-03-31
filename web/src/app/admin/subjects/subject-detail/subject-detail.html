@@ -90,13 +90,27 @@
                 </label>
                 <div class="bulk-buttons">
                   <button class="remove-btn" [disabled]="!hasSelectedAssignedStudents" (click)="confirmRemove()">
-                    Remove selected
+                    Remove Selected{{ hasSelectedAssignedStudents ? ' (' + selectedAssignedStudentsCount + ')' : '' }}
                   </button>
                   <button class="transfer-btn" [disabled]="!hasSelectedAssignedStudents" (click)="transferStudent()">
-                    Transfer selected
+                    Transfer Selected{{ hasSelectedAssignedStudents ? ' (' + selectedAssignedStudentsCount + ')' : '' }}
                   </button>
+                  <label class="sort-control">
+                    <span>Sort by:</span>
+                    <select [(ngModel)]="assignedStudentsSortBy" name="assignedStudentsSortBy">
+                      <option value="firstName">First Name</option>
+                      <option value="lastName">Last Name</option>
+                    </select>
+                    <select [(ngModel)]="assignedStudentsSortDirection" name="assignedStudentsSortDirection">
+                      <option value="asc">A-Z</option>
+                      <option value="desc">Z-A</option>
+                    </select>
+                  </label>
                 </div>
               </div>
+              <p class="assigned-count-summary">
+                {{ assignedStudents.length }} {{ assignedStudents.length === 1 ? 'student' : 'students' }} assigned
+              </p>
               <table class="students-table">
                 <thead>
                   <tr>
@@ -117,7 +131,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (student of assignedStudents; track student.id) {
+                  @for (student of paginatedAssignedStudents; track student.id) {
                     <tr>
                       <td class="checkbox-col">
                         <input
@@ -139,13 +153,80 @@
                   }
                 </tbody>
               </table>
+              <div class="pagination-bar">
+                <div class="pagination-summary">
+                  Showing {{ pageStart }}-{{ pageEnd }} of {{ assignedStudents.length }}
+                </div>
+                <div class="pagination-controls">
+                  <label class="page-size">
+                    <span>Rows</span>
+                    <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()" name="assignedStudentsPageSize">
+                      @for (size of pageSizeOptions; track size) {
+                        <option [ngValue]="size">{{ size }}</option>
+                      }
+                    </select>
+                  </label>
+                  <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
+                    Previous
+                  </button>
+                  <span class="page-indicator">Page {{ safeCurrentPage }} of {{ totalPages }}</span>
+                  <button type="button" class="page-btn" [disabled]="safeCurrentPage === totalPages" (click)="goToNextPage()">
+                    Next
+                  </button>
+                </div>
+              </div>
             } @else {
               <p class="tab-placeholder">No students assigned yet.</p>
             }
           </div>
         }
         @if (activeTab === 'timetable') {
-          <p class="tab-placeholder">No timetable configured yet.</p>
+          <div class="timetable-section">
+            <div class="timetable-header">
+              <div>
+                <h4>Timetable Entries</h4>
+                <p>Manage the periods for this subject.</p>
+              </div>
+              <button class="add-timetable-btn" type="button" (click)="openTimetableForm()">Add Timetable</button>
+            </div>
+
+            @if (timetableError) {
+              <p class="tab-error">{{ timetableError }}</p>
+            }
+
+            @if (isLoadingTimetables) {
+              <div class="state-card">Loading timetable entries...</div>
+            } @else if (timetables.length > 0) {
+              <table class="students-table timetable-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Day</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (entry of timetables; track entry.id) {
+                    <tr>
+                      <td>{{ $index + 1 }}</td>
+                      <td>{{ getDayLabel(entry.dayOfWeek) }}</td>
+                      <td>{{ entry.startTime }}</td>
+                      <td>{{ entry.endTime }}</td>
+                      <td class="actions">
+                        <button class="transfer-btn" type="button" (click)="viewTimetable(entry)">View</button>
+                        <button class="transfer-btn" type="button" (click)="openTimetableForm(entry)">Edit</button>
+                        <button class="remove-btn" type="button" (click)="confirmDeleteTimetable(entry)">Delete</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <p class="tab-placeholder">No timetable configured yet.</p>
+            }
+          </div>
         }
       </div>
     </div>
@@ -204,6 +285,74 @@
         <button class="cancel-btn" (click)="cancelTransfer()">Cancel</button>
         <button class="confirm-btn" [disabled]="!targetSubjectId || isTransferring" (click)="confirmTransfer()">
           {{ isTransferring ? 'Transferring...' : 'Transfer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showTimetableForm) {
+  <div class="transfer-overlay" (click)="closeTimetableForm()">
+    <div class="transfer-card timetable-modal" (click)="$event.stopPropagation()">
+      <div class="transfer-header">
+        <h3>{{ editingTimetable ? 'Edit Timetable' : 'Add Timetable' }}</h3>
+        <button class="close-btn" (click)="closeTimetableForm()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="transfer-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Day of Week</label>
+            <select [(ngModel)]="timetableForm.dayOfWeek" name="timetableDayOfWeek">
+              @for (day of dayOfWeekOptions; track day) {
+                <option [ngValue]="day">{{ getDayLabel(day) }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Start Time</label>
+            <input type="time" [(ngModel)]="timetableForm.startTime" name="timetableStartTime" />
+          </div>
+          <div class="form-group">
+            <label>End Time</label>
+            <input type="time" [(ngModel)]="timetableForm.endTime" name="timetableEndTime" />
+          </div>
+          <div class="form-group full-width info-group">
+            <label>Students</label>
+            <p>This timetable will automatically apply to all students currently assigned to this subject.</p>
+          </div>
+        </div>
+        @if (timetableError) {
+          <p class="tab-error">{{ timetableError }}</p>
+        }
+      </div>
+      <div class="transfer-actions">
+        <button class="cancel-btn" (click)="closeTimetableForm()">Cancel</button>
+        <button class="confirm-btn" [disabled]="isSavingTimetable" (click)="saveTimetable()">
+          {{ isSavingTimetable ? 'Saving...' : (editingTimetable ? 'Save Changes' : 'Create Timetable') }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteTimetableDialog && timetableToDelete) {
+  <div class="transfer-overlay" (click)="cancelDeleteTimetable()">
+    <div class="transfer-card" (click)="$event.stopPropagation()">
+      <div class="transfer-header">
+        <h3>Delete Timetable</h3>
+        <button class="close-btn" (click)="cancelDeleteTimetable()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="transfer-body">
+        <p>
+          Are you sure you want to delete the timetable for
+          <strong>{{ getDayLabel(timetableToDelete.dayOfWeek) }}</strong>
+          <strong>{{ formatTimeRange(timetableToDelete) }}</strong>?
+        </p>
+      </div>
+      <div class="transfer-actions">
+        <button class="cancel-btn" (click)="cancelDeleteTimetable()">Cancel</button>
+        <button class="remove-btn" [disabled]="isSavingTimetable" (click)="deleteTimetable()">
+          {{ isSavingTimetable ? 'Deleting...' : 'Delete' }}
         </button>
       </div>
     </div>
