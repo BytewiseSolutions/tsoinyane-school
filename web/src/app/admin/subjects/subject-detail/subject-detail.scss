@@ -147,6 +147,129 @@
   font-size: 14px;
 }
 
+.already-assigned-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #e8f8ef;
+  color: #1f8a49;
+  border: 1px solid #b7e4c7;
+}
+
+.transfer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.transfer-card {
+  background: #fff;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 32px rgba(0, 31, 91, 0.2);
+
+  .transfer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    border-bottom: 1px solid #e0e7f0;
+
+    h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--navy-blue);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: #888;
+      cursor: pointer;
+      &:hover { color: var(--navy-blue); }
+    }
+  }
+
+  .transfer-body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      color: #4c5c7f;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--navy-blue);
+      }
+
+      select {
+        padding: 10px 14px;
+        border: 1px solid #ccd6f0;
+        border-radius: 6px;
+        font-size: 14px;
+        color: var(--navy-blue);
+        outline: none;
+        &:focus { border-color: var(--navy-blue); }
+      }
+    }
+  }
+
+  .transfer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid #e0e7f0;
+
+    .cancel-btn {
+      background: #f4f6fb;
+      color: var(--navy-blue);
+      border: 1px solid #ccd6f0;
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      &:hover { background: #e0e7f0; }
+    }
+
+    .confirm-btn {
+      background: var(--navy-blue);
+      color: #fff;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      &:hover:not(:disabled) { background: var(--navy-blue-light); }
+      &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+  }
+}
+
 .tab-error {
   color: #b53a3a;
   font-size: 14px;
@@ -195,6 +318,58 @@
   overflow-y: auto;
 }
 
+::ng-deep .student-select .ng-value {
+  display: inline-flex;
+  align-items: center;
+  background-color: #e8f0fe;
+  color: var(--navy-blue);
+  border: 1px solid #c5d5f8;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 4px;
+
+  .ng-value-icon {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    color: #6a7897;
+
+    &:hover { color: #c62828; }
+  }
+}
+
+.remove-btn {
+  background-color: #c62828;
+  color: #fff;
+  border: 1px solid #b71c1c;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity 0.2s, transform 0.15s;
+
+  &:hover { opacity: 0.85; transform: translateY(-1px); }
+  &:active { transform: translateY(0); }
+}
+
+.transfer-btn {
+  background-color: #e8f0fe;
+  color: var(--navy-blue);
+  border: 1px solid #c5d5f8;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity 0.2s, transform 0.15s;
+
+  &:hover { opacity: 0.85; transform: translateY(-1px); }
+  &:active { transform: translateY(0); }
+}
+
 .students-table {
   width: 100%;
   border-collapse: collapse;
@@ -222,30 +397,5 @@
   td.actions {
     display: flex;
     gap: 8px;
-  }
-
-  .remove-btn, .transfer-btn {
-    padding: 6px 14px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: opacity 0.2s, transform 0.15s;
-
-    &:hover { opacity: 0.85; transform: translateY(-1px); }
-    &:active { transform: translateY(0); }
-  }
-
-  .remove-btn {
-    background-color: #c62828;
-    color: #fff;
-    border: 1px solid #b71c1c;
-  }
-
-  .transfer-btn {
-    background-color: #e8f0fe;
-    color: var(--navy-blue);
-    border: 1px solid #c5d5f8;
   }
 }

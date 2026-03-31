@@ -49,24 +49,30 @@
               <ng-select
                 [items]="selectableStudents"
                 bindLabel="displayName"
-                bindValue="id"
                 [multiple]="true"
                 [searchable]="true"
                 [clearable]="true"
                 [closeOnSelect]="false"
-                [(ngModel)]="selectedStudentIds"
+                [(ngModel)]="selectedStudents"
                 name="studentSelect"
                 placeholder="Search and select students..."
                 class="student-select"
                 (add)="onItemAdded($event)"
                 (remove)="onItemRemoved($event)"
               >
+                <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                  <span class="ng-value-label">{{ item.displayName }}</span>
+                  <span class="ng-value-icon right" (click)="clear(item)">×</span>
+                </ng-template>
                 <ng-template ng-option-tmp let-item="item" let-item$="item$">
-                  <input type="checkbox" [checked]="item$.selected" />
+                  <input type="checkbox" [checked]="item$.selected" [disabled]="isAlreadyAssigned(item)" />
                   {{ item.displayName }}
+                  @if (isAlreadyAssigned(item)) {
+                    <span class="already-assigned-badge">Already assigned</span>
+                  }
                 </ng-template>
               </ng-select>
-              <button class="assign-btn" [disabled]="!selectedStudentIds.length" (click)="assignStudents()">Assign</button>
+              <button class="assign-btn" [disabled]="!selectedStudents.length" (click)="assignStudents()">Assign</button>
             </div>
             @if (studentsError) {
               <p class="tab-error">{{ studentsError }}</p>
@@ -92,7 +98,7 @@
                       <td>{{ student.email || 'N/A' }}</td>
                       <td>{{ student.phone || 'N/A' }}</td>
                       <td class="actions">
-                        <button class="remove-btn" (click)="removeStudent(student)">Remove</button>
+                        <button class="remove-btn" (click)="confirmRemove(student)">Remove</button>
                         <button class="transfer-btn" (click)="transferStudent(student)">Transfer</button>
                       </td>
                     </tr>
@@ -111,3 +117,52 @@
     </div>
   }
 </div>
+
+@if (removingStudent) {
+  <div class="transfer-overlay" (click)="cancelRemove()">
+    <div class="transfer-card" (click)="$event.stopPropagation()">
+      <div class="transfer-header">
+        <h3>Remove Student</h3>
+        <button class="close-btn" (click)="cancelRemove()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="transfer-body">
+        <p>Are you sure you want to remove <strong>{{ removingStudent.displayName }}</strong> from this subject?</p>
+      </div>
+      <div class="transfer-actions">
+        <button class="cancel-btn" (click)="cancelRemove()">Cancel</button>
+        <button class="remove-btn" (click)="removeStudent(removingStudent)">Remove</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (transferringStudent) {  <div class="transfer-overlay" (click)="cancelTransfer()">
+    <div class="transfer-card" (click)="$event.stopPropagation()">
+      <div class="transfer-header">
+        <h3>Transfer Student</h3>
+        <button class="close-btn" (click)="cancelTransfer()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="transfer-body">
+        <p>Transfer <strong>{{ transferringStudent.displayName }}</strong> to another subject.</p>
+        <div class="form-group">
+          <label>Select Subject</label>
+          <select [(ngModel)]="targetSubjectId" name="targetSubject">
+            <option [ngValue]="null">Select a subject...</option>
+            @for (s of availableSubjects; track s.id) {
+              <option [ngValue]="s.id">{{ s.name }} ({{ s.code }})</option>
+            }
+          </select>
+        </div>
+        @if (studentsError) {
+          <p class="tab-error">{{ studentsError }}</p>
+        }
+      </div>
+      <div class="transfer-actions">
+        <button class="cancel-btn" (click)="cancelTransfer()">Cancel</button>
+        <button class="confirm-btn" [disabled]="!targetSubjectId || isTransferring" (click)="confirmTransfer()">
+          {{ isTransferring ? 'Transferring...' : 'Transfer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

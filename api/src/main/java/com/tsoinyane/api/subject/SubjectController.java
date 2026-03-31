@@ -1,5 +1,6 @@
 package com.tsoinyane.api.subject;
 
+import com.tsoinyane.api.student.StudentDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -35,6 +36,16 @@ public class SubjectController {
     @PostMapping
     public SubjectDto createSubject(@RequestBody SubjectDto request) {
         return subjectService.createSubject(request);
+    }
+
+    @GetMapping("/{id}/students")
+    public List<StudentDto> getSubjectStudents(@PathVariable Long id) {
+        return subjectService.getSubjectStudents(id);
+    }
+
+    @PutMapping("/{id}/students")
+    public List<StudentDto> updateSubjectStudents(@PathVariable Long id, @RequestBody List<Long> studentIds) {
+        return subjectService.updateSubjectStudents(id, studentIds);
     }
 
     @PutMapping("/{id}")

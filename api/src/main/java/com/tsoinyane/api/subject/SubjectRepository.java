@@ -29,4 +29,12 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
             where s.id = :id
             """)
     Optional<Subject> findWithAssociationsById(@Param("id") Long id);
+
+    @Query("""
+            select s from Subject s
+            left join fetch s.students st
+            left join fetch st.user
+            where s.id = :id
+            """)
+    Optional<Subject> findWithStudentsById(@Param("id") Long id);
 }

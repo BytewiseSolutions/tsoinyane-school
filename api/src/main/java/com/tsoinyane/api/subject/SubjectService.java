@@ -8,7 +8,11 @@ import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.teacher.Teacher;
 import com.tsoinyane.api.teacher.TeacherRepository;
+import com.tsoinyane.api.student.Student;
+import com.tsoinyane.api.student.StudentDto;
+import com.tsoinyane.api.student.StudentRepository;
 import com.tsoinyane.api.user.User;
+import com.tsoinyane.api.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,7 +29,49 @@ public class SubjectService {
     private final SchoolRepository schoolRepository;
     private final GradeRepository gradeRepository;
     private final TeacherRepository teacherRepository;
+    private final StudentRepository studentRepository;
     private final CurrentUserService currentUserService;
+
+    @Transactional(readOnly = true)
+    public List<StudentDto> getSubjectStudents(Long subjectId) {
+        Subject subject = subjectRepository.findWithStudentsById(subjectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + subjectId));
+
+        return subject.getStudents().stream()
+                .map(this::toStudentDto)
+                .toList();
+    }
+
+    @Transactional
+    public List<StudentDto> updateSubjectStudents(Long subjectId, List<Long> studentIds) {
+        Subject subject = subjectRepository.findWithStudentsById(subjectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + subjectId));
+
+        List<Student> students = studentIds == null || studentIds.isEmpty()
+                ? List.of()
+                : studentRepository.findAllById(studentIds);
+
+        subject.setStudents(new java.util.LinkedHashSet<>(students));
+        subjectRepository.save(subject);
+
+        return students.stream().map(this::toStudentDto).toList();
+    }
+
+    private StudentDto toStudentDto(Student student) {
+        User user = student.getUser();
+        String displayName = user != null
+                ? ((user.getFirstName() != null ? user.getFirstName() : "") + " "
+                + (user.getLastName() != null ? user.getLastName() : "")).trim()
+                : null;
+
+        return StudentDto.builder()
+                .id(student.getId())
+                .studentNumber(student.getStudentNumber())
+                .userFullName(displayName)
+                .userEmail(user != null ? user.getEmail() : null)
+                .userPhone(user != null ? user.getPhone() : null)
+                .build();
+    }
 
     @Transactional(readOnly = true)
     public SubjectDto getSubject(Long id) {
