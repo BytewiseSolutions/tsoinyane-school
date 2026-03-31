@@ -45,6 +45,14 @@ public class UserService {
                 .toList();
     }
 
+    public List<UserDto> getUsers(Long schoolId, Role role) {
+        return userRepository.findAllByOrderByIdAsc().stream()
+                .filter(user -> schoolId == null || user.getSchools().stream().anyMatch(s -> s.getId().equals(schoolId)))
+                .filter(user -> role == null || (user.getRoles() != null && user.getRoles().contains(role)))
+                .map(this::toDto)
+                .toList();
+    }
+
     public UserDto getUserById(Long id) {
         User user = userRepository.findWithSchoolsAndRolesById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));

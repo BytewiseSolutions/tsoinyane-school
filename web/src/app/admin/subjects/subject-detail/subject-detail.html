@@ -33,32 +33,6 @@
       </div>
     </div>
 
-    <div class="details-grid">
-      <section class="details-card">
-        <h3>Subject Information</h3>
-        <div class="detail-row">
-          <span>Code</span>
-          <strong>{{ subject.code }}</strong>
-        </div>
-        <div class="detail-row">
-          <span>Name</span>
-          <strong>{{ subject.name }}</strong>
-        </div>
-      </section>
-
-      <section class="details-card">
-        <h3>Assignment</h3>
-        <div class="detail-row">
-          <span>School</span>
-          <strong>{{ subject.schoolName || 'N/A' }}</strong>
-        </div>
-        <div class="detail-row">
-          <span>Teacher</span>
-          <strong>{{ subject.teacherName || 'N/A' }}</strong>
-        </div>
-      </section>
-    </div>
-
     <div class="tabs-card">
       <div class="tab-bar">
         <button class="tab-btn" [class.active]="activeTab === 'students'" (click)="activeTab = 'students'">Students</button>
@@ -67,7 +41,68 @@
 
       <div class="tab-content">
         @if (activeTab === 'students') {
-          <p class="tab-placeholder">No students assigned yet.</p>
+          <div class="students-section">
+            <div class="section-heading">
+              <h4>Student Class</h4>
+            </div>
+            <div class="assign-row">
+              <ng-select
+                [items]="selectableStudents"
+                bindLabel="displayName"
+                bindValue="id"
+                [multiple]="true"
+                [searchable]="true"
+                [clearable]="true"
+                [closeOnSelect]="false"
+                [(ngModel)]="selectedStudentIds"
+                name="studentSelect"
+                placeholder="Search and select students..."
+                class="student-select"
+                (add)="onItemAdded($event)"
+                (remove)="onItemRemoved($event)"
+              >
+                <ng-template ng-option-tmp let-item="item" let-item$="item$">
+                  <input type="checkbox" [checked]="item$.selected" />
+                  {{ item.displayName }}
+                </ng-template>
+              </ng-select>
+              <button class="assign-btn" [disabled]="!selectedStudentIds.length" (click)="assignStudents()">Assign</button>
+            </div>
+            @if (studentsError) {
+              <p class="tab-error">{{ studentsError }}</p>
+            }
+            @if (assignedStudents.length > 0) {
+              <table class="students-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Student Number</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (student of assignedStudents; track student.id) {
+                    <tr>
+                      <td>{{ $index + 1 }}</td>
+                      <td>{{ student.studentId ? '#' + student.studentId : 'N/A' }}</td>
+                      <td>{{ student.displayName }}</td>
+                      <td>{{ student.email || 'N/A' }}</td>
+                      <td>{{ student.phone || 'N/A' }}</td>
+                      <td class="actions">
+                        <button class="remove-btn" (click)="removeStudent(student)">Remove</button>
+                        <button class="transfer-btn" (click)="transferStudent(student)">Transfer</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <p class="tab-placeholder">No students assigned yet.</p>
+            }
+          </div>
         }
         @if (activeTab === 'timetable') {
           <p class="tab-placeholder">No timetable configured yet.</p>
