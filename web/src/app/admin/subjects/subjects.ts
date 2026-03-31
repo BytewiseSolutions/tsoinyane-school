@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { SchoolContextService } from '../layout/school-context';
@@ -32,7 +33,8 @@ export class AdminSubjects implements OnInit, OnDestroy {
 
   constructor(
     private backendService: BackendService,
-    private schoolContext: SchoolContextService
+    private schoolContext: SchoolContextService,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -80,10 +82,26 @@ export class AdminSubjects implements OnInit, OnDestroy {
     this.selectedSubject = null;
   }
 
+  viewSubject(subject: SchoolSubject) {
+    this.router.navigate(['/admin/subjects', subject.id]);
+  }
+
   onSaved(subject: SchoolSubject) {
     if (this.selectedSubject) {
-      this.subjects = this.subjects.map(item => item === this.selectedSubject ? subject : item);
-      this.closeForm();
+      const id = this.selectedSubject.id!;
+      const payload: SchoolSubject = { ...subject, schoolId: this.selectedSchoolId };
+
+      this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${id}`, payload).subscribe({
+        next: (updated) => {
+          this.subjects = this.subjects.map(item =>
+            item.id === id ? this.mapSavedSubject(updated) : item
+          );
+          this.closeForm();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to update subject.';
+        },
+      });
       return;
     }
 
@@ -104,7 +122,16 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   deleteSubject(subject: SchoolSubject) {
-    this.subjects = this.subjects.filter(s => s !== subject);
+    if (!subject.id) return;
+
+    this.backendService.delete(`subject/${subject.id}`).subscribe({
+      next: () => {
+        this.subjects = this.subjects.filter(s => s.id !== subject.id);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to delete subject.';
+      },
+    });
   }
 
   getStatusLabel(status: Status | null | undefined): string {
@@ -121,6 +148,16 @@ export class AdminSubjects implements OnInit, OnDestroy {
 
     this.isLoading = true;
     this.errorMessage = '';
+
+    this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId }).subscribe({
+      next: (subjects) => {
+        this.subjects = (subjects ?? []).map(s => this.mapSavedSubject(s));
+      },
+      error: (error: HttpErrorResponse) => {
+        this.subjects = [];
+        this.errorMessage = error.error?.message || 'Failed to load subjects.';
+      },
+    });
 
     this.backendService.get<Grade[]>('grade').subscribe({
       next: (grades) => {

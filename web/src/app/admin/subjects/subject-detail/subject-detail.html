@@ -1,0 +1,78 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back to Subjects</button>
+      <h2>{{ subject?.name || 'Subject Details' }}</h2>
+      <p>View the selected subject's details.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading subject details...</div>
+  } @else if (errorMessage && !subject) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  } @else if (subject) {
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Code</span>
+        <strong>{{ subject.code }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Status</span>
+        <strong [class]="'status ' + getStatusLabel(subject.status).toLowerCase()">
+          {{ getStatusLabel(subject.status) }}
+        </strong>
+      </div>
+      <div class="summary-item">
+        <span>Grade</span>
+        <strong>{{ subject.gradeName || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Teacher</span>
+        <strong>{{ subject.teacherName || 'N/A' }}</strong>
+      </div>
+    </div>
+
+    <div class="details-grid">
+      <section class="details-card">
+        <h3>Subject Information</h3>
+        <div class="detail-row">
+          <span>Code</span>
+          <strong>{{ subject.code }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Name</span>
+          <strong>{{ subject.name }}</strong>
+        </div>
+      </section>
+
+      <section class="details-card">
+        <h3>Assignment</h3>
+        <div class="detail-row">
+          <span>School</span>
+          <strong>{{ subject.schoolName || 'N/A' }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Teacher</span>
+          <strong>{{ subject.teacherName || 'N/A' }}</strong>
+        </div>
+      </section>
+    </div>
+
+    <div class="tabs-card">
+      <div class="tab-bar">
+        <button class="tab-btn" [class.active]="activeTab === 'students'" (click)="activeTab = 'students'">Students</button>
+        <button class="tab-btn" [class.active]="activeTab === 'timetable'" (click)="activeTab = 'timetable'">Timetable</button>
+      </div>
+
+      <div class="tab-content">
+        @if (activeTab === 'students') {
+          <p class="tab-placeholder">No students assigned yet.</p>
+        }
+        @if (activeTab === 'timetable') {
+          <p class="tab-placeholder">No timetable configured yet.</p>
+        }
+      </div>
+    </div>
+  }
+</div>

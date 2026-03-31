@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class SubjectService {
@@ -24,6 +26,20 @@ public class SubjectService {
     private final GradeRepository gradeRepository;
     private final TeacherRepository teacherRepository;
     private final CurrentUserService currentUserService;
+
+    @Transactional(readOnly = true)
+    public SubjectDto getSubject(Long id) {
+        return subjectRepository.findWithAssociationsById(id)
+                .map(this::toDto)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubjectDto> getSubjects(Long schoolId) {
+        return subjectRepository.findAllBySchoolId(schoolId).stream()
+                .map(this::toDto)
+                .toList();
+    }
 
     @Transactional
     public SubjectDto createSubject(SubjectDto request) {
@@ -54,6 +70,45 @@ public class SubjectService {
                 .build();
 
         return toDto(subjectRepository.save(subject));
+    }
+
+    @Transactional
+    public SubjectDto updateSubject(Long id, SubjectDto request) {
+        Subject subject = subjectRepository.findWithAssociationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + id));
+
+        String code = normalize(request.getCode());
+        String name = normalize(request.getName());
+
+        if (code.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Subject code is required");
+        }
+        if (name.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Subject name is required");
+        }
+
+        School school = resolveSchool(request.getSchoolId());
+        Grade grade = resolveGrade(request.getGradeId(), school.getId());
+        Teacher teacher = resolveTeacher(request.getTeacherId(), school.getId());
+        User actor = currentUserService.getCurrentUser();
+
+        subject.setCode(code);
+        subject.setName(name);
+        subject.setSchool(school);
+        subject.setGrade(grade);
+        subject.setTeacher(teacher);
+        subject.setStatus(request.getStatus() != null ? request.getStatus() : subject.getStatus());
+        subject.setUpdatedBy(actor);
+
+        return toDto(subjectRepository.save(subject));
+    }
+
+    @Transactional
+    public void deleteSubject(Long id) {
+        if (!subjectRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + id);
+        }
+        subjectRepository.deleteById(id);
     }
 
     private School resolveSchool(Long schoolId) {
@@ -112,6 +167,7 @@ public class SubjectService {
                 .code(subject.getCode())
                 .name(subject.getName())
                 .gradeId(grade != null ? grade.getId() : null)
+                .gradeName(grade != null ? grade.getName() : null)
                 .teacherId(teacher != null ? teacher.getId() : null)
                 .teacherName(teacher != null && teacher.getUser() != null ? teacher.getUser().getDisplayName() : null)
                 .status(subject.getStatus())

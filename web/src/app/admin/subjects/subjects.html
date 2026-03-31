@@ -40,6 +40,7 @@
             <td>{{ subject.teacherName || 'N/A' }}</td>
             <td><span class="badge" [class.active]="getStatusLabel(subject.status) === 'Active'" [class.inactive]="getStatusLabel(subject.status) === 'Inactive'">{{ getStatusLabel(subject.status) }}</span></td>
             <td class="actions">
+              <button class="view-btn" (click)="viewSubject(subject)"><i class="fa-solid fa-eye"></i></button>
               <button class="edit-btn" (click)="openForm(subject)"><i class="fa-solid fa-pen"></i></button>
               <button class="delete-btn" (click)="deleteSubject(subject)"><i class="fa-solid fa-trash"></i></button>
             </td>

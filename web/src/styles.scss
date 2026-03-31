@@ -209,12 +209,12 @@ body {
         justify-content: center;
       }
 
+      .view-btn { background-color: #e8f5e9; color: #2e7d32; }
       .edit-btn { background-color: #e8f0fe; color: var(--navy-blue); }
       .delete-btn { background-color: #fdecea; color: #c62828; }
     }
   }
 
-  // SETTINGS
   .settings-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
