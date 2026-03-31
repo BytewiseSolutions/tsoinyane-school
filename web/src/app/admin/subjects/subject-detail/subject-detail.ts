@@ -31,10 +31,11 @@ export class SubjectDetail implements OnInit {
   selectableStudents: StudentOption[] = [];
   assignedStudents: StudentOption[] = [];
   selectedStudents: StudentOption[] = [];
+  selectedAssignedStudentIds: number[] = [];
   studentsError = '';
 
-  transferringStudent: StudentOption | null = null;
-  removingStudent: StudentOption | null = null;
+  transferringStudents: StudentOption[] = [];
+  removingStudents: StudentOption[] = [];
   targetSubjectId: number | null = null;
   availableSubjects: SchoolSubject[] = [];
   isTransferring = false;
@@ -96,22 +97,72 @@ export class SubjectDetail implements OnInit {
     this.saveAssignedStudents();
   }
 
-  confirmRemove(student: StudentOption) {
-    this.removingStudent = student;
+  get hasSelectedAssignedStudents(): boolean {
+    return this.selectedAssignedStudentIds.length > 0;
+  }
+
+  get allAssignedStudentsSelected(): boolean {
+    return this.assignedStudents.length > 0
+      && this.selectedAssignedStudentIds.length === this.assignedStudents.length;
+  }
+
+  get partiallySelectedAssignedStudents(): boolean {
+    return this.selectedAssignedStudentIds.length > 0
+      && this.selectedAssignedStudentIds.length < this.assignedStudents.length;
+  }
+
+  get removingStudent(): StudentOption | null {
+    return this.removingStudents[0] ?? null;
+  }
+
+  get transferringStudent(): StudentOption | null {
+    return this.transferringStudents[0] ?? null;
+  }
+
+  isAssignedStudentSelected(studentId: number): boolean {
+    return this.selectedAssignedStudentIds.includes(studentId);
+  }
+
+  toggleAssignedStudent(studentId: number, checked: boolean) {
+    if (checked) {
+      if (!this.selectedAssignedStudentIds.includes(studentId)) {
+        this.selectedAssignedStudentIds = [...this.selectedAssignedStudentIds, studentId];
+      }
+      return;
+    }
+
+    this.selectedAssignedStudentIds = this.selectedAssignedStudentIds.filter(id => id !== studentId);
+  }
+
+  toggleAllAssignedStudents(checked: boolean) {
+    this.selectedAssignedStudentIds = checked ? this.assignedStudents.map(student => student.id) : [];
+  }
+
+  confirmRemove(student?: StudentOption) {
+    this.removingStudents = student ? [student] : this.getSelectedAssignedStudents();
   }
 
   cancelRemove() {
-    this.removingStudent = null;
+    this.removingStudents = [];
   }
 
-  removeStudent(student: StudentOption) {
-    this.assignedStudents = this.assignedStudents.filter(s => s.id !== student.id);
-    this.removingStudent = null;
+  removeStudents() {
+    if (!this.removingStudents.length) {
+      return;
+    }
+
+    this.removeAssignedStudents(this.removingStudents.map(student => student.id));
+    this.removingStudents = [];
     this.saveAssignedStudents();
   }
 
-  transferStudent(student: StudentOption) {
-    this.transferringStudent = student;
+  transferStudent(student?: StudentOption) {
+    this.transferringStudents = student ? [student] : this.getSelectedAssignedStudents();
+
+    if (!this.transferringStudents.length) {
+      return;
+    }
+
     this.targetSubjectId = null;
     this.studentsError = '';
 
@@ -125,42 +176,52 @@ export class SubjectDetail implements OnInit {
   }
 
   cancelTransfer() {
-    this.transferringStudent = null;
+    this.transferringStudents = [];
     this.targetSubjectId = null;
+    this.studentsError = '';
   }
 
   confirmTransfer() {
-    if (!this.transferringStudent || !this.targetSubjectId || this.isTransferring) return;
+    if (!this.transferringStudents.length || !this.targetSubjectId || this.isTransferring) return;
 
     this.isTransferring = true;
-    const student = this.transferringStudent;
+    const studentsToTransfer = [...this.transferringStudents];
     const targetId = this.targetSubjectId;
 
     this.backendService.get<any[]>(`subject/${targetId}/students`).subscribe({
       next: (existing) => {
         const existingIds = (existing ?? []).map((s: any) => s.id);
-        if (existingIds.includes(student.id)) {
-          this.studentsError = `${student.displayName} is already assigned to the target subject.`;
+        const alreadyAssigned = studentsToTransfer.filter(student => existingIds.includes(student.id));
+        if (alreadyAssigned.length) {
+          this.studentsError = alreadyAssigned.length === 1
+            ? `${alreadyAssigned[0].displayName} is already assigned to the target subject.`
+            : `${alreadyAssigned.length} selected students are already assigned to the target subject.`;
           this.isTransferring = false;
           return;
         }
 
-        const newIds = [...existingIds, student.id];
+        const newIds = [...existingIds, ...studentsToTransfer.map(student => student.id)];
         this.backendService.put(`subject/${targetId}/students`, newIds).subscribe({
           next: () => {
-            this.removeStudent(student);
-            this.transferringStudent = null;
+            this.removeAssignedStudents(studentsToTransfer.map(student => student.id));
+            this.saveAssignedStudents();
+            this.transferringStudents = [];
             this.targetSubjectId = null;
+            this.studentsError = '';
             this.isTransferring = false;
           },
           error: () => {
-            this.studentsError = 'Failed to transfer student.';
+            this.studentsError = this.transferringStudents.length > 1
+              ? 'Failed to transfer selected students.'
+              : 'Failed to transfer student.';
             this.isTransferring = false;
           },
         });
       },
       error: () => {
-        this.studentsError = 'Failed to transfer student.';
+        this.studentsError = this.transferringStudents.length > 1
+          ? 'Failed to transfer selected students.'
+          : 'Failed to transfer student.';
         this.isTransferring = false;
       },
     });
@@ -184,6 +245,7 @@ export class SubjectDetail implements OnInit {
           phone: s.userPhone,
           studentId: s.studentNumber ?? null,
         }));
+        this.selectedAssignedStudentIds = [];
       },
       error: () => {
         this.studentsError = 'Failed to load assigned students.';
@@ -222,5 +284,16 @@ export class SubjectDetail implements OnInit {
         this.studentsError = 'Failed to load students.';
       },
     });
+  }
+
+  private getSelectedAssignedStudents(): StudentOption[] {
+    const selectedIds = new Set(this.selectedAssignedStudentIds);
+    return this.assignedStudents.filter(student => selectedIds.has(student.id));
+  }
+
+  private removeAssignedStudents(studentIds: number[]) {
+    const idsToRemove = new Set(studentIds);
+    this.assignedStudents = this.assignedStudents.filter(student => !idsToRemove.has(student.id));
+    this.selectedAssignedStudentIds = this.selectedAssignedStudentIds.filter(id => !idsToRemove.has(id));
   }
 }

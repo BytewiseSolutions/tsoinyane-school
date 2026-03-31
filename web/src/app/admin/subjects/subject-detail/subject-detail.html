@@ -78,9 +78,36 @@
               <p class="tab-error">{{ studentsError }}</p>
             }
             @if (assignedStudents.length > 0) {
+              <div class="bulk-actions">
+                <label class="bulk-select">
+                  <input
+                    type="checkbox"
+                    [checked]="allAssignedStudentsSelected"
+                    [indeterminate]="partiallySelectedAssignedStudents"
+                    (change)="toggleAllAssignedStudents($any($event.target).checked)"
+                  />
+                  <span>Select all assigned students</span>
+                </label>
+                <div class="bulk-buttons">
+                  <button class="remove-btn" [disabled]="!hasSelectedAssignedStudents" (click)="confirmRemove()">
+                    Remove selected
+                  </button>
+                  <button class="transfer-btn" [disabled]="!hasSelectedAssignedStudents" (click)="transferStudent()">
+                    Transfer selected
+                  </button>
+                </div>
+              </div>
               <table class="students-table">
                 <thead>
                   <tr>
+                    <th class="checkbox-col">
+                      <input
+                        type="checkbox"
+                        [checked]="allAssignedStudentsSelected"
+                        [indeterminate]="partiallySelectedAssignedStudents"
+                        (change)="toggleAllAssignedStudents($any($event.target).checked)"
+                      />
+                    </th>
                     <th>#</th>
                     <th>Student Number</th>
                     <th>Name</th>
@@ -92,6 +119,13 @@
                 <tbody>
                   @for (student of assignedStudents; track student.id) {
                     <tr>
+                      <td class="checkbox-col">
+                        <input
+                          type="checkbox"
+                          [checked]="isAssignedStudentSelected(student.id)"
+                          (change)="toggleAssignedStudent(student.id, $any($event.target).checked)"
+                        />
+                      </td>
                       <td>{{ $index + 1 }}</td>
                       <td>{{ student.studentId ? '#' + student.studentId : 'N/A' }}</td>
                       <td>{{ student.displayName }}</td>
@@ -122,28 +156,37 @@
   <div class="transfer-overlay" (click)="cancelRemove()">
     <div class="transfer-card" (click)="$event.stopPropagation()">
       <div class="transfer-header">
-        <h3>Remove Student</h3>
+        <h3>{{ removingStudents.length > 1 ? 'Remove Students' : 'Remove Student' }}</h3>
         <button class="close-btn" (click)="cancelRemove()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="transfer-body">
-        <p>Are you sure you want to remove <strong>{{ removingStudent.displayName }}</strong> from this subject?</p>
+        @if (removingStudents.length > 1) {
+          <p>Are you sure you want to remove <strong>{{ removingStudents.length }} students</strong> from this subject?</p>
+        } @else {
+          <p>Are you sure you want to remove <strong>{{ removingStudent.displayName }}</strong> from this subject?</p>
+        }
       </div>
       <div class="transfer-actions">
         <button class="cancel-btn" (click)="cancelRemove()">Cancel</button>
-        <button class="remove-btn" (click)="removeStudent(removingStudent)">Remove</button>
+        <button class="remove-btn" (click)="removeStudents()">Remove</button>
       </div>
     </div>
   </div>
 }
 
-@if (transferringStudent) {  <div class="transfer-overlay" (click)="cancelTransfer()">
+@if (transferringStudent) {
+  <div class="transfer-overlay" (click)="cancelTransfer()">
     <div class="transfer-card" (click)="$event.stopPropagation()">
       <div class="transfer-header">
-        <h3>Transfer Student</h3>
+        <h3>{{ transferringStudents.length > 1 ? 'Transfer Students' : 'Transfer Student' }}</h3>
         <button class="close-btn" (click)="cancelTransfer()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="transfer-body">
-        <p>Transfer <strong>{{ transferringStudent.displayName }}</strong> to another subject.</p>
+        @if (transferringStudents.length > 1) {
+          <p>Transfer <strong>{{ transferringStudents.length }} students</strong> to another subject.</p>
+        } @else {
+          <p>Transfer <strong>{{ transferringStudent.displayName }}</strong> to another subject.</p>
+        }
         <div class="form-group">
           <label>Select Subject</label>
           <select [(ngModel)]="targetSubjectId" name="targetSubject">
