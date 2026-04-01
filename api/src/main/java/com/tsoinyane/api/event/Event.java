@@ -16,6 +16,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @NoArgsConstructor
@@ -33,8 +34,20 @@ public class Event extends BaseEntity {
     @Column(nullable = false)
     private LocalDate date;
 
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    @Column(name = "end_time")
+    private LocalTime endTime;
+
     @Column(nullable = false)
     private String location;
+
+    @Column(name = "event_type")
+    private String eventType;
+
+    @Column(length = 1000)
+    private String description;
 
     @Column(nullable = false)
     private String status;

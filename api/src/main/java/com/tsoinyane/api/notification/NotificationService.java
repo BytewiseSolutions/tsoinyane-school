@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -29,6 +30,7 @@ public class NotificationService {
 
         studentRepository.findRecentForDashboard(schoolId, PageRequest.of(0, 4)).forEach(student ->
                 notifications.add(NotificationDto.builder()
+                        .type("STUDENT")
                         .icon("fa-user-graduate")
                         .title("New Student Enrolled")
                         .message(buildStudentMessage(student))
@@ -38,6 +40,7 @@ public class NotificationService {
 
         teacherRepository.findRecentForNotifications(schoolId, PageRequest.of(0, 4)).forEach(teacher ->
                 notifications.add(NotificationDto.builder()
+                        .type("TEACHER")
                         .icon("fa-chalkboard-teacher")
                         .title("New Teacher Added")
                         .message(buildTeacherMessage(teacher))
@@ -45,12 +48,20 @@ public class NotificationService {
                         .build())
         );
 
-        eventRepository.findUpcomingBySchoolId(schoolId, LocalDate.now()).stream()
+        LocalDate today = LocalDate.now();
+
+        eventRepository.findUpcomingBySchoolId(schoolId, today).stream()
+                .filter(event -> event.getDate() != null)
+                .filter(event -> {
+                    long daysUntil = ChronoUnit.DAYS.between(today, event.getDate());
+                    return daysUntil >= 0 && daysUntil <= 7;
+                })
                 .limit(4)
                 .forEach(event -> notifications.add(NotificationDto.builder()
+                        .type("EVENT_REMINDER")
                         .icon("fa-calendar-days")
-                        .title("Upcoming Event")
-                        .message(buildEventMessage(event.getName(), event.getDate(), event.getLocation()))
+                        .title(buildEventTitle(event.getDate(), today))
+                        .message(buildEventMessage(event.getName(), event.getDate(), event.getLocation(), today))
                         .timestamp(event.getDate().atStartOfDay(ZoneId.systemDefault()).toInstant())
                         .build()));
 
@@ -72,11 +83,36 @@ public class NotificationService {
         return name + " was assigned to " + schoolName + ".";
     }
 
-    private String buildEventMessage(String name, LocalDate date, String location) {
+    private String buildEventTitle(LocalDate eventDate, LocalDate today) {
+        long daysUntil = ChronoUnit.DAYS.between(today, eventDate);
+
+        if (daysUntil == 0) {
+            return "Event Today";
+        }
+
+        if (daysUntil == 1) {
+            return "Event Tomorrow";
+        }
+
+        return "Event Reminder";
+    }
+
+    private String buildEventMessage(String name, LocalDate date, String location, LocalDate today) {
         if (date == null) {
           return name + " is scheduled at " + location + ".";
         }
 
-        return name + " is scheduled for " + date + " at " + location + ".";
+        long daysUntil = ChronoUnit.DAYS.between(today, date);
+        String timing;
+
+        if (daysUntil == 0) {
+            timing = "today";
+        } else if (daysUntil == 1) {
+            timing = "tomorrow";
+        } else {
+            timing = "in " + daysUntil + " days";
+        }
+
+        return name + " is scheduled " + timing + " at " + location + ".";
     }
 }

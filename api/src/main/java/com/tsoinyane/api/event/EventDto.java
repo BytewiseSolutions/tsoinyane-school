@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @NoArgsConstructor
@@ -18,6 +19,10 @@ public class EventDto extends BaseDto {
 
     private String name;
     private LocalDate date;
+    private LocalTime startTime;
+    private LocalTime endTime;
     private String location;
+    private String eventType;
+    private String description;
     private String status;
 }
