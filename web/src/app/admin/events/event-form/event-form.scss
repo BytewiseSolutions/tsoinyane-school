@@ -64,15 +64,21 @@
           color: var(--navy-blue);
         }
 
-        input, select {
+        input, select, textarea {
           padding: 10px 14px;
           border: 1px solid #ccd6f0;
           border-radius: 6px;
           font-size: 14px;
           outline: none;
           color: var(--navy-blue);
+          font-family: inherit;
 
           &:focus { border-color: var(--navy-blue); }
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 96px;
         }
       }
 

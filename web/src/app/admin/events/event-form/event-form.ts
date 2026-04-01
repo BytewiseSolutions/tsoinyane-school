@@ -19,7 +19,11 @@ export class EventForm implements OnInit {
     schoolId: null,
     name: '',
     date: '',
+    startTime: '',
+    endTime: '',
     location: '',
+    eventType: 'Academic',
+    description: '',
     status: 'Upcoming',
   };
 

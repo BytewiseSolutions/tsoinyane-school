@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -33,7 +34,11 @@ public class EventService {
     public EventDto createEvent(EventDto request) {
         String name = normalize(request.getName());
         String location = normalize(request.getLocation());
+        String eventType = normalizeNullable(request.getEventType());
+        String description = normalizeNullable(request.getDescription());
         LocalDate date = request.getDate();
+        LocalTime startTime = request.getStartTime();
+        LocalTime endTime = request.getEndTime();
 
         if (name.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event name is required");
@@ -44,6 +49,7 @@ public class EventService {
         if (date == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event date is required");
         }
+        validateTimeRange(startTime, endTime);
 
         School school = resolveSchool(request.getSchoolId());
         User actor = currentUserService.getCurrentUser();
@@ -51,7 +57,11 @@ public class EventService {
         Event event = Event.builder()
                 .name(name)
                 .date(date)
+                .startTime(startTime)
+                .endTime(endTime)
                 .location(location)
+                .eventType(eventType)
+                .description(description)
                 .status(normalizeStatus(request.getStatus(), date))
                 .school(school)
                 .createdBy(actor)
@@ -67,7 +77,11 @@ public class EventService {
 
         String name = normalize(request.getName());
         String location = normalize(request.getLocation());
+        String eventType = normalizeNullable(request.getEventType());
+        String description = normalizeNullable(request.getDescription());
         LocalDate date = request.getDate();
+        LocalTime startTime = request.getStartTime();
+        LocalTime endTime = request.getEndTime();
 
         if (name.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event name is required");
@@ -78,12 +92,17 @@ public class EventService {
         if (date == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event date is required");
         }
+        validateTimeRange(startTime, endTime);
 
         School school = resolveSchool(request.getSchoolId() != null ? request.getSchoolId() : event.getSchool().getId());
 
         event.setName(name);
         event.setDate(date);
+        event.setStartTime(startTime);
+        event.setEndTime(endTime);
         event.setLocation(location);
+        event.setEventType(eventType);
+        event.setDescription(description);
         event.setStatus(normalizeStatus(request.getStatus(), date));
         event.setSchool(school);
         event.setUpdatedBy(currentUserService.getCurrentUser());
@@ -110,6 +129,17 @@ public class EventService {
         return value == null ? "" : value.trim();
     }
 
+    private String normalizeNullable(String value) {
+        String normalized = normalize(value);
+        return normalized.isBlank() ? null : normalized;
+    }
+
+    private void validateTimeRange(LocalTime startTime, LocalTime endTime) {
+        if (startTime != null && endTime != null && !endTime.isAfter(startTime)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be after start time");
+        }
+    }
+
     private String normalizeStatus(String status, LocalDate date) {
         String normalized = normalize(status);
         if (!normalized.isBlank()) {
@@ -128,7 +158,11 @@ public class EventService {
                 .updatedAt(event.getUpdatedAt())
                 .name(event.getName())
                 .date(event.getDate())
+                .startTime(event.getStartTime())
+                .endTime(event.getEndTime())
                 .location(event.getLocation())
+                .eventType(event.getEventType())
+                .description(event.getDescription())
                 .status(event.getStatus())
                 .schoolId(school != null ? school.getId() : null)
                 .schoolName(school != null ? school.getName() : null)
