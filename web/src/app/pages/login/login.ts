@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { BackendService } from '../../util/backend.service';
 import { LoginRequest } from './login-request';
 import { LoginResponse } from './login-response';
+import { clearStoredAuth } from '../../auth/auth-session';
 
 @Component({
   selector: 'app-login',
@@ -63,11 +64,6 @@ export class Login {
   }
 
   private clearStoredAuth() {
-    for (const storage of [localStorage, sessionStorage]) {
-      storage.removeItem('accessToken');
-      storage.removeItem('tokenType');
-      storage.removeItem('expiresAt');
-      storage.removeItem('user');
-    }
+    clearStoredAuth();
   }
 }

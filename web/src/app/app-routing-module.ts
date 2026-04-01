@@ -15,6 +15,9 @@ import { Users } from './admin/users/users';
 import { UserImportComponent } from './admin/users/import/import';
 import { UserDetails } from './admin/users/user-details/user-details';
 import { AdminSubjects } from './admin/subjects/subjects';
+import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
+import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
+import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { AdminGrades } from './admin/grades/grades';
 import { GradeImportComponent } from './admin/grades/import/import';
 import { Events } from './admin/events/events';
@@ -22,6 +25,7 @@ import { Notifications } from './admin/notifications/notifications';
 import { Maintenance } from './admin/maintenance/maintenance';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
+import { AuthGuard } from './auth/auth-guard';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -37,6 +41,8 @@ const routes: Routes = [
   {
     path: 'admin',
     component: Dashboard,
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminMain },
@@ -46,6 +52,9 @@ const routes: Routes = [
       { path: 'grades', component: AdminGrades },
       { path: 'grades/import', component: GradeImportComponent },
       { path: 'subjects', component: AdminSubjects },
+      { path: 'subjects/:id', component: SubjectDetail },
+      { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail },
+      { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail },
       { path: 'events', component: Events },
       { path: 'notifications', component: Notifications },
       { path: 'maintenance', component: Maintenance },

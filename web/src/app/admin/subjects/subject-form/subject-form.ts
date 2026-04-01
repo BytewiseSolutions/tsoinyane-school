@@ -1,12 +1,8 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-
-export interface SchoolSubject {
-  name: string;
-  school: string;
-  teacher: string;
-  students: number;
-  status: string;
-}
+import { Grade } from '../../grades/grade';
+import { Status } from '../../users/status';
+import { SchoolSubject } from '../subject';
+import { SubjectTeacherOption } from '../subject-teacher-option';
 
 @Component({
   selector: 'app-subject-form',
@@ -16,28 +12,59 @@ export interface SchoolSubject {
 })
 export class SubjectForm implements OnInit {
   @Input() existingSubject: SchoolSubject | null = null;
+  @Input() schoolId: number | null = null;
+  @Input() schoolName = '';
+  @Input() gradeOptions: Grade[] = [];
+  @Input() teacherOptions: SubjectTeacherOption[] = [];
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<SchoolSubject>();
 
   isEdit = false;
+  readonly statusOptions = [Status.ACTIVE, Status.INACTIVE];
 
   subject: SchoolSubject = {
+    code: '',
     name: '',
-    school: '',
-    teacher: '',
-    students: 0,
-    status: 'Active',
+    schoolId: null,
+    schoolName: null,
+    gradeId: null,
+    gradeName: null,
+    teacherId: null,
+    teacherName: null,
+    status: Status.ACTIVE,
   };
 
   ngOnInit() {
     if (this.existingSubject) {
       this.isEdit = true;
       this.subject = { ...this.existingSubject };
+      return;
     }
+
+    this.subject.schoolId = this.schoolId;
+    this.subject.schoolName = this.schoolName || null;
   }
 
   onSubmit() {
-    this.saved.emit(this.subject);
+    const code = this.subject.code.trim();
+    const name = this.subject.name.trim();
+
+    if (!code || !name || !this.subject.gradeId || !this.subject.teacherId) {
+      return;
+    }
+
+    const selectedGrade = this.gradeOptions.find(grade => grade.id === this.subject.gradeId);
+    const selectedTeacher = this.teacherOptions.find(teacher => teacher.id === this.subject.teacherId);
+
+    this.saved.emit({
+      ...this.subject,
+      code,
+      name,
+      schoolId: this.schoolId,
+      schoolName: this.schoolName || null,
+      gradeName: selectedGrade?.name ?? null,
+      teacherName: selectedTeacher?.name ?? null,
+    });
     this.close();
   }
 

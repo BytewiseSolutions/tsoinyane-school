@@ -10,6 +10,7 @@ export interface DashboardStats {
   totalStudents: number;
   totalTeachers: number;
   totalGrades: number;
+  totalSubjects: number;
   totalSchools: number;
   recentStudents: DashboardRecentStudent[];
 }

@@ -1,6 +1,6 @@
 import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 
@@ -35,7 +35,11 @@ import { Events } from './admin/events/events';
 import { Notifications } from './admin/notifications/notifications';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
+import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
+import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
+import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { EventForm } from './admin/events/event-form/event-form';
+import { AuthInterceptor } from './auth/auth.interceptor';
 
 @NgModule({
   declarations: [
@@ -69,6 +73,9 @@ import { EventForm } from './admin/events/event-form/event-form';
     Notifications,
     Settings,
     SubjectForm,
+    SubjectDetail,
+    TimetableDetail,
+    LessonDetail,
     EventForm
   ],
   imports: [
@@ -79,7 +86,12 @@ import { EventForm } from './admin/events/event-form/event-form';
     AppRoutingModule
   ],
   providers: [
-    provideBrowserGlobalErrorListeners()
+    provideBrowserGlobalErrorListeners(),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AuthInterceptor,
+      multi: true,
+    }
   ],
   bootstrap: [App]
 })

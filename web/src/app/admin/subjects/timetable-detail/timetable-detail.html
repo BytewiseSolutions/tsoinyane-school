@@ -1,0 +1,227 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back to Subject</button>
+      <h2>Timetable Details</h2>
+      <p>View the selected timetable entry and manage its lesson sessions.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading timetable details...</div>
+  } @else if (errorMessage || !timetable) {
+    <div class="state-card error">{{ errorMessage || 'Timetable not found.' }}</div>
+  } @else {
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Subject</span>
+        <strong>{{ timetable.subjectName || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Day</span>
+        <strong>{{ getDayLabel(timetable.dayOfWeek) }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Time</span>
+        <strong>{{ formatTimeRange() }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Students</span>
+        <strong>{{ timetableStudents.length }}</strong>
+      </div>
+    </div>
+
+    <div class="details-card tabs-card">
+      <div class="tab-bar">
+        <button class="tab-btn" [class.active]="activeTab === 'lessons'" (click)="activeTab = 'lessons'">Lessons</button>
+        <button class="tab-btn" [class.active]="activeTab === 'students'" (click)="activeTab = 'students'">Students</button>
+      </div>
+
+      <div class="tab-content">
+        @if (activeTab === 'lessons') {
+          <div class="tab-header">
+            <div>
+              <h3>Lessons</h3>
+              <p>These lesson sessions are generated from this timetable.</p>
+            </div>
+          </div>
+
+          @if (lessonsError) {
+            <p class="empty-state error-text">{{ lessonsError }}</p>
+          }
+
+          @if (isLoadingLessons) {
+            <p class="empty-state">Loading lessons...</p>
+          } @else if (lessons.length > 0) {
+            <table class="students-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Attendance</th>
+                  <th>Homework % Complete</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (lesson of lessons; track lesson.id) {
+                  <tr [class.selected-row]="lesson.id === selectedLessonId" (click)="selectLesson(lesson.id ?? null)">
+                    <td>{{ $index + 1 }}</td>
+                    <td>{{ formatLessonSession(lesson) }}</td>
+                    <td>{{ getAttendanceCompletion(lesson) }}</td>
+                    <td>{{ getHomeworkCompletion(lesson) }}</td>
+                    <td>{{ lesson.status || 'PENDING' }}</td>
+                    <td class="actions">
+                      <button class="primary-btn" type="button" (click)="$event.stopPropagation(); viewLesson(lesson.id)">
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="empty-state">No lessons generated yet.</p>
+          }
+        }
+
+        @if (activeTab === 'students') {
+          <div class="tab-header">
+            <div>
+              <h3>Students</h3>
+              <p>
+                @if (selectedLesson) {
+                  Students added to the selected lesson on {{ formatLessonDate(selectedLesson.date) }}.
+                } @else {
+                  Select a lesson first to manage students.
+                }
+              </p>
+            </div>
+          </div>
+
+          @if (lessons.length > 1) {
+            <div class="lesson-picker">
+              <label for="selectedLessonId">Lesson</label>
+              <select id="selectedLessonId" [ngModel]="selectedLessonId" (ngModelChange)="selectLesson($event)" name="selectedLessonId">
+                @for (lesson of lessons; track lesson.id) {
+                  <option [ngValue]="lesson.id">
+                    {{ formatLessonDate(lesson.date) }} | {{ formatLessonTime(lesson.startTime) }} - {{ formatLessonTime(lesson.endTime) }}
+                  </option>
+                }
+              </select>
+            </div>
+          }
+
+          <div class="assign-row">
+            <ng-select
+              [items]="selectableStudentsForLesson"
+              bindLabel="displayName"
+              [multiple]="true"
+              [searchable]="true"
+              [clearable]="true"
+              [closeOnSelect]="false"
+              [(ngModel)]="selectedStudentOptions"
+              name="studentLessonStudentId"
+              placeholder="Search and select students..."
+              class="student-select"
+              (add)="onStudentAdded($event)"
+              (remove)="onStudentRemoved($event)"
+            >
+              <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                <span class="ng-value-label">{{ item.displayName }}</span>
+                <span class="ng-value-icon right" (click)="clear(item)">×</span>
+              </ng-template>
+              <ng-template ng-option-tmp let-item="item" let-item$="item$">
+                <input type="checkbox" [checked]="item$.selected" />
+                {{ item.displayName }}{{ item.studentId ? ' (#' + item.studentId + ')' : '' }}
+              </ng-template>
+            </ng-select>
+            <button class="primary-btn" [disabled]="!selectedStudentOptions.length || isSavingStudentLesson" (click)="saveStudentLesson()">
+              {{ isSavingStudentLesson ? 'Saving...' : 'Add' }}
+            </button>
+          </div>
+
+          @if (studentsError) {
+            <p class="empty-state error-text">{{ studentsError }}</p>
+          }
+
+          @if (!selectedLesson) {
+            <p class="empty-state">No lesson selected yet.</p>
+          } @else if (isLoadingStudentLessons) {
+            <p class="empty-state">Loading lesson students...</p>
+          } @else if (studentRows.length > 0) {
+            <table class="students-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Student Number</th>
+                  <th>Name</th>
+                  <th>Attendance</th>
+                  <th>Homework</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (student of studentRows; track student.id) {
+                  <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td>{{ student.studentId ? '#' + student.studentId : 'N/A' }}</td>
+                    <td>{{ student.displayName }}</td>
+                    <td>{{ student.attendanceStatus || 'PENDING' }}</td>
+                    <td>{{ student.homeworkStatus || 'PENDING' }}</td>
+                    <td class="actions">
+                      <button
+                        class="remove-btn"
+                        type="button"
+                        [disabled]="removingStudentLessonId === student.studentLessonId"
+                        (click)="confirmRemoveStudentLesson(student)"
+                      >
+                        {{ removingStudentLessonId === student.studentLessonId ? 'Removing...' : 'Remove' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="empty-state">No students are linked to this lesson yet.</p>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>
+
+@if (pendingRemovalStudent) {
+  <div class="dialog-overlay" (click)="cancelRemoveStudentLesson()">
+    <div class="dialog-card confirm-card" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <h3>Remove Student</h3>
+        <button class="close-btn" type="button" [disabled]="!!removingStudentLessonId" (click)="cancelRemoveStudentLesson()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <p>
+          Are you sure you want to remove
+          <strong>{{ pendingRemovalStudent.displayName }}</strong>
+          from this lesson?
+        </p>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-btn" type="button" [disabled]="!!removingStudentLessonId" (click)="cancelRemoveStudentLesson()">
+          Cancel
+        </button>
+        <button
+          class="remove-btn"
+          type="button"
+          [disabled]="!!removingStudentLessonId"
+          (click)="removeStudentLesson(pendingRemovalStudent.studentLessonId)"
+        >
+          {{ removingStudentLessonId ? 'Removing...' : 'Remove' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

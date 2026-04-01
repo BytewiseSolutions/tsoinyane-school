@@ -3,6 +3,7 @@ package com.tsoinyane.api.dashboard;
 import com.tsoinyane.api.common.Status;
 import com.tsoinyane.api.grade.GradeRepository;
 import com.tsoinyane.api.school.SchoolRepository;
+import com.tsoinyane.api.subject.SubjectRepository;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentRepository;
 import com.tsoinyane.api.teacher.TeacherRepository;
@@ -17,6 +18,7 @@ public class DashboardService {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final GradeRepository gradeRepository;
+    private final SubjectRepository subjectRepository;
     private final SchoolRepository schoolRepository;
 
     public DashboardStatsDto getDashboardStats(Long schoolId) {
@@ -24,6 +26,7 @@ public class DashboardService {
                 .totalStudents(studentRepository.countBySchoolId(schoolId))
                 .totalTeachers(teacherRepository.countBySchoolId(schoolId))
                 .totalGrades(gradeRepository.countBySchoolId(schoolId))
+                .totalSubjects(subjectRepository.countBySchoolId(schoolId))
                 .totalSchools(schoolId == null ? schoolRepository.count() : schoolRepository.countById(schoolId))
                 .recentStudents(studentRepository.findRecentForDashboard(schoolId, PageRequest.of(0, 5)).stream()
                         .map(this::toRecentStudentDto)

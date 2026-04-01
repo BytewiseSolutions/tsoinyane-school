@@ -11,6 +11,7 @@ import com.tsoinyane.api.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Comparator;
@@ -27,6 +28,13 @@ public class TeacherService {
     private final SchoolRepository schoolRepository;
     private final GradeRepository gradeRepository;
     private final CurrentUserService currentUserService;
+
+    @Transactional(readOnly = true)
+    public List<TeacherDto> getTeachers(Long schoolId) {
+        return teacherRepository.findAllBySchoolId(schoolId).stream()
+                .map(this::toDto)
+                .toList();
+    }
 
     public TeacherDto createTeacher(TeacherDto request) {
         User user = resolveTeacherUser(request.getUserId());

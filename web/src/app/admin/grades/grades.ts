@@ -93,10 +93,6 @@ export class AdminGrades implements OnInit, OnDestroy {
     this.showGradeForm = false;
   }
 
-  viewGrade(grade: Grade): void {
-    this.showTemporaryMessage(`View for "${grade.name}" will be added next.`);
-  }
-
   editGrade(grade: Grade): void {
     this.editingGrade = { ...grade };
     this.showGradeForm = true;

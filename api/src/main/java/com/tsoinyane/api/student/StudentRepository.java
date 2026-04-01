@@ -26,4 +26,14 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
             order by s.createdAt desc
             """)
     List<Student> findRecentForDashboard(@Param("schoolId") Long schoolId, Pageable pageable);
+
+    @Query("""
+            select s from Student s
+            join fetch s.user
+            join fetch s.school
+            join fetch s.grade
+            where (:schoolId is null or s.school.id = :schoolId)
+            order by s.studentNumber asc
+            """)
+    List<Student> findAllBySchoolId(@Param("schoolId") Long schoolId);
 }

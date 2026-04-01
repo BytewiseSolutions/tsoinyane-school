@@ -4,10 +4,10 @@ import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.user.User;
-import com.tsoinyane.api.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -20,12 +20,14 @@ public class GradeService {
     private final SchoolRepository schoolRepository;
     private final CurrentUserService currentUserService;
 
+    @Transactional(readOnly = true)
     public List<GradeDto> getAllGrades() {
         return gradeRepository.findAllWithSchoolOrderByIdAsc().stream()
                 .map(this::toDto)
                 .toList();
     }
 
+    @Transactional
     public GradeDto createGrade(GradeDto request) {
         String name = normalizeName(request.getName());
         if (name.isBlank()) {
@@ -42,9 +44,12 @@ public class GradeService {
                 .updatedBy(actor)
                 .build();
 
-        return toDto(gradeRepository.save(grade));
+        Grade saved = gradeRepository.save(grade);
+        return toDto(gradeRepository.findWithSchoolById(saved.getId())
+                .orElse(saved));
     }
 
+    @Transactional
     public GradeDto updateGrade(Long id, GradeDto request) {
         Grade existingGrade = gradeRepository.findWithSchoolById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grade not found"));
@@ -61,9 +66,12 @@ public class GradeService {
         existingGrade.setSchool(school);
         existingGrade.setUpdatedBy(actor);
 
-        return toDto(gradeRepository.save(existingGrade));
+        gradeRepository.save(existingGrade);
+        return toDto(gradeRepository.findWithSchoolById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grade not found")));
     }
 
+    @Transactional
     public void deleteGrade(Long id) {
         Grade existingGrade = gradeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grade not found"));
