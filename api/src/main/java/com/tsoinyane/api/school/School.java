@@ -23,6 +23,23 @@ public class School extends BaseEntity {
     private String name;
     private String email;
     private String phone;
+    private String location;
+
+    @Column(name = "academic_year", length = 10)
+    private String academicYear;
+
+    @Column(name = "current_term", length = 20)
+    @Enumerated(EnumType.STRING)
+    private Term currentTerm;
+
+    @Column(name = "passing_mark")
+    private Integer passingMark;
+
+    @Column(name = "attendance_threshold")
+    private Integer attendanceThreshold;
+
+    @Column(length = 20)
+    private String language;
 
     @Enumerated(EnumType.STRING)
     private SchoolType type;

@@ -17,6 +17,12 @@ public class SchoolDto extends BaseDto {
     private String name;
     private String email;
     private String phone;
+    private String location;
+    private String academicYear;
+    private Term currentTerm;
+    private Integer passingMark;
+    private Integer attendanceThreshold;
+    private String language;
     private SchoolType type;
 
     private List<Long> userIds;

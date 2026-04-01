@@ -1,4 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Subject, takeUntil } from 'rxjs';
+import { BackendService } from '../../util/backend.service';
+import { SchoolContextService } from '../layout/school-context';
+import { SchoolInfo } from './school-info';
+import { AcademicSettings } from './academic-settings';
+import { SchoolRequest } from './school-request';
+import { Term } from './term';
 
 @Component({
   selector: 'app-settings',
@@ -6,59 +14,74 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
-export class Settings implements OnInit {
-  schoolInfo = {
-    schoolName: 'Tsoinyane Government Combined School',
-    location: 'Tsoinyane, Pitseng, Leribe',
-    phone: '+266 59181664',
-    email: 'info@tsoinyane.co.ls',
-  };
+export class Settings implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
 
-  passwordForm = {
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  };
+  schoolInfo: SchoolInfo = { id: null, name: '', code: '', location: '', phone: '', email: '', type: '' };
+  academicSettings: AcademicSettings = { academicYear: '', currentTerm: Term.TERM_1, passingMark: null, attendanceThreshold: null, language: 'English' };
 
-  academicSettings = {
-    academicYear: '2026',
-    currentTerm: 'Term 1',
-    gradingScale: 'A-F',
-    passingMark: 50,
-    attendanceThreshold: 75,
-    timezone: 'Africa/Maseru',
-    language: 'English',
-  };
+  passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
 
-  integrationSettings = {
-    smtpHost: 'smtp.example.com',
-    smtpPort: 587,
-    senderEmail: 'noreply@tsoinyane.co.ls',
-    smsProvider: 'None',
-    smsApiKey: '',
-  };
+  savingSchool = false;
+  savingAcademic = false;
+  savingPassword = false;
 
-  sectionMessage: Record<string, string> = {
-    school: '',
-    password: '',
-    academic: '',
-    integrations: '',
-  };
+  successDialogOpen = false;
+  successDialogMessage = '';
 
+  schoolError = '';
+  academicError = '';
   passwordError = '';
 
-  ngOnInit() {
-    this.schoolInfo = this.loadSetting('tgcs_school_info', this.schoolInfo);
-    this.academicSettings = this.loadSetting('tgcs_academic_settings', this.academicSettings);
-    this.integrationSettings = this.loadSetting('tgcs_integration_settings', this.integrationSettings);
+  constructor(
+    private backendService: BackendService,
+    private schoolContext: SchoolContextService
+  ) {}
+
+  ngOnInit(): void {
+    this.schoolContext.selectedSchool$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(school => {
+        if (school?.id) this.loadSchool(school.id);
+      });
   }
 
-  saveSchoolInfo() {
-    this.persistSetting('tgcs_school_info', this.schoolInfo, 'school', 'School information saved successfully.');
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  updatePassword() {
-    this.sectionMessage['password'] = '';
+  saveSchoolInfo(): void {
+    if (!this.schoolInfo.id) return;
+    this.schoolError = '';
+    this.savingSchool = true;
+
+    this.backendService.put<SchoolInfo, SchoolRequest>(`school/${this.schoolInfo.id}`, this.buildRequest()).subscribe({
+      next: (updated: any) => {
+        this.patchFromResponse(updated);
+        this.setSuccess('school', 'School information saved successfully.');
+      },
+      error: (e: HttpErrorResponse) => { this.schoolError = e.error?.message || 'Failed to save school information.'; },
+      complete: () => { this.savingSchool = false; },
+    });
+  }
+
+  saveAcademicSettings(): void {
+    if (!this.schoolInfo.id) return;
+    this.academicError = '';
+    this.savingAcademic = true;
+
+    this.backendService.put<any, SchoolRequest>(`school/${this.schoolInfo.id}`, this.buildRequest()).subscribe({
+      next: (updated: any) => {
+        this.patchFromResponse(updated);
+        this.setSuccess('academic', 'Academic settings saved successfully.');
+      },
+      error: (e: HttpErrorResponse) => { this.academicError = e.error?.message || 'Failed to save academic settings.'; },
+      complete: () => { this.savingAcademic = false; },
+    });
+  }
+
+  updatePassword(): void {
     this.passwordError = '';
 
     if (!this.passwordForm.currentPassword || !this.passwordForm.newPassword || !this.passwordForm.confirmPassword) {
@@ -72,62 +95,50 @@ export class Settings implements OnInit {
     }
 
     if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
-      this.passwordError = 'New password and confirmation do not match.';
+      this.passwordError = 'Passwords do not match.';
       return;
     }
 
-    localStorage.setItem('tgcs_password_last_updated', new Date().toISOString());
-    this.passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
-    this.setSectionMessage('password', 'Password updated successfully.');
+    this.savingPassword = true;
+
+    this.backendService.post<any, { currentPassword: string; newPassword: string }>('auth/change-password', {
+      currentPassword: this.passwordForm.currentPassword,
+      newPassword: this.passwordForm.newPassword,
+    }).subscribe({
+      next: () => {
+        this.passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
+        this.setSuccess('password', 'Password updated successfully.');
+      },
+      error: (e: HttpErrorResponse) => { this.passwordError = e.error?.message || 'Failed to update password.'; },
+      complete: () => { this.savingPassword = false; },
+    });
   }
 
-  saveAcademicSettings() {
-    this.persistSetting('tgcs_academic_settings', this.academicSettings, 'academic', 'Academic settings saved.');
+  private loadSchool(id: number): void {
+    this.backendService.get<any>(`school`).subscribe({
+      next: (schools: any[]) => {
+        const school = schools.find((s: any) => s.id === id);
+        if (school) this.patchFromResponse(school);
+      },
+    });
   }
 
-  saveIntegrationSettings() {
-    this.persistSetting('tgcs_integration_settings', this.integrationSettings, 'integrations', 'Integration settings saved.');
+  private patchFromResponse(s: any): void {
+    this.schoolInfo = { id: s.id, name: s.name ?? '', code: s.code ?? '', location: s.location ?? '', phone: s.phone ?? '', email: s.email ?? '', type: s.type ?? '' };
+    this.academicSettings = { academicYear: s.academicYear ?? '', currentTerm: s.currentTerm ?? Term.TERM_1, passingMark: s.passingMark ?? null, attendanceThreshold: s.attendanceThreshold ?? null, language: s.language ?? 'English' };
   }
 
-  private loadSetting<T>(key: string, fallback: T): T {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-
-    try {
-      const parsed = JSON.parse(raw);
-
-      if (Array.isArray(fallback)) {
-        if (Array.isArray(parsed)) {
-          return parsed as T;
-        }
-
-        // Recover from older malformed saved data where arrays were stored as objects.
-        if (parsed && typeof parsed === 'object') {
-          return Object.values(parsed) as T;
-        }
-
-        return fallback;
-      }
-
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return { ...(fallback as object), ...parsed } as T;
-      }
-
-      return fallback;
-    } catch {
-      return fallback;
-    }
+  private buildRequest(): SchoolRequest {
+    return { ...this.schoolInfo, ...this.academicSettings };
   }
 
-  private persistSetting(key: string, data: unknown, section: string, message: string) {
-    localStorage.setItem(key, JSON.stringify(data));
-    this.setSectionMessage(section, message);
+  closeSuccessDialog(): void {
+    this.successDialogOpen = false;
+    this.successDialogMessage = '';
   }
 
-  private setSectionMessage(section: string, message: string) {
-    this.sectionMessage[section] = message;
-    setTimeout(() => {
-      this.sectionMessage[section] = '';
-    }, 2500);
+  private setSuccess(section: 'school' | 'academic' | 'password', message: string): void {
+    this.successDialogMessage = message;
+    this.successDialogOpen = true;
   }
 }

@@ -58,7 +58,7 @@ public class ActivityLogService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(ActivityLogWriteRequest request) {
+    public void record(ActivityLogDto request) {
         activityLogRepository.save(ActivityLog.builder()
                 .actorId(request.actorId())
                 .actorName(request.actorName())
