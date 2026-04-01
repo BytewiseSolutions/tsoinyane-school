@@ -23,7 +23,6 @@ import { GradeImportComponent } from './admin/grades/import/import';
 import { Events } from './admin/events/events';
 import { ActivityLogs } from './admin/activity-logs/activity-logs';
 import { Notifications } from './admin/notifications/notifications';
-import { Maintenance } from './admin/maintenance/maintenance';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
 import { AuthGuard } from './auth/auth-guard';
@@ -59,7 +58,6 @@ const routes: Routes = [
       { path: 'events', component: Events },
       { path: 'activity-logs', component: ActivityLogs, data: { roles: ['SYSTEM_ADMIN'] } },
       { path: 'notifications', component: Notifications },
-      { path: 'maintenance', component: Maintenance },
       { path: 'settings', component: Settings },
     ]
   },

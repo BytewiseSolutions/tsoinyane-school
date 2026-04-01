@@ -7,6 +7,7 @@ import { SchoolContextService } from '../school-context';
 import { SchoolOption } from '../../school-option';
 import { NotificationItem } from './notification-item';
 import { Subject, takeUntil } from 'rxjs';
+import { NotificationStateService } from '../../notifications/notification-state';
 
 @Component({
   selector: 'app-header',
@@ -25,25 +26,22 @@ export class AdminHeader implements OnDestroy {
   notifications: NotificationItem[] = [];
   notificationsLoading = false;
   notificationsError = '';
-
-  notifPrefs = {
-    newStudent: true,
-    newTeacher: true,
-    upcomingEvents: true,
-    systemUpdates: false,
-    backupCompleted: true,
-    securityAlerts: true,
-  };
+  markingReadId: number | null = null;
+  markingAllRead = false;
 
   constructor(
     private sidebarState: SidebarStateService,
     private backendService: BackendService,
-    private schoolContext: SchoolContextService
+    private schoolContext: SchoolContextService,
+    private notificationState: NotificationStateService
   ) {}
 
   ngOnInit() {
     this.loadCurrentUser();
-    this.loadNotificationPreferences();
+    this.notificationState.refreshRequested$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadNotifications());
+
     this.schoolContext.selectedSchool$
       .pipe(takeUntil(this.destroy$))
       .subscribe(school => {
@@ -65,16 +63,45 @@ export class AdminHeader implements OnDestroy {
     this.sidebarState.toggle();
   }
 
+  loadNotificationsManually(): void {
+    this.loadNotifications();
+  }
+
+  markAllAsRead(): void {
+    const unread = this.notifications.filter(n => n.id != null && !n.read);
+    if (!unread.length || this.markingAllRead) return;
+
+    this.markingAllRead = true;
+    let completed = 0;
+
+    unread.forEach(notif => {
+      this.backendService.post<NotificationItem, null>(`notification/${notif.id}/read`, null).subscribe({
+        next: updated => {
+          this.notifications = this.notifications.map(item => item.id === updated.id ? updated : item);
+        },
+        complete: () => {
+          completed++;
+          if (completed === unread.length) {
+            this.markingAllRead = false;
+            this.notificationState.requestRefresh();
+          }
+        },
+      });
+    });
+  }
+
   toggleNotifications() {
-    this.loadNotificationPreferences();
     this.notificationsOpen = !this.notificationsOpen;
+    if (this.notificationsOpen) {
+      this.loadNotifications();
+    }
   }
 
   closeNotifications() {
     this.notificationsOpen = false;
   }
 
-  getNotificationTime(timestamp?: string): string {
+  getNotificationTime(timestamp?: string | null): string {
     if (!timestamp) {
       return 'Just now';
     }
@@ -102,6 +129,54 @@ export class AdminHeader implements OnDestroy {
 
     const diffDays = Math.round(diffHours / 24);
     return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(diffDays, 'day');
+  }
+
+  get unreadNotificationCount(): number {
+    return this.notifications.filter(notification => !notification.read).length;
+  }
+
+  isUnread(notification: NotificationItem): boolean {
+    return notification.read !== true;
+  }
+
+  isScheduled(notification: NotificationItem): boolean {
+    if (!notification.scheduledAt) {
+      return false;
+    }
+
+    const scheduledAt = new Date(notification.scheduledAt);
+    return !Number.isNaN(scheduledAt.getTime()) && scheduledAt.getTime() > Date.now();
+  }
+
+  getScheduleLabel(notification: NotificationItem): string {
+    return `Publishes ${this.getNotificationTime(notification.scheduledAt)}`;
+  }
+
+  getExpiryLabel(notification: NotificationItem): string {
+    return `Expires ${this.getNotificationTime(notification.expiresAt)}`;
+  }
+
+  markAsRead(notification: NotificationItem) {
+    if (notification.id == null || notification.read || this.markingReadId != null) {
+      return;
+    }
+
+    this.markingReadId = notification.id;
+    this.backendService.post<NotificationItem, null>(`notification/${notification.id}/read`, null).subscribe({
+      next: updatedNotification => {
+        this.notifications = this.notifications.map(item =>
+          item.id === updatedNotification.id ? updatedNotification : item
+        );
+        this.notificationState.requestRefresh();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.notificationsError = error.error?.message || 'Failed to update notification.';
+        this.markingReadId = null;
+      },
+      complete: () => {
+        this.markingReadId = null;
+      },
+    });
   }
 
   private loadCurrentUser() {
@@ -187,11 +262,12 @@ export class AdminHeader implements OnDestroy {
 
     this.backendService.get<NotificationItem[]>('notification', this.selectedSchoolId ? { schoolId: this.selectedSchoolId } : undefined).subscribe({
       next: (notifications) => {
-        this.notifications = this.applyNotificationPreferences(notifications ?? []);
+        this.notifications = notifications ?? [];
       },
       error: (error: HttpErrorResponse) => {
         this.notifications = [];
         this.notificationsError = error.error?.message || 'Failed to load notifications.';
+        this.notificationsLoading = false;
       },
       complete: () => {
         this.notificationsLoading = false;
@@ -222,53 +298,9 @@ export class AdminHeader implements OnDestroy {
     this.onSchoolChange();
   }
 
-  private loadNotificationPreferences() {
-    const saved = localStorage.getItem('tgcs_notification_settings');
-    if (!saved) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(saved) as { eventReminders?: boolean } | null;
-      if (!parsed || typeof parsed !== 'object') {
-        return;
-      }
-
-      if (typeof parsed.eventReminders === 'boolean') {
-        this.notifPrefs.upcomingEvents = parsed.eventReminders;
-      }
-    } catch {
-      // keep defaults
-    }
-  }
-
-  private applyNotificationPreferences(notifications: NotificationItem[]): NotificationItem[] {
-    return notifications.filter(notification => {
-      if (notification.type === 'EVENT_REMINDER' && !this.notifPrefs.upcomingEvents) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
-  onEventReminderPreferenceChange() {
-    const saved = localStorage.getItem('tgcs_notification_settings');
-    let parsed: Record<string, unknown> = {};
-
-    if (saved) {
-      try {
-        const candidate = JSON.parse(saved);
-        if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) {
-          parsed = candidate as Record<string, unknown>;
-        }
-      } catch {
-        parsed = {};
-      }
-    }
-
-    parsed['eventReminders'] = this.notifPrefs.upcomingEvents;
-    localStorage.setItem('tgcs_notification_settings', JSON.stringify(parsed));
-    this.notifications = this.applyNotificationPreferences(this.notifications);
+  getAudienceLabel(notification: NotificationItem): string {
+    return (notification.audienceRoles ?? [])
+      .map(role => this.formatRole(role))
+      .join(', ');
   }
 }

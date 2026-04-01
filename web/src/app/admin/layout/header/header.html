@@ -18,7 +18,9 @@
     }
     <button class="notif-btn" (click)="toggleNotifications()">
       <i class="fa-solid fa-bell"></i>
-      <span class="notif-badge">{{ notifications.length }}</span>
+      @if (unreadNotificationCount > 0) {
+        <span class="notif-badge">{{ unreadNotificationCount }}</span>
+      }
     </button>
     <div class="admin-profile">
       <i class="fa-solid fa-circle-user"></i>
@@ -38,9 +40,19 @@
 
       <div class="notif-header">
         <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
-        <button class="close-btn" (click)="closeNotifications()">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+        <div class="notif-header-actions">
+          <button class="refresh-btn" [disabled]="notificationsLoading" (click)="loadNotificationsManually()" title="Refresh">
+            <i class="fa-solid fa-rotate-right" [class.spinning]="notificationsLoading"></i>
+          </button>
+          @if (unreadNotificationCount > 0) {
+            <button class="mark-all-btn" [disabled]="markingAllRead" (click)="markAllAsRead()">
+              {{ markingAllRead ? 'Marking...' : 'Mark all as read' }}
+            </button>
+          }
+          <button class="close-btn" (click)="closeNotifications()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
       </div>
 
       <div class="notif-list">
@@ -51,15 +63,38 @@
         } @else if (!notifications.length) {
           <div class="notif-state">No notifications yet.</div>
         } @else {
-        @for (notif of notifications; track notif.title + notif.timestamp) {
-          <div class="notif-item">
+        @for (notif of notifications; track notif.id ?? notif.title + notif.timestamp) {
+          <div class="notif-item" [class.unread]="isUnread(notif)">
             <div class="notif-icon">
               <i class="fa-solid {{ notif.icon }}"></i>
             </div>
             <div class="notif-content">
               <h4>{{ notif.title }}</h4>
               <p>{{ notif.message }}</p>
+              <div class="notif-meta">
+                @if (isUnread(notif)) {
+                  <span class="unread-chip">Unread</span>
+                }
+                @if (isScheduled(notif)) {
+                  <span>{{ getScheduleLabel(notif) }}</span>
+                }
+                @if (notif.expiresAt) {
+                  <span>{{ getExpiryLabel(notif) }}</span>
+                }
+                <span>{{ notif.senderName || 'System' }}</span>
+                <span>{{ notif.schoolName || 'All schools' }}</span>
+                @if (notif.audienceRoles?.length) {
+                  <span>{{ getAudienceLabel(notif) }}</span>
+                }
+              </div>
               <span class="notif-time">{{ getNotificationTime(notif.timestamp) }}</span>
+              @if (isUnread(notif)) {
+                <div class="notif-actions">
+                  <button type="button" [disabled]="markingReadId === notif.id" (click)="markAsRead(notif)">
+                    {{ markingReadId === notif.id ? 'Marking...' : 'Mark as Read' }}
+                  </button>
+                </div>
+              }
             </div>
           </div>
         }
@@ -67,46 +102,8 @@
       </div>
 
       <div class="notif-footer">
+        <a routerLink="/admin/notifications" (click)="closeNotifications()">Open Notification Center</a>
         <button (click)="closeNotifications()">Close</button>
-      </div>
-
-      <div class="notif-preferences">
-        <h4><i class="fa-solid fa-sliders"></i> Notification Preferences</h4>
-        <div class="notif-pref-grid">
-          <div class="notif-pref-col">
-            <label class="toggle-row">
-              <span>New Student Enrolled</span>
-              <input type="checkbox" [(ngModel)]="notifPrefs.newStudent" name="newStudent" />
-            </label>
-            <label class="toggle-row">
-              <span>New Teacher Added</span>
-              <input type="checkbox" [(ngModel)]="notifPrefs.newTeacher" name="newTeacher" />
-            </label>
-            <label class="toggle-row">
-              <span>Upcoming Events</span>
-              <input
-                type="checkbox"
-                [(ngModel)]="notifPrefs.upcomingEvents"
-                (ngModelChange)="onEventReminderPreferenceChange()"
-                name="upcomingEvents"
-              />
-            </label>
-          </div>
-          <div class="notif-pref-col">
-            <label class="toggle-row">
-              <span>System Updates</span>
-              <input type="checkbox" [(ngModel)]="notifPrefs.systemUpdates" name="systemUpdates" />
-            </label>
-            <label class="toggle-row">
-              <span>Backup Completed</span>
-              <input type="checkbox" [(ngModel)]="notifPrefs.backupCompleted" name="backupCompleted" />
-            </label>
-            <label class="toggle-row">
-              <span>Security Alerts</span>
-              <input type="checkbox" [(ngModel)]="notifPrefs.securityAlerts" name="securityAlerts" />
-            </label>
-          </div>
-        </div>
       </div>
 
     </div>

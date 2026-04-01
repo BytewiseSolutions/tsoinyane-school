@@ -1,51 +1,168 @@
 <div class="admin-page">
   <div class="page-header">
-    <h2>Notifications</h2>
+    <div>
+      <h2>Notifications</h2>
+      <p>View role-based announcements and send school-scoped notifications where permitted.</p>
+    </div>
+    @if (canSendNotifications) {
+      <button class="add-btn" (click)="openForm()">
+        <i class="fa-solid fa-paper-plane"></i> Send Notification
+      </button>
+    }
   </div>
 
-  <div class="settings-grid">
-    <div class="settings-card">
-      <h3><i class="fa-solid fa-bell"></i> Notification Preferences</h3>
-      <form class="settings-form" (ngSubmit)="saveNotificationSettings()">
-        <div class="preferences-grid">
-          <label class="toggle-row">
-            <span>Email Alerts</span>
-            <input type="checkbox" [(ngModel)]="notificationSettings.emailAlerts" name="emailAlerts" />
-          </label>
-          <label class="toggle-row">
-            <span>SMS Alerts</span>
-            <input type="checkbox" [(ngModel)]="notificationSettings.smsAlerts" name="smsAlerts" />
-          </label>
-          <label class="toggle-row">
-            <span>Event Reminders</span>
-            <input type="checkbox" [(ngModel)]="notificationSettings.eventReminders" name="eventReminders" />
-          </label>
-          <label class="toggle-row">
-            <span>Weekly Parent Summary</span>
-            <input type="checkbox" [(ngModel)]="notificationSettings.parentSummary" name="parentSummary" />
-          </label>
-          <label class="toggle-row">
-            <span>Admin Digest</span>
-            <input type="checkbox" [(ngModel)]="notificationSettings.adminDigest" name="adminDigest" />
-          </label>
-          <div class="form-group">
-            <label>Summary Delivery Day</label>
-            <select [(ngModel)]="notificationSettings.reportDay" name="reportDay">
-              <option value="Monday">Monday</option>
-              <option value="Tuesday">Tuesday</option>
-              <option value="Wednesday">Wednesday</option>
-              <option value="Thursday">Thursday</option>
-              <option value="Friday">Friday</option>
-            </select>
+  @if (pageError) {
+    <div class="empty-state error" style="margin-bottom: 16px;">{{ pageError }}</div>
+  }
+
+  <section class="panel-card">
+    <div class="panel-header">
+      <h3><i class="fa-solid fa-bell"></i> Notification Inbox</h3>
+      <div class="inbox-summary">
+        <span class="count-chip">{{ notifications.length }}</span>
+        @if (unreadCount) {
+          <span class="unread-chip">{{ unreadCount }} unread</span>
+        }
+        <button class="refresh-icon-btn" [disabled]="notificationsLoading" (click)="refresh()" title="Refresh">
+          <i class="fa-solid fa-rotate-right" [class.spinning]="notificationsLoading"></i>
+        </button>
+        @if (unreadCount > 0) {
+          <button class="mark-all-btn" [disabled]="markingAllRead" (click)="markAllAsRead()">
+            {{ markingAllRead ? 'Marking...' : 'Mark all as read' }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (notificationsLoading) {
+      <div class="empty-state">Loading notifications...</div>
+    } @else if (notificationsError) {
+      <div class="empty-state error">{{ notificationsError }}</div>
+    } @else if (!notifications.length) {
+      <div class="empty-state">No notifications available for your role and school context yet.</div>
+    } @else {
+      <div class="notification-list">
+        @for (notification of paginatedNotifications; track notification.id ?? notification.title + notification.timestamp) {
+          <article class="notification-card" [class.unread]="isUnread(notification)" [class.expired]="isExpired(notification)">
+            <div class="notification-icon">
+              <i class="fa-solid {{ notification.icon }}"></i>
+            </div>
+            <div class="notification-body">
+              <div class="notification-topline">
+                <h4>{{ notification.title }}</h4>
+                <span class="notification-time">{{ getNotificationTime(notification.timestamp) }}</span>
+              </div>
+              <p>{{ notification.message }}</p>
+              <div class="notification-meta">
+                @if (isUnread(notification)) {
+                  <span class="status-chip unread">Unread</span>
+                } @else {
+                  <span class="status-chip read">Read</span>
+                }
+                @if (isScheduled(notification)) {
+                  <span class="status-chip scheduled">{{ getScheduleLabel(notification) }}</span>
+                }
+                @if (notification.expiresAt) {
+                  <span class="status-chip expiry">{{ getExpiryLabel(notification) }}</span>
+                }
+                <span>{{ notification.senderName || 'System' }}</span>
+                <span>{{ notification.schoolName || 'All schools' }}</span>
+                @if (notification.audienceRoles?.length) {
+                  <span>{{ getAudienceLabel(notification) }}</span>
+                }
+              </div>
+              @if (notification.editable || isUnread(notification)) {
+                <div class="notification-actions">
+                  @if (isUnread(notification)) {
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      [disabled]="markingReadId === notification.id"
+                      (click)="markAsRead(notification)"
+                    >
+                      {{ markingReadId === notification.id ? 'Marking...' : 'Mark as Read' }}
+                    </button>
+                  }
+                  @if (notification.editable) {
+                    <button type="button" class="edit-btn" (click)="openForm(notification)">Edit</button>
+                    <button type="button" class="delete-btn" (click)="requestDelete(notification)">Delete</button>
+                  }
+                </div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+      @if (notifications.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-summary">Showing {{ pageStart }}-{{ pageEnd }} of {{ notifications.length }}</div>
+          <div class="pagination-controls">
+            <label class="page-size">
+              <span>Rows</span>
+              <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()" name="pageSize">
+                @for (size of pageSizeOptions; track size) {
+                  <option [ngValue]="size">{{ size }}</option>
+                }
+              </select>
+            </label>
+            <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">Previous</button>
+            <span class="page-indicator">Page {{ safeCurrentPage }} of {{ totalPages }}</span>
+            <button type="button" class="page-btn" [disabled]="safeCurrentPage === totalPages" (click)="goToNextPage()">Next</button>
           </div>
         </div>
+      }
+    }
+  </section>
+</div>
 
-        @if (message) {
-          <p class="form-message success">{{ message }}</p>
-        }
+@if (showForm) {
+  <app-notification-form
+    [existingNotification]="selectedNotification"
+    [selectedSchoolId]="selectedSchoolId"
+    [selectedSchoolName]="selectedSchoolName"
+    [isSystemAdmin]="isSystemAdmin"
+    [availableRecipientOptions]="availableRecipientOptions"
+    (closed)="closeForm()"
+    (saved)="onSaved($event.scheduled, $event.isEdit)" />
+}
 
-        <button type="submit" class="save-btn">Save Notification Settings</button>
-      </form>
+@if (successDialogOpen) {
+  <div class="dialog-backdrop" (click)="closeSuccessDialog()">
+    <div class="success-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="dialog-icon">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h3>{{ successDialogTitle }}</h3>
+      <p>{{ successDialogMessage }}</p>
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" (click)="closeSuccessDialog()">Close</button>
+      </div>
     </div>
   </div>
-</div>
+}
+
+@if (confirmDeleteOpen && notificationPendingDelete) {
+  <div class="dialog-backdrop" (click)="closeDeleteDialog()">
+    <div
+      class="success-dialog delete-dialog"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="dialog-icon delete-icon">
+        <i class="fa-solid fa-trash"></i>
+      </div>
+      <h3>Delete Notification</h3>
+      <p>Are you sure you want to delete "{{ notificationPendingDelete.title }}"?</p>
+      @if (deleteError) {
+        <p class="form-message error">{{ deleteError }}</p>
+      }
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" [disabled]="deleting" (click)="closeDeleteDialog()">Cancel</button>
+        <button type="button" class="delete-btn" [disabled]="deleting" (click)="confirmDelete()">
+          {{ deleting ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
