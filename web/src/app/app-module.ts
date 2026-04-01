@@ -34,6 +34,7 @@ import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
 import { ActivityLogs } from './admin/activity-logs/activity-logs';
 import { Notifications } from './admin/notifications/notifications';
+import { NotificationForm } from './admin/notifications/notification-form/notification-form';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
@@ -73,6 +74,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     Events,
     ActivityLogs,
     Notifications,
+    NotificationForm,
     Settings,
     SubjectForm,
     SubjectDetail,

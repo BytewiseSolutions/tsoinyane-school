@@ -1,0 +1,65 @@
+<div class="form-overlay" (click)="close()">
+  <div class="form-card" (click)="$event.stopPropagation()">
+
+    <div class="form-header">
+      <h3>{{ isEdit ? 'Edit Notification' : 'Send Notification' }}</h3>
+      <button class="close-btn" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <form class="form-body" (ngSubmit)="submit()">
+      <div class="scope-label">{{ targetSchoolLabel }}</div>
+
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" [(ngModel)]="form.title" name="title" maxlength="150" placeholder="Exam reminder, timetable update..." />
+      </div>
+
+      <div class="form-group">
+        <label>Message</label>
+        <textarea [(ngModel)]="form.message" name="message" maxlength="1000" rows="5" placeholder="Write a clear message for the selected recipient groups."></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Publish At</label>
+          <input type="datetime-local" [(ngModel)]="form.scheduledAt" name="scheduledAt" />
+        </div>
+        <div class="form-group">
+          <label>Expires At</label>
+          <input type="datetime-local" [(ngModel)]="form.expiresAt" name="expiresAt" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Recipients</label>
+        <div class="recipient-grid">
+          @for (option of availableRecipientOptions; track option.value) {
+            <label class="recipient-option">
+              <input type="checkbox" [checked]="hasAudience(option.value)" (change)="toggleAudience(option.value, $any($event.target).checked)" />
+              <span>{{ option.label }}</span>
+            </label>
+          }
+        </div>
+      </div>
+
+      @if (isSystemAdmin) {
+        <label class="recipient-option scope-toggle">
+          <input type="checkbox" [(ngModel)]="form.sendToAllSchools" name="sendToAllSchools" />
+          <span>Send to all schools instead of the selected school context</span>
+        </label>
+      }
+
+      @if (formError) {
+        <p class="form-error">{{ formError }}</p>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" [disabled]="saving" (click)="close()">Cancel</button>
+        <button type="button" class="submit-btn" [disabled]="!canSubmit" (click)="submit()">
+          {{ saving ? (isEdit ? 'Saving...' : 'Sending...') : (isEdit ? 'Save Changes' : 'Send Notification') }}
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
