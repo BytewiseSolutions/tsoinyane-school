@@ -63,4 +63,10 @@ public class Notification extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private Set<Role> audienceRoles = new LinkedHashSet<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "notification_read_by", joinColumns = @JoinColumn(name = "notification_id"))
+    @Column(name = "user_id", nullable = false)
+    @Builder.Default
+    private Set<Long> readByUserIds = new LinkedHashSet<>();
 }

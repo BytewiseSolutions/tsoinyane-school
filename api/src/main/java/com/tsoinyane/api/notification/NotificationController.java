@@ -29,13 +29,13 @@ public class NotificationController {
 
     @PostMapping
     @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN"})
-    public NotificationDto createNotification(@Valid @RequestBody NotificationCreateRequest request) {
+    public NotificationDto createNotification(@Valid @RequestBody NotificationDto request) {
         return notificationService.createNotification(request);
     }
 
     @PutMapping("/{id}")
     @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN"})
-    public NotificationDto updateNotification(@PathVariable Long id, @Valid @RequestBody NotificationCreateRequest request) {
+    public NotificationDto updateNotification(@PathVariable Long id, @Valid @RequestBody NotificationDto request) {
         return notificationService.updateNotification(id, request);
     }
 

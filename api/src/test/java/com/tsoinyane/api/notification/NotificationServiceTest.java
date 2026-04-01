@@ -44,9 +44,6 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
 
     @Autowired
-    private NotificationReadReceiptRepository notificationReadReceiptRepository;
-
-    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -56,13 +53,11 @@ class NotificationServiceTest {
     private CurrentUserService currentUserService;
 
     private School school;
-    private User systemAdmin;
     private User schoolAdmin;
     private User teacher;
 
     @BeforeEach
     void setUp() {
-        notificationReadReceiptRepository.deleteAll();
         notificationRepository.deleteAll();
         userRepository.deleteAll();
         schoolRepository.deleteAll();
@@ -73,7 +68,7 @@ class NotificationServiceTest {
                 .type(SchoolType.PRIMARY)
                 .build());
 
-        systemAdmin = saveUser("system@tsoinyane.co.ls", "System", "Admin", Set.of(Role.SYSTEM_ADMIN), Set.of());
+        saveUser("system@tsoinyane.co.ls", "System", "Admin", Set.of(Role.SYSTEM_ADMIN), Set.of());
         schoolAdmin = saveUser("schooladmin@tsoinyane.co.ls", "School", "Admin", Set.of(Role.SCHOOL_ADMIN), Set.of(school));
         teacher = saveUser("teacher@tsoinyane.co.ls", "Test", "Teacher", Set.of(Role.TEACHER), Set.of(school));
     }
@@ -110,7 +105,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    void markNotificationAsReadCreatesReceiptAndReturnsUpdatedNotification() {
+    void markNotificationAsReadUpdatesReadByUserIdsAndReturnsUpdatedNotification() {
         Notification notification = saveNotification("Staff Meeting", Instant.now().minusSeconds(60), null, schoolAdmin);
         when(currentUserService.getCurrentUser()).thenReturn(teacher);
 
@@ -118,18 +113,15 @@ class NotificationServiceTest {
         List<NotificationDto> notifications = notificationService.getNotifications(school.getId());
 
         assertThat(updated.isRead()).isTrue();
-        assertThat(updated.getReadAt()).isNotNull();
-        assertThat(notificationReadReceiptRepository.count()).isEqualTo(1);
+        assertThat(notificationRepository.findById(notification.getId()))
+                .isPresent()
+                .get()
+                .extracting(n -> n.getReadByUserIds().contains(teacher.getId()))
+                .isEqualTo(true);
         assertThat(notifications).extracting(NotificationDto::isRead).containsExactly(true);
     }
 
-    private User saveUser(
-            String email,
-            String firstName,
-            String lastName,
-            Set<Role> roles,
-            Set<School> schools
-    ) {
+    private User saveUser(String email, String firstName, String lastName, Set<Role> roles, Set<School> schools) {
         return userRepository.save(User.builder()
                 .email(email)
                 .firstName(firstName)
@@ -140,12 +132,7 @@ class NotificationServiceTest {
                 .build());
     }
 
-    private Notification saveNotification(
-            String title,
-            Instant scheduledAt,
-            Instant expiresAt,
-            User createdBy
-    ) {
+    private Notification saveNotification(String title, Instant scheduledAt, Instant expiresAt, User createdBy) {
         return notificationRepository.save(Notification.builder()
                 .title(title)
                 .message(title + " message")
