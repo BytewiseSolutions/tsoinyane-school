@@ -103,7 +103,7 @@ public class ActivityLogFilter extends OncePerRequestFilter {
         String action = resolveAction(method, servletPath);
         String module = resolveModule(servletPath);
 
-        activityLogService.record(ActivityLogWriteRequest.builder()
+        activityLogService.record(ActivityLogDto.builder()
                 .actorId(authContext.actorId())
                 .actorName(authContext.actorName())
                 .actorEmail(authContext.actorEmail())

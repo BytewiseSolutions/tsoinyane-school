@@ -22,10 +22,10 @@
         <span class="notif-badge">{{ unreadNotificationCount }}</span>
       }
     </button>
-    <div class="admin-profile">
+    <a routerLink="/admin/profile" class="admin-profile">
       <i class="fa-solid fa-circle-user"></i>
       <span>{{ currentUserRole }}</span>
-    </div>
+    </a>
     <a routerLink="/login" class="logout-btn">
       <i class="fa-solid fa-right-from-bracket"></i>
       <span>Logout</span>

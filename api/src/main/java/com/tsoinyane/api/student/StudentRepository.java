@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface StudentRepository extends JpaRepository<Student, Long> {
     Optional<Student> findByStudentNumber(String studentNumber);
 
-    @Query("select s from Student s join fetch s.grade where s.user.id = :userId")
+    @Query("select s from Student s join fetch s.grade join fetch s.school join fetch s.user where s.user.id = :userId")
     Optional<Student> findByUser_Id(@Param("userId") Long userId);
 
     @Query("select count(s) from Student s where (:schoolId is null or s.school.id = :schoolId)")

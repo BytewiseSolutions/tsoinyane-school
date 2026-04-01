@@ -25,4 +25,10 @@ public class AuthController {
     public Map<String, String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return Map.of("message", authService.forgotPassword(request));
     }
+
+    @PostMapping("/change-password")
+    public Map<String, String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return Map.of("message", "Password updated successfully.");
+    }
 }

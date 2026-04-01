@@ -1,0 +1,117 @@
+<div class="admin-page">
+  <div class="page-header">
+    <h2>Reports & Results</h2>
+  </div>
+
+  <div class="report-filters table-card">
+    <div class="filter-row">
+      <div class="filter-field">
+        <label>Grade</label>
+        <select [(ngModel)]="selectedGradeId" name="grade" (ngModelChange)="onGradeChange()">
+          <option [ngValue]="null">All Grades</option>
+          @for (grade of grades; track grade.id) {
+            <option [ngValue]="grade.id">{{ grade.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-field">
+        <label>Student</label>
+        <select [(ngModel)]="selectedStudentId" name="student" (ngModelChange)="onStudentChange()">
+          <option [ngValue]="null">Select a student...</option>
+          @for (student of filteredStudents; track student.id) {
+            <option [ngValue]="student.id">{{ student.name }} ({{ student.studentNumber }})</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (!selectedSchoolId) {
+    <div class="empty-report">Please select a school from the header to view reports.</div>
+  } @else if (!selectedStudentId) {
+    <div class="empty-report">Select a student above to view their report.</div>
+  } @else if (loading) {
+    <div class="empty-report">Loading report...</div>
+  } @else if (error) {
+    <div class="empty-report error">{{ error }}</div>
+  } @else if (report) {
+
+    <div class="report-header-card">
+      <div class="student-info">
+        <div class="student-avatar"><i class="fa-solid fa-user-graduate"></i></div>
+        <div>
+          <h3>{{ report.studentName }}</h3>
+          <p>{{ report.studentNumber }} &bull; {{ report.gradeName }} &bull; {{ report.schoolName }}</p>
+        </div>
+      </div>
+      <div class="summary-stats">
+        <div class="stat-box">
+          <span class="stat-value" [class]="getRateClass(report.attendanceRate)">{{ report.attendanceRate }}%</span>
+          <span class="stat-label">Attendance</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-value" [class]="getRateClass(report.homeworkRate)">{{ report.homeworkRate }}%</span>
+          <span class="stat-label">Homework</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-value">{{ report.totalLessons }}</span>
+          <span class="stat-label">Total Lessons</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-value">{{ report.totalPresent }}</span>
+          <span class="stat-label">Present</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-value">{{ report.totalAbsent }}</span>
+          <span class="stat-label">Absent</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-value">{{ report.totalLate }}</span>
+          <span class="stat-label">Late</span>
+        </div>
+      </div>
+    </div>
+
+    @if (!report.subjects.length) {
+      <div class="empty-report">No lesson data recorded for this student yet.</div>
+    } @else {
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Teacher</th>
+              <th>Lessons</th>
+              <th>Present</th>
+              <th>Absent</th>
+              <th>Late</th>
+              <th>Attendance</th>
+              <th>HW Done</th>
+              <th>HW Not Done</th>
+              <th>Homework</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (subject of report.subjects; track subject.subjectId) {
+              <tr>
+                <td>
+                  <strong>{{ subject.subjectName }}</strong>
+                  <div class="subtle-text">{{ subject.subjectCode }}</div>
+                </td>
+                <td>{{ subject.teacherName }}</td>
+                <td>{{ subject.totalLessons }}</td>
+                <td>{{ subject.present }}</td>
+                <td>{{ subject.absent }}</td>
+                <td>{{ subject.late }}</td>
+                <td><span class="rate-badge" [class]="getRateClass(subject.attendanceRate)">{{ subject.attendanceRate }}%</span></td>
+                <td>{{ subject.homeworkDone }}</td>
+                <td>{{ subject.homeworkNotDone }}</td>
+                <td><span class="rate-badge" [class]="getRateClass(subject.homeworkRate)">{{ subject.homeworkRate }}%</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

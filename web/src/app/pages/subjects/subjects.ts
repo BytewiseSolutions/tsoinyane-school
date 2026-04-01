@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { SchoolService, School } from '../../shared/school';
+import { SchoolService, PublicSchool } from '../../shared/school';
 
 @Component({
   selector: 'app-subjects',
@@ -8,14 +8,16 @@ import { SchoolService, School } from '../../shared/school';
   styleUrl: './subjects.scss',
 })
 export class Subjects implements OnInit {
-  selectedSchool: School = 'combined';
+  selectedSchool: PublicSchool | null = null;
 
-  get showPrimary() {
-    return this.selectedSchool === 'primary' || this.selectedSchool === 'combined';
+  get showPrimary(): boolean {
+    const name = this.selectedSchool?.name?.toLowerCase() ?? '';
+    return name.includes('primary') || name.includes('combined') || !this.selectedSchool;
   }
 
-  get showHigh() {
-    return this.selectedSchool === 'high' || this.selectedSchool === 'combined';
+  get showHigh(): boolean {
+    const name = this.selectedSchool?.name?.toLowerCase() ?? '';
+    return name.includes('high') || name.includes('combined') || !this.selectedSchool;
   }
 
   constructor(private schoolService: SchoolService) {}

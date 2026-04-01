@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { SchoolService, School } from '../school';
+import { SchoolService, PublicSchool } from '../school';
 
 @Component({
   selector: 'app-navbar',
@@ -11,12 +11,19 @@ export class Navbar implements OnInit {
   menuOpen = false;
   dropdownOpen = false;
   schoolName = 'Tsoinyane Government Combined School';
+  schools: PublicSchool[] = [];
+  selectedSchool: PublicSchool | null = null;
 
   constructor(private schoolService: SchoolService) {}
 
   ngOnInit() {
+    this.schoolService.schools$.subscribe(schools => {
+      this.schools = schools;
+    });
+
     this.schoolService.selectedSchool$.subscribe(school => {
-      this.schoolName = this.schoolService.getSchoolName(school);
+      this.selectedSchool = school;
+      this.schoolName = school?.name ?? 'Tsoinyane Government Combined School';
     });
   }
 
@@ -32,7 +39,7 @@ export class Navbar implements OnInit {
     this.dropdownOpen = !this.dropdownOpen;
   }
 
-  selectSchool(school: School) {
+  selectSchool(school: PublicSchool) {
     this.schoolService.setSchool(school);
     this.dropdownOpen = false;
   }

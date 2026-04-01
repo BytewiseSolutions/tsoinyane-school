@@ -1,6 +1,6 @@
 <div class="admin-page">
   <div class="page-header">
-    <h2>System Settings</h2>
+    <h2>Settings</h2>
   </div>
 
   <div class="settings-grid">
@@ -10,26 +10,28 @@
       <form class="settings-form" (ngSubmit)="saveSchoolInfo()">
         <div class="form-group">
           <label>School Name</label>
-          <input type="text" [(ngModel)]="schoolInfo.schoolName" name="schoolName" required />
+          <input type="text" [(ngModel)]="schoolInfo.name" name="schoolName" required />
         </div>
         <div class="form-group">
           <label>Location</label>
-          <input type="text" [(ngModel)]="schoolInfo.location" name="location" required />
+          <input type="text" [(ngModel)]="schoolInfo.location" name="location" />
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Phone</label>
-            <input type="text" [(ngModel)]="schoolInfo.phone" name="phone" required />
+            <input type="text" [(ngModel)]="schoolInfo.phone" name="phone" />
           </div>
           <div class="form-group">
             <label>Email</label>
-            <input type="email" [(ngModel)]="schoolInfo.email" name="email" required />
+            <input type="email" [(ngModel)]="schoolInfo.email" name="email" />
           </div>
         </div>
-        @if (sectionMessage['school']) {
-          <p class="form-message success">{{ sectionMessage['school'] }}</p>
+        @if (schoolError) {
+          <p class="form-message error">{{ schoolError }}</p>
         }
-        <button type="submit" class="save-btn">Save School Info</button>
+        <button type="submit" class="save-btn" [disabled]="savingSchool || !schoolInfo.id">
+          {{ savingSchool ? 'Saving...' : 'Save School Info' }}
+        </button>
       </form>
     </div>
 
@@ -53,10 +55,9 @@
         @if (passwordError) {
           <p class="form-message error">{{ passwordError }}</p>
         }
-        @if (sectionMessage['password']) {
-          <p class="form-message success">{{ sectionMessage['password'] }}</p>
-        }
-        <button type="submit" class="save-btn">Update Password</button>
+        <button type="submit" class="save-btn" [disabled]="savingPassword">
+          {{ savingPassword ? 'Updating...' : 'Update Password' }}
+        </button>
       </form>
     </div>
 
@@ -66,85 +67,59 @@
         <div class="form-row">
           <div class="form-group">
             <label>Academic Year</label>
-            <input type="text" [(ngModel)]="academicSettings.academicYear" name="academicYear" />
+            <input type="text" [(ngModel)]="academicSettings.academicYear" name="academicYear" placeholder="e.g. 2026" />
           </div>
           <div class="form-group">
             <label>Current Term</label>
             <select [(ngModel)]="academicSettings.currentTerm" name="currentTerm">
-              <option value="Term 1">Term 1</option>
-              <option value="Term 2">Term 2</option>
-              <option value="Term 3">Term 3</option>
+              <option value="TERM_1">Term 1</option>
+              <option value="TERM_2">Term 2</option>
+              <option value="TERM_3">Term 3</option>
+              <option value="TERM_4">Term 4</option>
             </select>
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group">
-            <label>Grading Scale</label>
-            <select [(ngModel)]="academicSettings.gradingScale" name="gradingScale">
-              <option value="A-F">A-F</option>
-              <option value="Percentage">Percentage</option>
-              <option value="Points">Points</option>
-            </select>
-          </div>
           <div class="form-group">
             <label>Passing Mark (%)</label>
             <input type="number" min="0" max="100" [(ngModel)]="academicSettings.passingMark" name="passingMark" />
           </div>
-        </div>
-        <div class="form-row">
           <div class="form-group">
             <label>Minimum Attendance (%)</label>
             <input type="number" min="0" max="100" [(ngModel)]="academicSettings.attendanceThreshold" name="attendanceThreshold" />
           </div>
-          <div class="form-group">
-            <label>Language</label>
-            <select [(ngModel)]="academicSettings.language" name="language">
-              <option value="English">English</option>
-              <option value="Sesotho">Sesotho</option>
-              <option value="Both">Both</option>
-            </select>
-          </div>
-        </div>
-        @if (sectionMessage['academic']) {
-          <p class="form-message success">{{ sectionMessage['academic'] }}</p>
-        }
-        <button type="submit" class="save-btn">Save Academic Settings</button>
-      </form>
-    </div>
-
-    <div class="settings-card">
-      <h3><i class="fa-solid fa-plug"></i> Integrations</h3>
-      <form class="settings-form" (ngSubmit)="saveIntegrationSettings()">
-        <div class="form-row">
-          <div class="form-group">
-            <label>SMTP Host</label>
-            <input type="text" [(ngModel)]="integrationSettings.smtpHost" name="smtpHost" />
-          </div>
-          <div class="form-group">
-            <label>SMTP Port</label>
-            <input type="number" min="1" [(ngModel)]="integrationSettings.smtpPort" name="smtpPort" />
-          </div>
         </div>
         <div class="form-group">
-          <label>Sender Email</label>
-          <input type="email" [(ngModel)]="integrationSettings.senderEmail" name="senderEmail" />
+          <label>Language</label>
+          <select [(ngModel)]="academicSettings.language" name="language">
+            <option value="English">English</option>
+            <option value="Sesotho">Sesotho</option>
+            <option value="Both">Both</option>
+          </select>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>SMS Provider</label>
-            <input type="text" [(ngModel)]="integrationSettings.smsProvider" name="smsProvider" />
-          </div>
-          <div class="form-group">
-            <label>SMS API Key</label>
-            <input type="password" [(ngModel)]="integrationSettings.smsApiKey" name="smsApiKey" />
-          </div>
-        </div>
-        @if (sectionMessage['integrations']) {
-          <p class="form-message success">{{ sectionMessage['integrations'] }}</p>
+        @if (academicError) {
+          <p class="form-message error">{{ academicError }}</p>
         }
-        <button type="submit" class="save-btn">Save Integration Settings</button>
+        <button type="submit" class="save-btn" [disabled]="savingAcademic || !schoolInfo.id">
+          {{ savingAcademic ? 'Saving...' : 'Save Academic Settings' }}
+        </button>
       </form>
     </div>
 
   </div>
 </div>
+
+@if (successDialogOpen) {
+  <div class="dialog-backdrop" (click)="closeSuccessDialog()">
+    <div class="success-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="dialog-icon">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h3>Success</h3>
+      <p>{{ successDialogMessage }}</p>
+      <div class="dialog-actions">
+        <button type="button" class="save-btn" (click)="closeSuccessDialog()">Close</button>
+      </div>
+    </div>
+  </div>
+}

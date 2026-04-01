@@ -58,22 +58,22 @@ public class ActivityLogService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(ActivityLogWriteRequest request) {
+    public void record(ActivityLogDto request) {
         activityLogRepository.save(ActivityLog.builder()
-                .actorId(request.actorId())
-                .actorName(request.actorName())
-                .actorEmail(request.actorEmail())
-                .action(request.action())
-                .module(request.module())
-                .targetId(request.targetId())
-                .description(request.description())
-                .endpoint(request.endpoint())
-                .httpMethod(request.httpMethod())
-                .statusCode(request.statusCode())
-                .success(request.success())
-                .ipAddress(request.ipAddress())
-                .schoolId(request.schoolId())
-                .schoolName(request.schoolName())
+                .actorId(request.getActorId())
+                .actorName(request.getActorName())
+                .actorEmail(request.getActorEmail())
+                .action(request.getAction())
+                .module(request.getModule())
+                .targetId(request.getTargetId())
+                .description(request.getDescription())
+                .endpoint(request.getEndpoint())
+                .httpMethod(request.getHttpMethod())
+                .statusCode(request.getStatusCode())
+                .success(request.isSuccess())
+                .ipAddress(request.getIpAddress())
+                .schoolId(request.getSchoolId())
+                .schoolName(request.getSchoolName())
                 .build());
     }
 
