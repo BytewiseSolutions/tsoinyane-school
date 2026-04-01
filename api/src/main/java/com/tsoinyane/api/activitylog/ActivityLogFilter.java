@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -93,10 +94,11 @@ public class ActivityLogFilter extends OncePerRequestFilter {
         JsonNode requestJson = readJson(request.getContentAsByteArray());
         JsonNode responseJson = readJson(response.getContentAsByteArray());
         AuthContext authContext = resolveAuthContext(requestJson, responseJson);
-        Long schoolId = resolveSchoolId(request, requestJson, responseJson, authContext.actor());
-        String schoolName = resolveSchoolName(schoolId, authContext.actor());
+        List<School> actorSchools = resolveActorSchools(authContext.actorId());
+        Long schoolId = resolveSchoolId(request, requestJson, responseJson, actorSchools);
+        String schoolName = resolveSchoolName(schoolId, actorSchools);
         Long targetId = resolveTargetId(servletPath, requestJson, responseJson);
-        int statusCode = failure != null && response.getStatus() < 400 ? 500 : response.getStatus();
+        int statusCode = resolveStatusCode(response, failure);
         boolean success = failure == null && statusCode < 400;
         String action = resolveAction(method, servletPath);
         String module = resolveModule(servletPath);
@@ -124,10 +126,10 @@ public class ActivityLogFilter extends OncePerRequestFilter {
         if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser principal) {
             User actor = userRepository.findById(principal.id()).orElse(null);
             if (actor != null) {
-                return new AuthContext(actor.getId(), actor.getDisplayName(), actor.getEmail(), actor);
+                return new AuthContext(actor.getId(), actor.getDisplayName(), actor.getEmail());
             }
 
-            return new AuthContext(principal.id(), principal.email(), principal.email(), null);
+            return new AuthContext(principal.id(), principal.email(), principal.email());
         }
 
         Long actorId = readLong(responseJson, "user", "id");
@@ -141,14 +143,22 @@ public class ActivityLogFilter extends OncePerRequestFilter {
                 "Anonymous"
         );
 
-        return new AuthContext(actorId, actorName, actorEmail, actorId != null ? userRepository.findById(actorId).orElse(null) : null);
+        return new AuthContext(actorId, actorName, actorEmail);
+    }
+
+    private List<School> resolveActorSchools(Long actorId) {
+        if (actorId == null) {
+            return List.of();
+        }
+
+        return schoolRepository.findAllByUsers_Id(actorId);
     }
 
     private Long resolveSchoolId(
             HttpServletRequest request,
             JsonNode requestJson,
             JsonNode responseJson,
-            User actor
+            List<School> actorSchools
     ) {
         Long fromQuery = parseLong(request.getParameter("schoolId"));
         if (fromQuery != null) {
@@ -165,23 +175,31 @@ public class ActivityLogFilter extends OncePerRequestFilter {
             return fromBody;
         }
 
-        if (actor != null && actor.getSchools() != null && actor.getSchools().size() == 1) {
-            return actor.getSchools().iterator().next().getId();
+        if (actorSchools.size() == 1) {
+            return actorSchools.get(0).getId();
         }
 
         return null;
     }
 
-    private String resolveSchoolName(Long schoolId, User actor) {
+    private String resolveSchoolName(Long schoolId, List<School> actorSchools) {
         if (schoolId == null) {
-            return actor != null && actor.getSchools() != null && actor.getSchools().size() == 1
-                    ? actor.getSchools().iterator().next().getName()
+            return actorSchools.size() == 1
+                    ? actorSchools.get(0).getName()
                     : null;
         }
 
         return schoolRepository.findById(schoolId)
                 .map(School::getName)
                 .orElse(null);
+    }
+
+    private int resolveStatusCode(ContentCachingResponseWrapper response, Exception failure) {
+        if (failure instanceof ResponseStatusException responseStatusException) {
+            return responseStatusException.getStatusCode().value();
+        }
+
+        return failure != null && response.getStatus() < 400 ? 500 : response.getStatus();
     }
 
     private Long resolveTargetId(String servletPath, JsonNode requestJson, JsonNode responseJson) {
@@ -405,6 +423,6 @@ public class ActivityLogFilter extends OncePerRequestFilter {
                 .orElse(null);
     }
 
-    private record AuthContext(Long actorId, String actorName, String actorEmail, User actor) {
+    private record AuthContext(Long actorId, String actorName, String actorEmail) {
     }
 }

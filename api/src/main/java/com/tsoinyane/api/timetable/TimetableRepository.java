@@ -1,6 +1,7 @@
 package com.tsoinyane.api.timetable;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -8,6 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TimetableRepository extends JpaRepository<Timetable, Long> {
+
+    @Modifying
+    @Query(value = "delete from timetable_student where student_id = :studentId", nativeQuery = true)
+    void deleteStudentAssignments(@Param("studentId") Long studentId);
 
     @Query("""
             select distinct t from Timetable t

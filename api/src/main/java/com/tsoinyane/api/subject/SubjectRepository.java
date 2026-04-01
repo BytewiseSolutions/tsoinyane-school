@@ -1,6 +1,7 @@
 package com.tsoinyane.api.subject;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -8,6 +9,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SubjectRepository extends JpaRepository<Subject, Long> {
+
+    boolean existsByTeacher_Id(Long teacherId);
+
+    @Modifying
+    @Query(value = "delete from subject_student where student_id = :studentId", nativeQuery = true)
+    void deleteStudentAssignments(@Param("studentId") Long studentId);
 
     @Query("""
             select s from Subject s
