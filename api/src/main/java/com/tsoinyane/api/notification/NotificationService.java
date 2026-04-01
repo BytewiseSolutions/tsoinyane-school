@@ -69,14 +69,14 @@ public class NotificationService {
     }
 
     @Transactional
-    public NotificationDto createNotification(NotificationDto request) {
+    public NotificationDto createNotification(NotificationRequest request) {
         User currentUser = currentUserService.getCurrentUser();
         Set<Role> senderRoles = normalizeRoles(currentUser.getRoles());
         if (!canSendNotifications(senderRoles)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to send notifications.");
         }
 
-        Set<Role> audienceRoles = normalizeRoles(request.getAudienceRoles());
+        Set<Role> audienceRoles = normalizeRoles(request.audienceRoles());
         if (audienceRoles.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one recipient role is required.");
         }
@@ -87,19 +87,19 @@ public class NotificationService {
         }
 
         List<Long> senderSchoolIds = accessibleSchoolIds(currentUser.getId());
-        Long targetSchoolId = resolveTargetSchoolId(request.getSchoolId(), systemAdmin, senderSchoolIds);
-        validateSchedule(request.getScheduledAt(), request.getExpiresAt(), false);
+        Long targetSchoolId = resolveTargetSchoolId(request.schoolId(), systemAdmin, senderSchoolIds);
+        validateSchedule(request.scheduledAt(), request.expiresAt(), false);
         String targetSchoolName = resolveSchoolName(targetSchoolId);
 
         Notification notification = notificationRepository.save(Notification.builder()
-                .title(request.getTitle().trim())
-                .message(request.getMessage().trim())
+                .title(request.title().trim())
+                .message(request.message().trim())
                 .type(ANNOUNCEMENT_TYPE)
                 .icon(ANNOUNCEMENT_ICON)
                 .schoolId(targetSchoolId)
                 .schoolName(targetSchoolName)
-                .scheduledAt(request.getScheduledAt())
-                .expiresAt(request.getExpiresAt())
+                .scheduledAt(request.scheduledAt())
+                .expiresAt(request.expiresAt())
                 .audienceRoles(audienceRoles)
                 .createdBy(currentUser)
                 .updatedBy(currentUser)
@@ -109,7 +109,7 @@ public class NotificationService {
     }
 
     @Transactional
-    public NotificationDto updateNotification(Long id, NotificationDto request) {
+    public NotificationDto updateNotification(Long id, NotificationRequest request) {
         User currentUser = currentUserService.getCurrentUser();
         Set<Role> senderRoles = normalizeRoles(currentUser.getRoles());
         if (!canSendNotifications(senderRoles)) {
@@ -122,7 +122,7 @@ public class NotificationService {
         boolean systemAdmin = senderRoles.contains(Role.SYSTEM_ADMIN);
         validateEditPermission(notification, currentUser, systemAdmin);
 
-        Set<Role> audienceRoles = normalizeRoles(request.getAudienceRoles());
+        Set<Role> audienceRoles = normalizeRoles(request.audienceRoles());
         if (audienceRoles.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one recipient role is required.");
         }
@@ -132,16 +132,16 @@ public class NotificationService {
         }
 
         List<Long> senderSchoolIds = accessibleSchoolIds(currentUser.getId());
-        Long targetSchoolId = resolveTargetSchoolId(request.getSchoolId(), systemAdmin, senderSchoolIds);
-        validateSchedule(request.getScheduledAt(), request.getExpiresAt(), true);
+        Long targetSchoolId = resolveTargetSchoolId(request.schoolId(), systemAdmin, senderSchoolIds);
+        validateSchedule(request.scheduledAt(), request.expiresAt(), true);
         String targetSchoolName = resolveSchoolName(targetSchoolId);
 
-        notification.setTitle(request.getTitle().trim());
-        notification.setMessage(request.getMessage().trim());
+        notification.setTitle(request.title().trim());
+        notification.setMessage(request.message().trim());
         notification.setSchoolId(targetSchoolId);
         notification.setSchoolName(targetSchoolName);
-        notification.setScheduledAt(request.getScheduledAt());
-        notification.setExpiresAt(request.getExpiresAt());
+        notification.setScheduledAt(request.scheduledAt());
+        notification.setExpiresAt(request.expiresAt());
         notification.setAudienceRoles(audienceRoles);
         notification.setUpdatedBy(currentUser);
 
