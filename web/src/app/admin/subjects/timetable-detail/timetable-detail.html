@@ -58,19 +58,25 @@
                 <tr>
                   <th>#</th>
                   <th>Date</th>
-                  <th>Start Time</th>
-                  <th>End Time</th>
+                  <th>Attendance</th>
+                  <th>Homework % Complete</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 @for (lesson of lessons; track lesson.id) {
                   <tr [class.selected-row]="lesson.id === selectedLessonId" (click)="selectLesson(lesson.id ?? null)">
                     <td>{{ $index + 1 }}</td>
-                    <td>{{ formatLessonDate(lesson.date) }}</td>
-                    <td>{{ formatLessonTime(lesson.startTime) }}</td>
-                    <td>{{ formatLessonTime(lesson.endTime) }}</td>
+                    <td>{{ formatLessonSession(lesson) }}</td>
+                    <td>{{ getAttendanceCompletion(lesson) }}</td>
+                    <td>{{ getHomeworkCompletion(lesson) }}</td>
                     <td>{{ lesson.status || 'PENDING' }}</td>
+                    <td class="actions">
+                      <button class="primary-btn" type="button" (click)="$event.stopPropagation(); viewLesson(lesson.id)">
+                        View
+                      </button>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -92,7 +98,6 @@
                 }
               </p>
             </div>
-            <button class="primary-btn" type="button" [disabled]="!selectedLesson" (click)="openStudentForm()">Add Student</button>
           </div>
 
           @if (lessons.length > 1) {
@@ -107,6 +112,35 @@
               </select>
             </div>
           }
+
+          <div class="assign-row">
+            <ng-select
+              [items]="selectableStudentsForLesson"
+              bindLabel="displayName"
+              [multiple]="true"
+              [searchable]="true"
+              [clearable]="true"
+              [closeOnSelect]="false"
+              [(ngModel)]="selectedStudentOptions"
+              name="studentLessonStudentId"
+              placeholder="Search and select students..."
+              class="student-select"
+              (add)="onStudentAdded($event)"
+              (remove)="onStudentRemoved($event)"
+            >
+              <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                <span class="ng-value-label">{{ item.displayName }}</span>
+                <span class="ng-value-icon right" (click)="clear(item)">×</span>
+              </ng-template>
+              <ng-template ng-option-tmp let-item="item" let-item$="item$">
+                <input type="checkbox" [checked]="item$.selected" />
+                {{ item.displayName }}{{ item.studentId ? ' (#' + item.studentId + ')' : '' }}
+              </ng-template>
+            </ng-select>
+            <button class="primary-btn" [disabled]="!selectedStudentOptions.length || isSavingStudentLesson" (click)="saveStudentLesson()">
+              {{ isSavingStudentLesson ? 'Saving...' : 'Add' }}
+            </button>
+          </div>
 
           @if (studentsError) {
             <p class="empty-state error-text">{{ studentsError }}</p>
@@ -123,10 +157,9 @@
                   <th>#</th>
                   <th>Student Number</th>
                   <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
                   <th>Attendance</th>
                   <th>Homework</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,10 +168,18 @@
                     <td>{{ $index + 1 }}</td>
                     <td>{{ student.studentId ? '#' + student.studentId : 'N/A' }}</td>
                     <td>{{ student.displayName }}</td>
-                    <td>{{ student.email || 'N/A' }}</td>
-                    <td>{{ student.phone || 'N/A' }}</td>
                     <td>{{ student.attendanceStatus || 'PENDING' }}</td>
                     <td>{{ student.homeworkStatus || 'PENDING' }}</td>
+                    <td class="actions">
+                      <button
+                        class="remove-btn"
+                        type="button"
+                        [disabled]="removingStudentLessonId === student.studentLessonId"
+                        (click)="confirmRemoveStudentLesson(student)"
+                      >
+                        {{ removingStudentLessonId === student.studentLessonId ? 'Removing...' : 'Remove' }}
+                      </button>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -152,32 +193,33 @@
   }
 </div>
 
-@if (showStudentForm) {
-  <div class="dialog-overlay" (click)="closeStudentForm()">
-    <div class="dialog-card" (click)="$event.stopPropagation()">
+@if (pendingRemovalStudent) {
+  <div class="dialog-overlay" (click)="cancelRemoveStudentLesson()">
+    <div class="dialog-card confirm-card" (click)="$event.stopPropagation()">
       <div class="dialog-header">
-        <h3>Add Student</h3>
-        <button class="close-btn" type="button" (click)="closeStudentForm()">
+        <h3>Remove Student</h3>
+        <button class="close-btn" type="button" [disabled]="!!removingStudentLessonId" (click)="cancelRemoveStudentLesson()">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
       <div class="dialog-body">
-        <div class="form-group">
-          <label>Student</label>
-          <select [(ngModel)]="studentLessonForm.studentId" name="studentLessonStudentId">
-            <option [ngValue]="null">Select a student...</option>
-            @for (student of availableStudentsForLesson; track student.id) {
-              <option [ngValue]="student.id">
-                {{ student.displayName }}{{ student.studentId ? ' (#' + student.studentId + ')' : '' }}
-              </option>
-            }
-          </select>
-        </div>
+        <p>
+          Are you sure you want to remove
+          <strong>{{ pendingRemovalStudent.displayName }}</strong>
+          from this lesson?
+        </p>
       </div>
       <div class="dialog-actions">
-        <button class="secondary-btn" type="button" (click)="closeStudentForm()">Cancel</button>
-        <button class="primary-btn" type="button" [disabled]="isSavingStudentLesson || !availableStudentsForLesson.length" (click)="saveStudentLesson()">
-          {{ isSavingStudentLesson ? 'Saving...' : 'Add Student' }}
+        <button class="secondary-btn" type="button" [disabled]="!!removingStudentLessonId" (click)="cancelRemoveStudentLesson()">
+          Cancel
+        </button>
+        <button
+          class="remove-btn"
+          type="button"
+          [disabled]="!!removingStudentLessonId"
+          (click)="removeStudentLesson(pendingRemovalStudent.studentLessonId)"
+        >
+          {{ removingStudentLessonId ? 'Removing...' : 'Remove' }}
         </button>
       </div>
     </div>

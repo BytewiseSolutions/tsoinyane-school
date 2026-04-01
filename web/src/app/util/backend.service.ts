@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { getAuthorizationHeader } from '../auth/auth-session';
 
 @Injectable({
   providedIn: 'root',
@@ -58,6 +59,13 @@ export class BackendService {
   }
 
   private buildHeaders(): HttpHeaders {
-    return new HttpHeaders();
+    const authorizationHeader = getAuthorizationHeader();
+    if (!authorizationHeader) {
+      return new HttpHeaders();
+    }
+
+    return new HttpHeaders({
+      Authorization: authorizationHeader,
+    });
   }
 }

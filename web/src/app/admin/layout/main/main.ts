@@ -19,6 +19,7 @@ export class AdminMain implements OnInit, OnDestroy {
   totalStudents = 0;
   totalTeachers = 0;
   totalGrades = 0;
+  totalSubjects = 0;
   recentStudents: DashboardRecentStudent[] = [];
   upcomingEvents: SchoolEvent[] = [];
   isLoading = false;
@@ -53,6 +54,7 @@ export class AdminMain implements OnInit, OnDestroy {
         this.totalStudents = response.totalStudents ?? 0;
         this.totalTeachers = response.totalTeachers ?? 0;
         this.totalGrades = response.totalGrades ?? 0;
+        this.totalSubjects = response.totalSubjects ?? 0;
         this.recentStudents = response.recentStudents ?? [];
       },
       error: (error: HttpErrorResponse) => {

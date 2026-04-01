@@ -37,4 +37,7 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
             where s.id = :id
             """)
     Optional<Subject> findWithStudentsById(@Param("id") Long id);
+
+    @Query("select count(s) from Subject s where (:schoolId is null or s.school.id = :schoolId)")
+    long countBySchoolId(@Param("schoolId") Long schoolId);
 }

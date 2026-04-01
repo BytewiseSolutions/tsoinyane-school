@@ -164,17 +164,10 @@ public class SubjectService {
                 .stream().map(t -> t.getId()).toList();
 
         if (!timetableIds.isEmpty()) {
-            List<Long> lessonIds = lessonRepository.findAll().stream()
-                    .filter(l -> l.getTimetable() != null && timetableIds.contains(l.getTimetable().getId()))
-                    .map(l -> l.getId())
-                    .toList();
+            List<Long> lessonIds = lessonRepository.findIdsByTimetableIdIn(timetableIds);
 
             if (!lessonIds.isEmpty()) {
-                lessonIds.forEach(lessonId ->
-                        studentLessonRepository.deleteAll(
-                                studentLessonRepository.findAllByLessonId(lessonId)
-                        )
-                );
+                studentLessonRepository.deleteAllByLessonIdIn(lessonIds);
                 lessonRepository.deleteAllById(lessonIds);
             }
 

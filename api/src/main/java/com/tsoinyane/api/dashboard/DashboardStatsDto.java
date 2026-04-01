@@ -11,6 +11,7 @@ public class DashboardStatsDto {
     long totalStudents;
     long totalTeachers;
     long totalGrades;
+    long totalSubjects;
     long totalSchools;
     List<DashboardRecentStudentDto> recentStudents;
 }

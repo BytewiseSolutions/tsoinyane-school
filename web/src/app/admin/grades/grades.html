@@ -43,7 +43,6 @@
                 <td>{{ grade.name }}</td>
                 <td>{{ grade.schoolName || selectedSchoolName }}</td>
                 <td class="actions">
-                  <button class="action-btn view" type="button" (click)="viewGrade(grade)">View</button>
                   <button class="action-btn edit" type="button" (click)="editGrade(grade)">Edit</button>
                   <button class="action-btn danger" type="button" (click)="removeGrade(grade)">Remove</button>
                 </td>

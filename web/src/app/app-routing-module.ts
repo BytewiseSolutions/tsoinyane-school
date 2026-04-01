@@ -17,6 +17,7 @@ import { UserDetails } from './admin/users/user-details/user-details';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
 import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
+import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { AdminGrades } from './admin/grades/grades';
 import { GradeImportComponent } from './admin/grades/import/import';
 import { Events } from './admin/events/events';
@@ -53,6 +54,7 @@ const routes: Routes = [
       { path: 'subjects', component: AdminSubjects },
       { path: 'subjects/:id', component: SubjectDetail },
       { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail },
+      { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail },
       { path: 'events', component: Events },
       { path: 'notifications', component: Notifications },
       { path: 'maintenance', component: Maintenance },

@@ -1,6 +1,7 @@
 package com.tsoinyane.api.lesson;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -8,6 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface StudentLessonRepository extends JpaRepository<StudentLesson, Long> {
+
+    @Modifying
+    @Query("delete from StudentLesson sl where sl.lesson.id in :lessonIds")
+    void deleteAllByLessonIdIn(@Param("lessonIds") List<Long> lessonIds);
 
     @Query("""
             select sl from StudentLesson sl

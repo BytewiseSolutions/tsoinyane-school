@@ -55,6 +55,26 @@ export function getStoredAccessToken(): string | null {
   return accessToken && accessToken.trim() ? accessToken : null;
 }
 
+export function getStoredTokenType(): string | null {
+  const storage = getActiveAuthStorage();
+  if (!storage) {
+    return null;
+  }
+
+  const tokenType = storage.getItem('tokenType');
+  return tokenType && tokenType.trim() ? tokenType.trim() : null;
+}
+
+export function getAuthorizationHeader(): string | null {
+  const accessToken = getStoredAccessToken();
+  if (!accessToken) {
+    return null;
+  }
+
+  const tokenType = getStoredTokenType() ?? 'Bearer';
+  return `${tokenType} ${accessToken}`;
+}
+
 export function hasValidAccessToken(): boolean {
   const storage = getActiveAuthStorage();
   const accessToken = getStoredAccessToken();

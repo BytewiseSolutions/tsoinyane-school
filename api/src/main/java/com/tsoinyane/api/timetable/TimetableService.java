@@ -1,5 +1,8 @@
 package com.tsoinyane.api.timetable;
 
+import com.tsoinyane.api.lesson.Lesson;
+import com.tsoinyane.api.lesson.LessonRepository;
+import com.tsoinyane.api.lesson.LessonStatus;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.student.Student;
@@ -12,6 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -23,6 +29,7 @@ public class TimetableService {
 
     private final TimetableRepository timetableRepository;
     private final SubjectRepository subjectRepository;
+    private final LessonRepository lessonRepository;
     private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
@@ -56,7 +63,10 @@ public class TimetableService {
                 .updatedBy(actor)
                 .build();
 
-        return toDto(timetableRepository.save(timetable));
+        Timetable saved = timetableRepository.save(timetable);
+        lessonRepository.save(generateLesson(saved, actor));
+
+        return toDto(saved);
     }
 
     @Transactional
@@ -136,6 +146,28 @@ public class TimetableService {
         }
 
         return request.getDayOfWeek();
+    }
+
+    private Lesson generateLesson(Timetable timetable, User actor) {
+        DayOfWeek targetDay = timetable.getDayOfWeek();
+        LocalDate nextOccurrence = LocalDate.now()
+                .with(java.time.temporal.TemporalAdjusters.nextOrSame(targetDay));
+
+        LocalDateTime startTime = LocalDateTime.of(nextOccurrence, timetable.getStartTime());
+        LocalDateTime endTime = LocalDateTime.of(nextOccurrence, timetable.getEndTime());
+
+        return Lesson.builder()
+                .date(startTime)
+                .startTime(startTime)
+                .endTime(endTime)
+                .status(LessonStatus.PENDING)
+                .submitted(Boolean.FALSE)
+                .subject(timetable.getSubject())
+                .teacher(timetable.getSubject() != null ? timetable.getSubject().getTeacher() : null)
+                .timetable(timetable)
+                .createdBy(actor)
+                .updatedBy(actor)
+                .build();
     }
 
     private TimetableDto toDto(Timetable timetable) {

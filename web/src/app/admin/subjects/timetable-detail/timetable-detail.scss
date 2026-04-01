@@ -133,6 +133,17 @@
   }
 }
 
+.assign-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+
+  .student-select {
+    flex: 1;
+  }
+}
+
 .lesson-picker,
 .form-group {
   display: grid;
@@ -157,6 +168,12 @@
     box-sizing: border-box;
     outline: none;
   }
+}
+
+.help-text {
+  margin: 0;
+  font-size: 12px;
+  color: #6a7897;
 }
 
 .form-grid {
@@ -206,7 +223,8 @@
 }
 
 .primary-btn,
-.secondary-btn {
+.secondary-btn,
+.remove-btn {
   border-radius: 8px;
   padding: 9px 14px;
   font-size: 13px;
@@ -226,10 +244,21 @@
   color: var(--navy-blue);
 }
 
+.remove-btn {
+  border: 1px solid #b53a3a;
+  background: #c74242;
+  color: #fff;
+}
+
 .primary-btn:disabled,
-.secondary-btn:disabled {
+.secondary-btn:disabled,
+.remove-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.actions {
+  white-space: nowrap;
 }
 
 .dialog-overlay {
@@ -249,6 +278,10 @@
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(15, 34, 68, 0.18);
+}
+
+.confirm-card {
+  max-width: 460px;
 }
 
 .dialog-header,
@@ -285,6 +318,32 @@
   color: #6a7897;
   cursor: pointer;
   font-size: 16px;
+}
+
+::ng-deep .ng-dropdown-panel {
+  z-index: 9999 !important;
+}
+
+::ng-deep .student-select .ng-value {
+  display: inline-flex;
+  align-items: center;
+  background-color: #e8f0fe;
+  color: var(--navy-blue);
+  border: 1px solid #c5d5f8;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 4px;
+
+  .ng-value-icon {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    color: #6a7897;
+
+    &:hover { color: #c62828; }
+  }
 }
 
 @media (max-width: 900px) {

@@ -1,0 +1,84 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back to Timetable</button>
+      <h2>Lesson Details</h2>
+      <p>View this lesson session and its current students.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading lesson details...</div>
+  } @else if (errorMessage || !lesson) {
+    <div class="state-card error">{{ errorMessage || 'Lesson not found.' }}</div>
+  } @else {
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Subject</span>
+        <strong>{{ lesson.subjectName || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Teacher</span>
+        <strong>{{ lesson.teacherName || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Date</span>
+        <strong>{{ formatLessonDate(lesson.date) }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Time</span>
+        <strong>{{ formatTimeRange() }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Status</span>
+        <strong>{{ lesson.status || 'PENDING' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Students</span>
+        <strong>{{ studentLessons.length }}</strong>
+      </div>
+    </div>
+
+    <div class="details-card">
+      <div class="section-header">
+        <div>
+          <h3>Students</h3>
+          <p>Students currently linked to this lesson session.</p>
+        </div>
+      </div>
+
+      @if (studentsError) {
+        <p class="empty-state error-text">{{ studentsError }}</p>
+      }
+
+      @if (studentsLoading) {
+        <p class="empty-state">Loading lesson students...</p>
+      } @else if (studentLessons.length > 0) {
+        <table class="students-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student Number</th>
+              <th>Name</th>
+              <th>Attendance</th>
+              <th>Homework</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (student of studentLessons; track student.id) {
+              <tr>
+                <td>{{ $index + 1 }}</td>
+                <td>{{ student.studentNumber ? '#' + student.studentNumber : 'N/A' }}</td>
+                <td>{{ student.studentName || 'Unknown' }}</td>
+                <td>{{ student.attendanceStatus || 'PENDING' }}</td>
+                <td>{{ student.homeworkStatus || 'PENDING' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="empty-state">No students are linked to this lesson yet.</p>
+      }
+    </div>
+  }
+</div>

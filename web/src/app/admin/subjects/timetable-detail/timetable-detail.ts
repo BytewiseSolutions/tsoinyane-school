@@ -8,6 +8,9 @@ import { TimetableEntry } from '../timetable-entry';
 import { StudentOption } from '../student-option';
 import { AttendanceStatus } from '../attendance-status';
 import { HomeworkStatus } from '../homework-status';
+import { LessonStatus } from '../lesson-status';
+
+const SELECT_ALL_ID = -1;
 
 @Component({
   selector: 'app-timetable-detail',
@@ -20,9 +23,17 @@ export class TimetableDetail implements OnInit {
   assignedStudents: StudentOption[] = [];
   lessons: Lesson[] = [];
   studentLessons: StudentLesson[] = [];
+  availableStudentsForLesson: StudentOption[] = [];
+  selectableStudentsForLesson: StudentOption[] = [];
   isLoading = true;
   isLoadingLessons = false;
   isLoadingStudentLessons = false;
+  removingStudentLessonId: number | null = null;
+  pendingRemovalStudent: (StudentOption & {
+    studentLessonId: number | null;
+    attendanceStatus?: AttendanceStatus | null;
+    homeworkStatus?: HomeworkStatus | null;
+  }) | null = null;
   errorMessage = '';
   lessonsError = '';
   studentsError = '';
@@ -32,6 +43,8 @@ export class TimetableDetail implements OnInit {
   selectedLessonId: number | null = null;
   showStudentForm = false;
   isSavingStudentLesson = false;
+  selectedStudentOption: StudentOption | null = null;
+  selectedStudentOptions: StudentOption[] = [];
   studentLessonForm: StudentLesson = {
     lessonId: null,
     studentId: null,
@@ -78,6 +91,14 @@ export class TimetableDetail implements OnInit {
     this.router.navigate(['/admin/subjects']);
   }
 
+  viewLesson(lessonId: number | null | undefined): void {
+    if (!this.subjectId || !this.timetableId || !lessonId) {
+      return;
+    }
+
+    this.router.navigate(['/admin/subjects', this.subjectId, 'timetable', this.timetableId, 'lessons', lessonId]);
+  }
+
   getDayLabel(dayOfWeek: string | null | undefined): string {
     return (dayOfWeek ?? '')
       .toLowerCase()
@@ -99,6 +120,22 @@ export class TimetableDetail implements OnInit {
 
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+  }
+
+  formatLessonSession(lesson: Lesson): string {
+    const date = this.formatLessonDate(lesson.date || lesson.startTime);
+    const startTime = this.formatLessonTime(lesson.startTime);
+    const endTime = this.formatLessonTime(lesson.endTime);
+
+    return `${date} ${startTime} - ${endTime}`;
+  }
+
+  getAttendanceCompletion(_lesson: Lesson): string {
+    return 'P:0% | L:0% | A:0%';
+  }
+
+  getHomeworkCompletion(_lesson: Lesson): string {
+    return '0%';
   }
 
   formatLessonTime(value: string | null | undefined): string {
@@ -127,11 +164,16 @@ export class TimetableDetail implements OnInit {
     return this.lessons.find(lesson => lesson.id === this.selectedLessonId) ?? null;
   }
 
-  get studentRows(): Array<StudentOption & { attendanceStatus?: AttendanceStatus | null; homeworkStatus?: HomeworkStatus | null }> {
+  get studentRows(): Array<StudentOption & {
+    studentLessonId: number | null;
+    attendanceStatus?: AttendanceStatus | null;
+    homeworkStatus?: HomeworkStatus | null;
+  }> {
     return this.studentLessons.map(studentLesson => {
       const student = this.assignedStudents.find(item => item.id === studentLesson.studentId);
 
       return {
+        studentLessonId: studentLesson.id ?? null,
         id: studentLesson.studentId ?? 0,
         displayName: studentLesson.studentName || student?.displayName || 'Unknown',
         studentId: studentLesson.studentNumber ?? student?.studentId ?? null,
@@ -143,9 +185,18 @@ export class TimetableDetail implements OnInit {
     });
   }
 
-  get availableStudentsForLesson(): StudentOption[] {
-    const usedStudentIds = new Set(this.studentLessons.map(item => item.studentId).filter((id): id is number => !!id));
-    return this.timetableStudents.filter(student => !usedStudentIds.has(student.id));
+  onStudentAdded(item: StudentOption) {
+    if (item.id === SELECT_ALL_ID) {
+      this.selectedStudentOptions = [...this.availableStudentsForLesson];
+    }
+  }
+
+  onStudentRemoved(item: StudentOption) {
+    if (item.id === SELECT_ALL_ID) {
+      this.selectedStudentOptions = [];
+    } else {
+      this.selectedStudentOptions = this.selectedStudentOptions.filter(s => s.id !== SELECT_ALL_ID);
+    }
   }
 
   selectLesson(lessonId: number | null): void {
@@ -160,6 +211,8 @@ export class TimetableDetail implements OnInit {
     }
 
     this.studentsError = '';
+    this.selectedStudentOption = null;
+    this.selectedStudentOptions = [];
     this.studentLessonForm = {
       lessonId: this.selectedLessonId,
       studentId: null,
@@ -169,6 +222,8 @@ export class TimetableDetail implements OnInit {
 
   closeStudentForm(): void {
     this.showStudentForm = false;
+    this.selectedStudentOption = null;
+    this.selectedStudentOptions = [];
     this.studentLessonForm = {
       lessonId: this.selectedLessonId,
       studentId: null,
@@ -176,31 +231,81 @@ export class TimetableDetail implements OnInit {
   }
 
   saveStudentLesson(): void {
-    if (!this.selectedLessonId || !this.studentLessonForm.studentId || this.isSavingStudentLesson) {
-      this.studentsError = 'Select a student to add.';
+    if (!this.selectedLessonId || !this.selectedStudentOptions.length || this.isSavingStudentLesson) {
+      this.studentsError = 'Select at least one student to add.';
       return;
     }
 
     this.isSavingStudentLesson = true;
     this.studentsError = '';
 
-    const payload: StudentLesson = {
+    const requests = this.selectedStudentOptions
+      .filter(student => student.id !== SELECT_ALL_ID)
+      .map(student => ({
       lessonId: this.selectedLessonId,
-      studentId: this.studentLessonForm.studentId,
+      studentId: student.id,
       attendanceStatus: AttendanceStatus.PENDING,
       homeworkStatus: HomeworkStatus.PENDING,
-    };
+    } as StudentLesson));
 
-    this.backendService.post<StudentLesson, StudentLesson>('student-lesson', payload).subscribe({
-      next: (studentLesson) => {
-        this.studentLessons = [...this.studentLessons, studentLesson];
-        this.closeStudentForm();
+    let completed = 0;
+    const results: StudentLesson[] = [];
+
+    requests.forEach(payload => {
+      this.backendService.post<StudentLesson, StudentLesson>('student-lesson', payload).subscribe({
+        next: (studentLesson) => {
+          results.push(studentLesson);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.studentsError = error.error?.message || 'Failed to add student to lesson.';
+        },
+        complete: () => {
+          completed++;
+          if (completed === requests.length) {
+            this.studentLessons = [...this.studentLessons, ...results];
+            this.selectedStudentOptions = [];
+            this.isSavingStudentLesson = false;
+          }
+        },
+      });
+    });
+  }
+
+  confirmRemoveStudentLesson(student: StudentOption & {
+    studentLessonId: number | null;
+    attendanceStatus?: AttendanceStatus | null;
+    homeworkStatus?: HomeworkStatus | null;
+  }): void {
+    this.pendingRemovalStudent = student;
+  }
+
+  cancelRemoveStudentLesson(): void {
+    if (this.removingStudentLessonId) {
+      return;
+    }
+
+    this.pendingRemovalStudent = null;
+  }
+
+  removeStudentLesson(studentLessonId: number | null): void {
+    if (!studentLessonId || this.removingStudentLessonId === studentLessonId) {
+      return;
+    }
+
+    this.removingStudentLessonId = studentLessonId;
+    this.studentsError = '';
+
+    this.backendService.delete<void>(`student-lesson/${studentLessonId}`).subscribe({
+      next: () => {
+        this.studentLessons = this.studentLessons.filter(item => item.id !== studentLessonId);
+        this.refreshSelectableStudentsForLesson();
       },
       error: (error: HttpErrorResponse) => {
-        this.studentsError = error.error?.message || 'Failed to add student to lesson.';
+        this.studentsError = error.error?.message || 'Failed to remove student from lesson.';
       },
       complete: () => {
-        this.isSavingStudentLesson = false;
+        this.removingStudentLessonId = null;
+        this.pendingRemovalStudent = null;
       },
     });
   }
@@ -215,6 +320,7 @@ export class TimetableDetail implements OnInit {
           phone: student.userPhone ?? null,
           studentId: student.studentNumber ?? null,
         }));
+        this.refreshSelectableStudentsForLesson();
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error.error?.message || 'Failed to load timetable students.';
@@ -266,6 +372,7 @@ export class TimetableDetail implements OnInit {
     this.backendService.get<StudentLesson[]>('student-lesson', { lessonId: this.selectedLessonId }).subscribe({
       next: (studentLessons) => {
         this.studentLessons = studentLessons ?? [];
+        this.refreshSelectableStudentsForLesson();
       },
       error: (error: HttpErrorResponse) => {
         this.studentsError = error.error?.message || 'Failed to load lesson students.';
@@ -301,5 +408,20 @@ export class TimetableDetail implements OnInit {
     }
 
     return value.length >= 5 ? value.slice(0, 5) : value;
+  }
+
+  private refreshSelectableStudentsForLesson(): void {
+    const usedStudentIds = new Set(this.studentLessons.map(item => item.studentId).filter((id): id is number => !!id));
+    this.availableStudentsForLesson = this.timetableStudents.filter(student => !usedStudentIds.has(student.id));
+    this.selectableStudentsForLesson = this.availableStudentsForLesson.length
+      ? [
+          { id: SELECT_ALL_ID, displayName: 'Select All', email: null, phone: null, studentId: null },
+          ...this.availableStudentsForLesson,
+        ]
+      : [];
+
+    this.selectedStudentOptions = this.selectedStudentOptions.filter(selected =>
+      selected.id === SELECT_ALL_ID || this.availableStudentsForLesson.some(student => student.id === selected.id)
+    );
   }
 }
