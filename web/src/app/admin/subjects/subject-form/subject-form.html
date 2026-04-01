@@ -26,12 +26,16 @@
       <div class="form-row">
         <div class="form-group">
           <label>Grade</label>
-          <select [(ngModel)]="subject.gradeId" name="gradeId" required>
-            <option [ngValue]="null">Select grade</option>
-            @for (grade of gradeOptions; track grade.id) {
-              <option [ngValue]="grade.id">{{ grade.name }}</option>
-            }
-          </select>
+          @if (gradeOptions.length === 0) {
+            <p class="form-hint error">No grades found. Please <a routerLink="/admin/grades" (click)="close()">create grades</a> first.</p>
+          } @else {
+            <select [(ngModel)]="subject.gradeId" name="gradeId" required>
+              <option [ngValue]="null">Select grade</option>
+              @for (grade of gradeOptions; track grade.id) {
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          }
         </div>
         <div class="form-group">
           <label>Status</label>
