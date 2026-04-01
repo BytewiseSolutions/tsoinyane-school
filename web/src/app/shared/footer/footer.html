@@ -3,7 +3,7 @@
   <div class="footer-content">
 
     <div class="footer-brand">
-      <h2>Tsoinyane Government Combined School</h2>
+      <h2>{{ selectedSchool?.name ?? 'Tsoinyane Government Combined School' }}</h2>
       <p>Providing quality education to the community of Tsoinyane, Pitseng, Leribe.</p>
       <div class="social-links">
         <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
@@ -50,7 +50,7 @@
       <a routerLink="/terms-conditions">Terms & Conditions</a>
       <a routerLink="/accessibility">Accessibility Statement</a>
     </div>
-    <p>&copy; {{ currentYear }} Tsoinyane Government Combined School. All rights reserved.</p>
+    <p>&copy; {{ currentYear }} {{ selectedSchool?.name ?? 'Tsoinyane Government Combined School' }}. All rights reserved.</p>
   </div>
 
 </footer>

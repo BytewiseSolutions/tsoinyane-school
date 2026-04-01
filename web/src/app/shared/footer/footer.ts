@@ -10,12 +10,16 @@ import { SchoolService, PublicSchool } from '../school';
 export class Footer implements OnInit {
   currentYear = new Date().getFullYear();
   schools: PublicSchool[] = [];
+  selectedSchool: PublicSchool | null = null;
 
   constructor(private schoolService: SchoolService) {}
 
   ngOnInit(): void {
     this.schoolService.schools$.subscribe(schools => {
       this.schools = schools;
+    });
+    this.schoolService.selectedSchool$.subscribe(school => {
+      this.selectedSchool = school;
     });
   }
 
