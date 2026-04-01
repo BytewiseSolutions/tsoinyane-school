@@ -32,6 +32,7 @@ import { GradeForm } from './admin/grades/grade-form/grade-form';
 import { GradeImportComponent } from './admin/grades/import/import';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { Events } from './admin/events/events';
+import { ActivityLogs } from './admin/activity-logs/activity-logs';
 import { Notifications } from './admin/notifications/notifications';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
@@ -70,6 +71,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     GradeImportComponent,
     AdminSubjects,
     Events,
+    ActivityLogs,
     Notifications,
     Settings,
     SubjectForm,
