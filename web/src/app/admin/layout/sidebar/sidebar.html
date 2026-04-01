@@ -64,12 +64,6 @@
         @if (collapsed) { <span class="tooltip">Activity Logs</span> }
       </a>
     }
-    <a routerLink="/admin/maintenance" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-screwdriver-wrench"></i>
-      @if (!collapsed) { <span>Maintenance</span> }
-      @if (collapsed) { <span class="tooltip">Maintenance</span> }
-    </a>
-
     <a routerLink="/admin/settings" routerLinkActive="active" (click)="closeOnMobile()">
       <i class="fa-solid fa-gear"></i>
       @if (!collapsed) { <span>Settings</span> }
