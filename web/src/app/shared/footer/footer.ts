@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { SchoolService, School } from '../school';
+import { Component, OnInit } from '@angular/core';
+import { SchoolService, PublicSchool } from '../school';
 
 @Component({
   selector: 'app-footer',
@@ -7,12 +7,19 @@ import { SchoolService, School } from '../school';
   templateUrl: './footer.html',
   styleUrl: './footer.scss',
 })
-export class Footer {
+export class Footer implements OnInit {
   currentYear = new Date().getFullYear();
+  schools: PublicSchool[] = [];
 
   constructor(private schoolService: SchoolService) {}
 
-  selectSchool(school: School) {
+  ngOnInit(): void {
+    this.schoolService.schools$.subscribe(schools => {
+      this.schools = schools;
+    });
+  }
+
+  selectSchool(school: PublicSchool): void {
     this.schoolService.setSchool(school);
   }
 }

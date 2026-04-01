@@ -2,17 +2,19 @@
   <div class="info">
 
     <div class="contact-info">
-      <p><i class="fa-solid fa-phone"></i> +266 59181664</p>
-      <p><i class="fa-solid fa-envelope"></i> info@tsoinyane.co.ls</p>
-      <p><i class="fa-solid fa-location-dot"></i> Tsoinyane, Pitseng, Leribe</p>
+      @if (selectedSchool) {
+        <p><i class="fa-solid fa-phone"></i> {{ selectedSchool.phone }}</p>
+        <p><i class="fa-solid fa-envelope"></i> {{ selectedSchool.email }}</p>
+        <p><i class="fa-solid fa-location-dot"></i> {{ selectedSchool.location }}</p>
+      }
     </div>
 
     <div class="dropdown">
       <button class="dropbtn" [class.open]="dropdownOpen" (click)="toggleDropdown()">Select School <i class="fa-solid fa-chevron-down"></i></button>
       <div class="dropdown-content" [class.open]="dropdownOpen">
-        <a (click)="selectSchool('primary')">Tsoinyane Primary School</a>
-        <a (click)="selectSchool('high')">Tsoinyane High School</a>
-        <a (click)="selectSchool('combined')">Combined School</a>
+        @for (school of schools; track school.id) {
+          <a (click)="selectSchool(school)">{{ school.name }}</a>
+        }
       </div>
     </div>
 

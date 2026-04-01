@@ -1,22 +1,50 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
+import { environment } from '../../environments/environment';
 
-export type School = 'combined' | 'primary' | 'high';
+export interface PublicSchool {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class SchoolService {
-  private selectedSchool = new BehaviorSubject<School>('combined');
-  selectedSchool$ = this.selectedSchool.asObservable();
+  private readonly apiUrl = environment.apiUrl.replace(/\/+$/, '');
 
-  setSchool(school: School) {
-    this.selectedSchool.next(school);
+  private schoolsSubject = new BehaviorSubject<PublicSchool[]>([]);
+  schools$ = this.schoolsSubject.asObservable();
+
+  private selectedSchoolSubject = new BehaviorSubject<PublicSchool | null>(null);
+  selectedSchool$ = this.selectedSchoolSubject.asObservable();
+
+  constructor(private http: HttpClient) {
+    this.loadSchools();
   }
 
-  getSchoolName(school: School): string {
-    switch (school) {
-      case 'primary': return 'Tsoinyane Primary School';
-      case 'high': return 'Tsoinyane High School';
-      default: return 'Tsoinyane Government Combined School';
-    }
+  get schools(): PublicSchool[] {
+    return this.schoolsSubject.value;
+  }
+
+  get selectedSchool(): PublicSchool | null {
+    return this.selectedSchoolSubject.value;
+  }
+
+  setSchool(school: PublicSchool | null): void {
+    this.selectedSchoolSubject.next(school);
+  }
+
+  private loadSchools(): void {
+    this.http.get<PublicSchool[]>(`${this.apiUrl}/school`).subscribe({
+      next: (schools) => {
+        this.schoolsSubject.next(schools ?? []);
+        if (schools?.length && !this.selectedSchoolSubject.value) {
+          this.selectedSchoolSubject.next(schools[0]);
+        }
+      },
+    });
   }
 }

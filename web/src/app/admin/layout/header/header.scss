@@ -100,6 +100,13 @@
       color: var(--navy-blue);
       font-size: 14px;
       font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+
+      &:hover { background: #f0f4ff; }
 
       i { font-size: 22px; }
     }

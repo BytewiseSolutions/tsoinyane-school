@@ -67,6 +67,30 @@ public class UserService {
         return toDto(user);
     }
 
+    public UserDto getProfile() {
+        User user = currentUserService.getCurrentUser();
+        return toDto(userRepository.findWithSchoolsAndRolesById(user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")));
+    }
+
+    @Transactional
+    public UserDto updateProfile(UserDto request) {
+        User user = userRepository.findWithSchoolsAndRolesById(currentUserService.getCurrentUser().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (request.getFirstName() == null || request.getFirstName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "First name is required");
+        }
+        if (request.getLastName() == null || request.getLastName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Last name is required");
+        }
+        user.setTitle(request.getTitle());
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName().trim());
+        user.setPhone(trimToNull(request.getPhone()));
+        user.setUpdatedBy(user);
+        return toDto(userRepository.save(user));
+    }
+
     @Transactional
     public UserDto createUser(UserDto request) {
         String normalizedEmail = normalizeEmail(request.getEmail());

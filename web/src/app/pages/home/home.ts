@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { SchoolService, School } from '../../shared/school';
+import { SchoolService, PublicSchool } from '../../shared/school';
 
 @Component({
   selector: 'app-home',
@@ -8,7 +8,7 @@ import { SchoolService, School } from '../../shared/school';
   styleUrl: './home.scss',
 })
 export class Home implements OnInit {
-  selectedSchool: School = 'combined';
+  selectedSchool: PublicSchool | null = null;
   schoolName = 'Tsoinyane Government Combined School';
 
   primaryStats = [
@@ -33,8 +33,9 @@ export class Home implements OnInit {
   ];
 
   get stats() {
-    if (this.selectedSchool === 'primary') return this.primaryStats;
-    if (this.selectedSchool === 'high') return this.highStats;
+    const name = this.selectedSchool?.name?.toLowerCase() ?? '';
+    if (name.includes('primary')) return this.primaryStats;
+    if (name.includes('high')) return this.highStats;
     return this.combinedStats;
   }
 
@@ -43,7 +44,7 @@ export class Home implements OnInit {
   ngOnInit() {
     this.schoolService.selectedSchool$.subscribe(school => {
       this.selectedSchool = school;
-      this.schoolName = this.schoolService.getSchoolName(school);
+      this.schoolName = school?.name ?? 'Tsoinyane Government Combined School';
     });
   }
 }

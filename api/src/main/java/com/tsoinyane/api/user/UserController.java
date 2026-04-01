@@ -21,6 +21,16 @@ public class UserController {
 
     private final UserService userService;
 
+    @GetMapping("/me")
+    public UserDto getProfile() {
+        return userService.getProfile();
+    }
+
+    @PutMapping("/me")
+    public UserDto updateProfile(@RequestBody UserDto request) {
+        return userService.updateProfile(request);
+    }
+
     @GetMapping
     public List<UserDto> getUsers(
             @RequestParam(value = "schoolId", required = false) Long schoolId,

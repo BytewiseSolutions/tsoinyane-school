@@ -26,17 +26,20 @@
     <div class="footer-schools">
       <h3>Our Schools</h3>
       <ul>
-        <li><a (click)="selectSchool('primary')">Tsoinyane Primary School</a></li>
-        <li><a (click)="selectSchool('high')">Tsoinyane High School</a></li>
-        <li><a (click)="selectSchool('combined')">Combined School</a></li>
+        @for (school of schools; track school.id) {
+          <li><a (click)="selectSchool(school)" style="cursor:pointer">{{ school.name }}</a></li>
+        }
       </ul>
     </div>
 
     <div class="footer-contact">
       <h3>Contact Us</h3>
-      <p><i class="fa-solid fa-phone"></i> +266 59181664</p>
-      <p><i class="fa-solid fa-envelope"></i> info@tsoinyane.co.ls</p>
-      <p><i class="fa-solid fa-location-dot"></i> Tsoinyane, Pitseng, Leribe</p>
+      @for (school of schools; track school.id) {
+        <p class="school-contact-label">{{ school.name }}</p>
+        @if (school.phone) { <p><i class="fa-solid fa-phone"></i> {{ school.phone }}</p> }
+        @if (school.email) { <p><i class="fa-solid fa-envelope"></i> {{ school.email }}</p> }
+        @if (school.location) { <p><i class="fa-solid fa-location-dot"></i> {{ school.location }}</p> }
+      }
     </div>
 
   </div>
