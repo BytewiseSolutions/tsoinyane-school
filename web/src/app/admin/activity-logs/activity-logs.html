@@ -58,7 +58,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (log of paginatedLogs; track log.id) {
+          @for (log of logs; track log.id) {
             <tr>
               <td>{{ log.createdAt | date: 'MMM d, y, h:mm a' }}</td>
               <td>
@@ -79,7 +79,7 @@
               </td>
             </tr>
           }
-          @if (filteredLogs.length === 0) {
+          @if (logs.length === 0) {
             <tr>
               <td colspan="6" class="empty-state">
                 {{ hasActiveFilters ? 'No activity logs match the selected filters.' : 'No activity logs recorded yet.' }}
@@ -89,10 +89,10 @@
         </tbody>
       </table>
 
-      @if (filteredLogs.length > 0) {
+      @if (totalLogs > 0) {
         <div class="pagination-bar">
           <div class="pagination-summary">
-            Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredLogs.length }}
+            Showing {{ pageStart }}-{{ pageEnd }} of {{ totalLogs }}
           </div>
           <div class="pagination-controls">
             <label class="page-size">

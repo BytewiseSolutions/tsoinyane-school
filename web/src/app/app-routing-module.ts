@@ -57,7 +57,7 @@ const routes: Routes = [
       { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail },
       { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail },
       { path: 'events', component: Events },
-      { path: 'activity-logs', component: ActivityLogs },
+      { path: 'activity-logs', component: ActivityLogs, data: { roles: ['SYSTEM_ADMIN'] } },
       { path: 'notifications', component: Notifications },
       { path: 'maintenance', component: Maintenance },
       { path: 'settings', component: Settings },

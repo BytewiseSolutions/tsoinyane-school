@@ -1,24 +1,33 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, CanActivateChild, Router, UrlTree } from '@angular/router';
-import { clearStoredAuth, hasValidAccessToken } from './auth-session';
+import { ActivatedRouteSnapshot, CanActivate, CanActivateChild, Router, UrlTree } from '@angular/router';
+import { clearStoredAuth, hasRole, hasValidAccessToken } from './auth-session';
 
 @Injectable({
   providedIn: 'root',
 })
-export class AuthGuard implements CanActivate {
+export class AuthGuard implements CanActivate, CanActivateChild {
   constructor(private router: Router) {}
 
-  canActivate(): boolean | UrlTree {
-    return this.checkAuth();
+  canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
+    return this.checkAuth(route);
   }
 
-  canActivateChild(): boolean | UrlTree {
-    return this.checkAuth();
+  canActivateChild(route: ActivatedRouteSnapshot): boolean | UrlTree {
+    return this.checkAuth(route);
   }
 
-  private checkAuth(): boolean | UrlTree {
+  private checkAuth(route: ActivatedRouteSnapshot): boolean | UrlTree {
     if (hasValidAccessToken()) {
-      return true;
+      const requiredRoles = route.data['roles'] as string[] | undefined;
+      if (!requiredRoles?.length) {
+        return true;
+      }
+
+      if (requiredRoles.some(role => hasRole(role))) {
+        return true;
+      }
+
+      return this.router.createUrlTree(['/admin/dashboard']);
     }
 
     clearStoredAuth();

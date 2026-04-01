@@ -4,6 +4,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { SchoolContextService } from '../layout/school-context';
 import { ActivityLog } from './activity-log';
+import { ActivityLogPage } from './activity-log-page';
 
 @Component({
   selector: 'app-activity-logs',
@@ -26,6 +27,10 @@ export class ActivityLogs implements OnInit, OnDestroy {
   errorMessage = '';
 
   logs: ActivityLog[] = [];
+  availableActions: string[] = [];
+  availableModules: string[] = [];
+  totalLogs = 0;
+  totalPages = 1;
 
   constructor(
     private backendService: BackendService,
@@ -37,6 +42,7 @@ export class ActivityLogs implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(school => {
         this.selectedSchoolId = school?.id ?? null;
+        this.currentPage = 1;
         this.loadLogs();
       });
   }
@@ -46,46 +52,12 @@ export class ActivityLogs implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  get filteredLogs(): ActivityLog[] {
-    const query = this.searchTerm.trim().toLowerCase();
-
-    return this.logs.filter(log => {
-      const matchesSearch = !query || [
-        log.actorName,
-        log.actorEmail,
-        log.description,
-        log.module,
-        log.action,
-        log.schoolName,
-        log.endpoint,
-      ]
-        .filter((value): value is string => Boolean(value))
-        .some(value => value.toLowerCase().includes(query));
-      const matchesAction = this.actionFilter === 'All' || log.action === this.actionFilter;
-      const matchesModule = this.moduleFilter === 'All' || log.module === this.moduleFilter;
-      const matchesOutcome = this.outcomeFilter === 'All'
-        || (this.outcomeFilter === 'Successful' && log.success)
-        || (this.outcomeFilter === 'Failed' && !log.success);
-
-      return matchesSearch && matchesAction && matchesModule && matchesOutcome;
-    });
-  }
-
-  get paginatedLogs(): ActivityLog[] {
-    const start = (this.safeCurrentPage - 1) * this.pageSize;
-    return this.filteredLogs.slice(start, start + this.pageSize);
-  }
-
   get actionOptions(): string[] {
-    return Array.from(new Set(this.logs.map(log => log.action))).sort((left, right) => left.localeCompare(right));
+    return this.availableActions;
   }
 
   get moduleOptions(): string[] {
-    return Array.from(new Set(this.logs.map(log => log.module))).sort((left, right) => left.localeCompare(right));
-  }
-
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredLogs.length / this.pageSize));
+    return this.availableModules;
   }
 
   get safeCurrentPage(): number {
@@ -93,7 +65,7 @@ export class ActivityLogs implements OnInit, OnDestroy {
   }
 
   get pageStart(): number {
-    if (!this.filteredLogs.length) {
+    if (!this.logs.length) {
       return 0;
     }
 
@@ -101,7 +73,7 @@ export class ActivityLogs implements OnInit, OnDestroy {
   }
 
   get pageEnd(): number {
-    return Math.min(this.safeCurrentPage * this.pageSize, this.filteredLogs.length);
+    return Math.min(this.safeCurrentPage * this.pageSize, this.totalLogs);
   }
 
   get hasActiveFilters(): boolean {
@@ -115,10 +87,12 @@ export class ActivityLogs implements OnInit, OnDestroy {
 
   onFiltersChanged(): void {
     this.currentPage = 1;
+    this.loadLogs();
   }
 
   onPageSizeChanged(): void {
     this.currentPage = 1;
+    this.loadLogs();
   }
 
   clearFilters(): void {
@@ -127,17 +101,20 @@ export class ActivityLogs implements OnInit, OnDestroy {
     this.moduleFilter = 'All';
     this.outcomeFilter = 'All';
     this.currentPage = 1;
+    this.loadLogs();
   }
 
   goToPreviousPage(): void {
     if (this.safeCurrentPage > 1) {
       this.currentPage = this.safeCurrentPage - 1;
+      this.loadLogs();
     }
   }
 
   goToNextPage(): void {
     if (this.safeCurrentPage < this.totalPages) {
       this.currentPage = this.safeCurrentPage + 1;
+      this.loadLogs();
     }
   }
 
@@ -161,13 +138,46 @@ export class ActivityLogs implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    this.backendService.get<ActivityLog[]>('activity-log', this.selectedSchoolId ? { schoolId: this.selectedSchoolId } : undefined).subscribe({
-      next: (logs) => {
-        this.logs = logs ?? [];
-        this.currentPage = 1;
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage,
+      pageSize: this.pageSize,
+    };
+
+    const query = this.searchTerm.trim();
+    if (query) {
+      params['query'] = query;
+    }
+    if (this.actionFilter !== 'All') {
+      params['action'] = this.actionFilter;
+    }
+    if (this.moduleFilter !== 'All') {
+      params['module'] = this.moduleFilter;
+    }
+    if (this.outcomeFilter === 'Successful') {
+      params['success'] = true;
+    } else if (this.outcomeFilter === 'Failed') {
+      params['success'] = false;
+    }
+    if (this.selectedSchoolId != null) {
+      params['schoolId'] = this.selectedSchoolId;
+    }
+
+    this.backendService.get<ActivityLogPage>('activity-log', params).subscribe({
+      next: (response) => {
+        this.logs = response?.logs ?? [];
+        this.availableActions = response?.actionOptions ?? [];
+        this.availableModules = response?.moduleOptions ?? [];
+        this.totalLogs = response?.totalLogs ?? 0;
+        this.totalPages = Math.max(1, response?.totalPages ?? 1);
+        this.currentPage = Math.min(response?.currentPage ?? this.currentPage, this.totalPages);
+        this.pageSize = response?.pageSize ?? this.pageSize;
       },
       error: (error: HttpErrorResponse) => {
         this.logs = [];
+        this.availableActions = [];
+        this.availableModules = [];
+        this.totalLogs = 0;
+        this.totalPages = 1;
         this.errorMessage = error.error?.message || 'Failed to load activity logs.';
       },
       complete: () => {

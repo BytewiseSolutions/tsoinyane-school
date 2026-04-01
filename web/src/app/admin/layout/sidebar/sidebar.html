@@ -57,11 +57,13 @@
       @if (!collapsed) { <span>Notifications</span> }
       @if (collapsed) { <span class="tooltip">Notifications</span> }
     </a>
-    <a routerLink="/admin/activity-logs" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-clipboard-list"></i>
-      @if (!collapsed) { <span>Activity Logs</span> }
-      @if (collapsed) { <span class="tooltip">Activity Logs</span> }
-    </a>
+    @if (isSystemAdmin) {
+      <a routerLink="/admin/activity-logs" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-clipboard-list"></i>
+        @if (!collapsed) { <span>Activity Logs</span> }
+        @if (collapsed) { <span class="tooltip">Activity Logs</span> }
+      </a>
+    }
     <a routerLink="/admin/maintenance" routerLinkActive="active" (click)="closeOnMobile()">
       <i class="fa-solid fa-screwdriver-wrench"></i>
       @if (!collapsed) { <span>Maintenance</span> }
