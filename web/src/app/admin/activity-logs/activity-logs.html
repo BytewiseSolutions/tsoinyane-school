@@ -1,0 +1,118 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>Activity Logs</h2>
+      <p>Track system actions, who performed them, and whether they succeeded.</p>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="toolbar">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFiltersChanged()"
+        name="searchTerm"
+        placeholder="Search by user, action, module, description or endpoint..."
+      />
+      <select [(ngModel)]="actionFilter" (ngModelChange)="onFiltersChanged()" name="actionFilter">
+        <option value="All">All Actions</option>
+        @for (action of actionOptions; track action) {
+          <option [value]="action">{{ formatAction(action) }}</option>
+        }
+      </select>
+      <select [(ngModel)]="moduleFilter" (ngModelChange)="onFiltersChanged()" name="moduleFilter">
+        <option value="All">All Modules</option>
+        @for (module of moduleOptions; track module) {
+          <option [value]="module">{{ module }}</option>
+        }
+      </select>
+      <select [(ngModel)]="outcomeFilter" (ngModelChange)="onFiltersChanged()" name="outcomeFilter">
+        <option value="All">All Outcomes</option>
+        <option value="Successful">Successful</option>
+        <option value="Failed">Failed</option>
+      </select>
+      @if (hasActiveFilters) {
+        <button type="button" class="clear-btn" (click)="clearFilters()">Clear Filters</button>
+      }
+    </div>
+
+    @if (isLoading) {
+      <div class="empty-state">Loading activity logs...</div>
+    }
+
+    @if (errorMessage) {
+      <div class="empty-state">{{ errorMessage }}</div>
+    }
+
+    @if (!isLoading && !errorMessage) {
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Module</th>
+            <th>Details</th>
+            <th>Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (log of logs; track log.id) {
+            <tr>
+              <td>{{ log.createdAt | date: 'MMM d, y, h:mm a' }}</td>
+              <td>
+                <div class="primary">{{ getActorLabel(log) }}</div>
+                <div class="secondary">{{ log.actorEmail || 'No email recorded' }}</div>
+              </td>
+              <td><span class="action-chip">{{ formatAction(log.action) }}</span></td>
+              <td>
+                <div class="primary">{{ log.module }}</div>
+                <div class="secondary">{{ log.schoolName || 'All schools' }}</div>
+              </td>
+              <td>
+                <div class="primary">{{ log.description }}</div>
+                <div class="secondary">{{ log.endpoint }} · {{ log.httpMethod }} · {{ log.statusCode }}</div>
+              </td>
+              <td>
+                <span class="outcome-badge" [class.failed]="!log.success">{{ getOutcomeLabel(log) }}</span>
+              </td>
+            </tr>
+          }
+          @if (logs.length === 0) {
+            <tr>
+              <td colspan="6" class="empty-state">
+                {{ hasActiveFilters ? 'No activity logs match the selected filters.' : 'No activity logs recorded yet.' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (totalLogs > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-summary">
+            Showing {{ pageStart }}-{{ pageEnd }} of {{ totalLogs }}
+          </div>
+          <div class="pagination-controls">
+            <label class="page-size">
+              <span>Rows</span>
+              <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()" name="pageSize">
+                @for (size of pageSizeOptions; track size) {
+                  <option [ngValue]="size">{{ size }}</option>
+                }
+              </select>
+            </label>
+            <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
+              Previous
+            </button>
+            <span class="page-indicator">Page {{ safeCurrentPage }} of {{ totalPages }}</span>
+            <button type="button" class="page-btn" [disabled]="safeCurrentPage === totalPages" (click)="goToNextPage()">
+              Next
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

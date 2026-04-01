@@ -14,6 +14,10 @@ public interface StudentLessonRepository extends JpaRepository<StudentLesson, Lo
     @Query("delete from StudentLesson sl where sl.lesson.id in :lessonIds")
     void deleteAllByLessonIdIn(@Param("lessonIds") List<Long> lessonIds);
 
+    @Modifying
+    @Query("delete from StudentLesson sl where sl.student.id = :studentId")
+    void deleteAllByStudentId(@Param("studentId") Long studentId);
+
     @Query("""
             select sl from StudentLesson sl
             join fetch sl.lesson l

@@ -21,6 +21,7 @@ import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { AdminGrades } from './admin/grades/grades';
 import { GradeImportComponent } from './admin/grades/import/import';
 import { Events } from './admin/events/events';
+import { ActivityLogs } from './admin/activity-logs/activity-logs';
 import { Notifications } from './admin/notifications/notifications';
 import { Maintenance } from './admin/maintenance/maintenance';
 import { Settings } from './admin/settings/settings';
@@ -56,6 +57,7 @@ const routes: Routes = [
       { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail },
       { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail },
       { path: 'events', component: Events },
+      { path: 'activity-logs', component: ActivityLogs, data: { roles: ['SYSTEM_ADMIN'] } },
       { path: 'notifications', component: Notifications },
       { path: 'maintenance', component: Maintenance },
       { path: 'settings', component: Settings },

@@ -1,7 +1,7 @@
 import { Component, HostListener, Input, OnDestroy, OnInit } from '@angular/core';
 import { SidebarStateService } from '../sidebar-state';
 import { Subject, takeUntil } from 'rxjs';
-import { AuthUser } from '../../../models/auth-user';
+import { getStoredUser, hasRole } from '../../../auth/auth-session';
 
 @Component({
   selector: 'app-sidebar',
@@ -19,6 +19,7 @@ export class Sidebar implements OnInit, OnDestroy {
   currentUserName = 'TGCS Admin';
   currentUserRole = 'Administrator';
   currentUserEmail = 'admin@tsoinyane.co.ls';
+  isSystemAdmin = false;
 
   constructor(private sidebarState: SidebarStateService) {}
 
@@ -62,29 +63,25 @@ export class Sidebar implements OnInit, OnDestroy {
   }
 
   private loadCurrentUser() {
-    const raw = localStorage.getItem('user') ?? sessionStorage.getItem('user');
-    if (!raw) {
+    const user = getStoredUser();
+    if (!user) {
       return;
     }
 
-    try {
-      const user = JSON.parse(raw) as AuthUser;
-      const lastName = (user.lastName ?? '').trim();
-      const title = this.formatTitle(user.title);
-      const name = `${title} ${lastName}`.trim();
+    const lastName = (user.lastName ?? '').trim();
+    const title = this.formatTitle(user.title);
+    const name = `${title} ${lastName}`.trim();
 
-      if (name) {
-        this.currentUserName = name;
-      }
-      if (user.role) {
-        this.currentUserRole = this.formatRole(user.role);
-      }
-      if (user.email) {
-        this.currentUserEmail = user.email;
-      }
-    } catch {
-  
+    if (name) {
+      this.currentUserName = name;
     }
+    if (user.role) {
+      this.currentUserRole = this.formatRole(user.role);
+    }
+    if (user.email) {
+      this.currentUserEmail = user.email;
+    }
+    this.isSystemAdmin = hasRole('SYSTEM_ADMIN');
   }
 
   private formatRole(role: string): string {

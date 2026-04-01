@@ -1,3 +1,5 @@
+import { AuthUser } from '../models/auth-user';
+
 function hasUsableToken(storage: Storage): boolean {
   const accessToken = storage.getItem('accessToken');
   const expiresAtRaw = storage.getItem('expiresAt');
@@ -67,6 +69,40 @@ export function getAuthorizationHeader(): string | null {
   return `${tokenType} ${accessToken}`;
 }
 
+export function getStoredUser(): AuthUser | null {
+  const storage = getActiveAuthStorage();
+  if (!storage) {
+    return null;
+  }
+
+  const raw = storage.getItem('user');
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+export function hasRole(role: string): boolean {
+  const user = getStoredUser();
+  if (!user) {
+    return false;
+  }
+
+  const normalizedRole = normalizeRole(role);
+  if (normalizeRole(user.role) === normalizedRole) {
+    return true;
+  }
+
+  return (user.roles ?? [])
+    .map(item => normalizeRole(item))
+    .includes(normalizedRole);
+}
+
 export function hasValidAccessToken(): boolean {
   const storage = getActiveAuthStorage();
   const accessToken = getStoredAccessToken();
@@ -82,4 +118,11 @@ export function hasValidAccessToken(): boolean {
   }
 
   return Date.now() < expiresAt;
+}
+
+function normalizeRole(role?: string): string {
+  return (role ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_');
 }

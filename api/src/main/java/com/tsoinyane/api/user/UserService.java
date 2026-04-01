@@ -5,13 +5,17 @@ import com.tsoinyane.api.common.Status;
 import com.tsoinyane.api.common.Title;
 import com.tsoinyane.api.grade.Grade;
 import com.tsoinyane.api.grade.GradeRepository;
+import com.tsoinyane.api.lesson.LessonRepository;
+import com.tsoinyane.api.lesson.StudentLessonRepository;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentRepository;
+import com.tsoinyane.api.subject.SubjectRepository;
 import com.tsoinyane.api.teacher.Teacher;
 import com.tsoinyane.api.teacher.TeacherRepository;
+import com.tsoinyane.api.timetable.TimetableRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,6 +40,10 @@ public class UserService {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final GradeRepository gradeRepository;
+    private final LessonRepository lessonRepository;
+    private final StudentLessonRepository studentLessonRepository;
+    private final SubjectRepository subjectRepository;
+    private final TimetableRepository timetableRepository;
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserService currentUserService;
 
@@ -180,8 +188,27 @@ public class UserService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        studentRepository.findByUser_Id(id).ifPresent(studentRepository::delete);
-        teacherRepository.findByUser_Id(id).ifPresent(teacherRepository::delete);
+        studentRepository.findByUser_Id(id).ifPresent(student -> {
+            studentLessonRepository.deleteAllByStudentId(student.getId());
+            timetableRepository.deleteStudentAssignments(student.getId());
+            subjectRepository.deleteStudentAssignments(student.getId());
+            studentRepository.delete(student);
+        });
+        teacherRepository.findByUser_Id(id).ifPresent(teacher -> {
+            if (subjectRepository.existsByTeacher_Id(teacher.getId())) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Cannot delete this user because the teacher is still assigned to subjects"
+                );
+            }
+            if (lessonRepository.existsByTeacher_Id(teacher.getId())) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Cannot delete this user because the teacher is still assigned to lessons"
+                );
+            }
+            teacherRepository.delete(teacher);
+        });
         userRepository.delete(user);
     }
 

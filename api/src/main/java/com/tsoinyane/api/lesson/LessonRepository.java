@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
+    boolean existsByTeacher_Id(Long teacherId);
+
     @Query("""
             select l.id from Lesson l
             where l.timetable.id in :timetableIds
