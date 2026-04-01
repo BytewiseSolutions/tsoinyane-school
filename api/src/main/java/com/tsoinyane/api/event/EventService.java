@@ -7,6 +7,7 @@ import com.tsoinyane.api.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class EventService {
     private final SchoolRepository schoolRepository;
     private final CurrentUserService currentUserService;
 
+    @Transactional(readOnly = true)
     public List<EventDto> getEvents(Long schoolId, Boolean upcomingOnly) {
         List<Event> events = Boolean.TRUE.equals(upcomingOnly)
                 ? eventRepository.findUpcomingBySchoolId(schoolId, LocalDate.now())
@@ -31,6 +33,7 @@ public class EventService {
                 .toList();
     }
 
+    @Transactional
     public EventDto createEvent(EventDto request) {
         String name = normalize(request.getName());
         String location = normalize(request.getLocation());
@@ -62,15 +65,18 @@ public class EventService {
                 .location(location)
                 .eventType(eventType)
                 .description(description)
-                .status(normalizeStatus(request.getStatus(), date))
+                .status(resolveStatus(date))
                 .school(school)
                 .createdBy(actor)
                 .updatedBy(actor)
                 .build();
 
-        return toDto(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        return toDto(eventRepository.findWithSchoolById(saved.getId())
+                .orElse(saved));
     }
 
+    @Transactional
     public EventDto updateEvent(Long id, EventDto request) {
         Event event = eventRepository.findWithSchoolById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
@@ -103,13 +109,16 @@ public class EventService {
         event.setLocation(location);
         event.setEventType(eventType);
         event.setDescription(description);
-        event.setStatus(normalizeStatus(request.getStatus(), date));
+        event.setStatus(resolveStatus(date));
         event.setSchool(school);
         event.setUpdatedBy(currentUserService.getCurrentUser());
 
-        return toDto(eventRepository.save(event));
+        eventRepository.save(event);
+        return toDto(eventRepository.findWithSchoolById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found")));
     }
 
+    @Transactional
     public void deleteEvent(Long id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
@@ -140,12 +149,7 @@ public class EventService {
         }
     }
 
-    private String normalizeStatus(String status, LocalDate date) {
-        String normalized = normalize(status);
-        if (!normalized.isBlank()) {
-            return normalized;
-        }
-
+    private String resolveStatus(LocalDate date) {
         return date != null && date.isBefore(LocalDate.now()) ? "Past" : "Upcoming";
     }
 
@@ -163,7 +167,7 @@ public class EventService {
                 .location(event.getLocation())
                 .eventType(event.getEventType())
                 .description(event.getDescription())
-                .status(event.getStatus())
+                .status(resolveStatus(event.getDate()))
                 .schoolId(school != null ? school.getId() : null)
                 .schoolName(school != null ? school.getName() : null)
                 .createdById(event.getCreatedBy() != null ? event.getCreatedBy().getId() : null)

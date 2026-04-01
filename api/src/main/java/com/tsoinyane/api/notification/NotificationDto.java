@@ -8,6 +8,7 @@ import java.time.Instant;
 @Value
 @Builder
 public class NotificationDto {
+    String type;
     String icon;
     String title;
     String message;

@@ -9,17 +9,54 @@
   }
 
   <div class="table-card">
+    @if (actionMessage) {
+      <div class="action-feedback">{{ actionMessage }}</div>
+    }
+
     <div class="table-toolbar">
-      <input type="text" placeholder="Search events..." />
+      <div class="filter-field search-field">
+        <label for="event-search">Search</label>
+        <input
+          id="event-search"
+          type="text"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onFiltersChanged()"
+          name="searchTerm"
+          placeholder="Search by event, location, type or status..."
+        />
+      </div>
+
+      <div class="filter-field">
+        <label for="event-status-filter">Status</label>
+        <select id="event-status-filter" [(ngModel)]="statusFilter" (ngModelChange)="onFiltersChanged()" name="statusFilter">
+          <option value="All">All Statuses</option>
+          <option value="Upcoming">Upcoming</option>
+          <option value="Past">Past</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label for="event-type-filter">Type</label>
+        <select id="event-type-filter" [(ngModel)]="typeFilter" (ngModelChange)="onFiltersChanged()" name="typeFilter">
+          <option value="All">All Types</option>
+          @for (type of eventTypeOptions; track type) {
+            <option [value]="type">{{ type }}</option>
+          }
+        </select>
+      </div>
+
+      @if (hasActiveFilters) {
+        <button type="button" class="clear-filters-btn" (click)="clearFilters()">Clear Filters</button>
+      }
     </div>
     <table>
       <thead>
         <tr>
-          <th>Event</th>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Location</th>
-          <th>Status</th>
+          <th><button type="button" class="sort-btn" (click)="toggleSort('name')">Event <span>{{ getSortIndicator('name') }}</span></button></th>
+          <th><button type="button" class="sort-btn" (click)="toggleSort('date')">Date <span>{{ getSortIndicator('date') }}</span></button></th>
+          <th><button type="button" class="sort-btn" (click)="toggleSort('eventType')">Type <span>{{ getSortIndicator('eventType') }}</span></button></th>
+          <th><button type="button" class="sort-btn" (click)="toggleSort('location')">Location <span>{{ getSortIndicator('location') }}</span></button></th>
+          <th><button type="button" class="sort-btn" (click)="toggleSort('status')">Status <span>{{ getSortIndicator('status') }}</span></button></th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -29,7 +66,7 @@
             <td colspan="6">Loading events...</td>
           </tr>
         }
-        @for (event of events; track event.id ?? event.name) {
+        @for (event of paginatedEvents; track event.id ?? event.name) {
           <tr>
             <td>{{ event.name }}</td>
             <td>
@@ -47,13 +84,38 @@
             </td>
           </tr>
         }
-        @if (!isLoading && events.length === 0) {
+        @if (!isLoading && sortedFilteredEvents.length === 0) {
           <tr>
-            <td colspan="6">No events found.</td>
+            <td colspan="6">{{ hasActiveFilters ? 'No events match the selected filters.' : 'No events found.' }}</td>
           </tr>
         }
       </tbody>
     </table>
+
+    @if (sortedFilteredEvents.length > 0) {
+      <div class="pagination-bar">
+        <div class="pagination-summary">
+          Showing {{ pageStart }}-{{ pageEnd }} of {{ sortedFilteredEvents.length }}
+        </div>
+        <div class="pagination-controls">
+          <label class="page-size">
+            <span>Rows</span>
+            <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()" name="pageSize">
+              @for (size of pageSizeOptions; track size) {
+                <option [ngValue]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
+            Previous
+          </button>
+          <span class="page-indicator">Page {{ safeCurrentPage }} of {{ totalPages }}</span>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === totalPages" (click)="goToNextPage()">
+            Next
+          </button>
+        </div>
+      </div>
+    }
   </div>
 </div>
 
@@ -63,4 +125,19 @@
     [schoolId]="selectedSchoolId"
     (closed)="closeForm()"
     (saved)="onSaved($event)" />
+}
+
+@if (showDeleteDialog && eventToDelete) {
+  <div class="confirm-overlay" (click)="cancelDeleteEvent()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete Event</h3>
+      <p>Are you sure you want to delete <strong>{{ eventToDelete.name }}</strong>?</p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelDeleteEvent()">Cancel</button>
+        <button type="button" class="delete-btn" [disabled]="isProcessing" (click)="confirmDeleteEvent()">
+          {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
 }

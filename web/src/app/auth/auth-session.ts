@@ -23,14 +23,6 @@ export function getActiveAuthStorage(): Storage | null {
     return localStorage;
   }
 
-  if (localStorage.getItem('accessToken')) {
-    return localStorage;
-  }
-
-  if (sessionStorage.getItem('accessToken')) {
-    return sessionStorage;
-  }
-
   return null;
 }
 

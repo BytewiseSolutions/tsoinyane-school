@@ -84,7 +84,12 @@
             </label>
             <label class="toggle-row">
               <span>Upcoming Events</span>
-              <input type="checkbox" [(ngModel)]="notifPrefs.upcomingEvents" name="upcomingEvents" />
+              <input
+                type="checkbox"
+                [(ngModel)]="notifPrefs.upcomingEvents"
+                (ngModelChange)="onEventReminderPreferenceChange()"
+                name="upcomingEvents"
+              />
             </label>
           </div>
           <div class="notif-pref-col">

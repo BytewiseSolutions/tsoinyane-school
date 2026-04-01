@@ -80,6 +80,27 @@
           resize: vertical;
           min-height: 96px;
         }
+
+        .status-preview {
+          padding: 10px 14px;
+          border: 1px solid #cfe3d6;
+          border-radius: 6px;
+          background: #edf9f2;
+          color: #1f7a42;
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .status-preview.past {
+          border-color: #f2caca;
+          background: #fdf0f0;
+          color: #b33b3b;
+        }
+
+        small {
+          color: #657594;
+          font-size: 12px;
+        }
       }
 
       .form-actions {

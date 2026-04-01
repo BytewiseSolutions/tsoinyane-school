@@ -7,6 +7,9 @@
     </div>
 
     <form class="form-body" (ngSubmit)="onSubmit()">
+      @if (errorMessage) {
+        <div class="table-card">{{ errorMessage }}</div>
+      }
 
       <div class="form-group">
         <label>Event Name</label>
@@ -31,10 +34,10 @@
         </div>
         <div class="form-group">
           <label>Status</label>
-          <select [(ngModel)]="event.status" name="status">
-            <option value="Upcoming">Upcoming</option>
-            <option value="Past">Past</option>
-          </select>
+          <div class="status-preview" [class.past]="computedStatus === 'Past'">
+            {{ computedStatus }}
+          </div>
+          <small>Status updates automatically from the selected date.</small>
         </div>
       </div>
 
@@ -60,8 +63,10 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" class="cancel-btn" (click)="close()">Cancel</button>
-        <button type="submit" class="submit-btn">{{ isEdit ? 'Update' : 'Add Event' }}</button>
+        <button type="button" class="cancel-btn" (click)="close()" [disabled]="isSubmitting">Cancel</button>
+        <button type="submit" class="submit-btn" [disabled]="isSubmitting">
+          {{ isSubmitting ? (isEdit ? 'Updating...' : 'Saving...') : (isEdit ? 'Update' : 'Add Event') }}
+        </button>
       </div>
 
     </form>

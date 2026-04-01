@@ -43,6 +43,7 @@ export class AdminHeader implements OnDestroy {
 
   ngOnInit() {
     this.loadCurrentUser();
+    this.loadNotificationPreferences();
     this.schoolContext.selectedSchool$
       .pipe(takeUntil(this.destroy$))
       .subscribe(school => {
@@ -65,6 +66,7 @@ export class AdminHeader implements OnDestroy {
   }
 
   toggleNotifications() {
+    this.loadNotificationPreferences();
     this.notificationsOpen = !this.notificationsOpen;
   }
 
@@ -185,7 +187,7 @@ export class AdminHeader implements OnDestroy {
 
     this.backendService.get<NotificationItem[]>('notification', this.selectedSchoolId ? { schoolId: this.selectedSchoolId } : undefined).subscribe({
       next: (notifications) => {
-        this.notifications = notifications ?? [];
+        this.notifications = this.applyNotificationPreferences(notifications ?? []);
       },
       error: (error: HttpErrorResponse) => {
         this.notifications = [];
@@ -218,5 +220,55 @@ export class AdminHeader implements OnDestroy {
 
     this.selectedSchoolId = defaultSchool.id;
     this.onSchoolChange();
+  }
+
+  private loadNotificationPreferences() {
+    const saved = localStorage.getItem('tgcs_notification_settings');
+    if (!saved) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(saved) as { eventReminders?: boolean } | null;
+      if (!parsed || typeof parsed !== 'object') {
+        return;
+      }
+
+      if (typeof parsed.eventReminders === 'boolean') {
+        this.notifPrefs.upcomingEvents = parsed.eventReminders;
+      }
+    } catch {
+      // keep defaults
+    }
+  }
+
+  private applyNotificationPreferences(notifications: NotificationItem[]): NotificationItem[] {
+    return notifications.filter(notification => {
+      if (notification.type === 'EVENT_REMINDER' && !this.notifPrefs.upcomingEvents) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  onEventReminderPreferenceChange() {
+    const saved = localStorage.getItem('tgcs_notification_settings');
+    let parsed: Record<string, unknown> = {};
+
+    if (saved) {
+      try {
+        const candidate = JSON.parse(saved);
+        if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) {
+          parsed = candidate as Record<string, unknown>;
+        }
+      } catch {
+        parsed = {};
+      }
+    }
+
+    parsed['eventReminders'] = this.notifPrefs.upcomingEvents;
+    localStorage.setItem('tgcs_notification_settings', JSON.stringify(parsed));
+    this.notifications = this.applyNotificationPreferences(this.notifications);
   }
 }
