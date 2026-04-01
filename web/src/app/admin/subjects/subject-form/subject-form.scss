@@ -74,6 +74,22 @@
 
           &:focus { border-color: var(--navy-blue); }
         }
+
+        .form-hint {
+          font-size: 13px;
+          margin: 0;
+
+          &.error {
+            color: #b42318;
+
+            a {
+              color: #b42318;
+              font-weight: 700;
+              text-decoration: underline;
+              cursor: pointer;
+            }
+          }
+        }
       }
 
       .form-actions {
