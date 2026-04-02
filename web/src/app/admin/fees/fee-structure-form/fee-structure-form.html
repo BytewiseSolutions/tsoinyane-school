@@ -1,0 +1,90 @@
+<div class="overlay" (click)="close()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div>
+        <h3>{{ existingStructure ? 'Edit Fee Structure' : 'Add Fee Structure' }}</h3>
+        <p>Configure registration, school, and exam fees for the selected school.</p>
+      </div>
+      <button class="close-btn" type="button" (click)="close()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <div class="context-card">
+        <span>School</span>
+        <strong>{{ selectedSchoolName || 'No school selected' }}</strong>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field">
+          <span>{{ isEditMode ? 'Grade' : 'Grades' }}</span>
+          <ng-select
+            [items]="gradeSelectionOptions"
+            bindLabel="name"
+            bindValue="id"
+            [multiple]="!isEditMode"
+            [closeOnSelect]="isEditMode"
+            [searchable]="true"
+            [clearable]="true"
+            appendTo="body"
+            [ngModel]="isEditMode ? (selectedGradeIds[0] ?? null) : selectedGradeIds"
+            (ngModelChange)="onGradeSelectionChange(isEditMode ? ($event == null ? [] : [$event]) : $event)"
+            name="feeStructureGradeId"
+            placeholder="{{ isEditMode ? 'Select grade' : 'Select one, many, or all grades' }}"
+            class="grade-select"
+          ></ng-select>
+          @if (!isEditMode) {
+            <small class="helper-text">{{ selectedGradesLabel }}</small>
+          }
+        </div>
+
+        <label class="form-field">
+          <span>Term</span>
+          <select [(ngModel)]="feeStructure.term" name="feeStructureTerm">
+            @for (term of termOptions; track term) {
+              <option [ngValue]="term">{{ getTermLabel(term) }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Academic Year</span>
+          <input type="text" [(ngModel)]="feeStructure.academicYear" name="feeStructureAcademicYear" placeholder="2026" />
+        </label>
+
+        <label class="form-field">
+          <span>Registration Fee</span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="feeStructure.registrationFee" name="registrationFee" />
+        </label>
+
+        <label class="form-field">
+          <span>School Fees</span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="feeStructure.schoolFee" name="schoolFee" />
+        </label>
+
+        <label class="form-field">
+          <span>Exam Fee</span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="feeStructure.examFee" name="examFee" />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Description</span>
+          <textarea [(ngModel)]="feeStructure.description" name="feeStructureDescription" rows="3" placeholder="Optional notes about this fee structure"></textarea>
+        </label>
+      </div>
+
+      <div class="total-card">
+        <span>Total Fee</span>
+        <strong>{{ totalAmount | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <div class="dialog-actions">
+      <button type="button" class="secondary-btn" (click)="close()">Cancel</button>
+      <button type="button" class="primary-btn" (click)="onSubmit()">
+        {{ existingStructure ? 'Save Changes' : 'Create Fee Structure' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -37,6 +37,11 @@ public class TimetableController {
         return timetableService.createTimetable(request);
     }
 
+    @PostMapping("/{id}/regenerate-lessons")
+    public TimetableRegenerationResultDto regenerateUpcomingLessons(@PathVariable Long id) {
+        return timetableService.regenerateUpcomingLessons(id);
+    }
+
     @PutMapping("/{id}")
     public TimetableDto updateTimetable(@PathVariable Long id, @RequestBody TimetableDto request) {
         return timetableService.updateTimetable(id, request);

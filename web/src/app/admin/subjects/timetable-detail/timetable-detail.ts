@@ -13,6 +13,13 @@ import { LessonStatus } from '../lesson-status';
 
 const SELECT_ALL_ID = -1;
 
+interface TimetableRegenerationResult {
+  deletedLessonsCount: number;
+  deletedStudentLessonsCount: number;
+  createdLessonsCount: number;
+  retainedPastLessonsCount: number;
+}
+
 @Component({
   selector: 'app-timetable-detail',
   standalone: false,
@@ -40,11 +47,14 @@ export class TimetableDetail implements OnInit {
   errorMessage = '';
   lessonsError = '';
   studentsError = '';
+  actionMessage = '';
   subjectId: number | null = null;
   timetableId: number | null = null;
   activeTab: 'lessons' | 'students' = 'lessons';
   selectedLessonId: number | null = null;
   showStudentForm = false;
+  showRegenerateDialog = false;
+  isRegeneratingLessons = false;
   isSavingStudentLesson = false;
   selectedStudentOption: StudentOption | null = null;
   selectedStudentOptions: StudentOption[] = [];
@@ -76,18 +86,7 @@ export class TimetableDetail implements OnInit {
 
     this.subjectId = subjectId;
     this.timetableId = timetableId;
-
-    this.backendService.get<TimetableEntry>(`timetable/${timetableId}`).subscribe({
-      next: (timetable) => {
-        this.timetable = this.mapTimetable(timetable);
-        this.loadAssignedStudents(subjectId);
-        this.loadLessons(timetableId);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to load timetable details.';
-        this.isLoading = false;
-      },
-    });
+    this.loadTimetableDetails(subjectId, timetableId);
   }
 
   goBack(): void {
@@ -308,6 +307,44 @@ export class TimetableDetail implements OnInit {
     }
   }
 
+  confirmRegenerateLessons(): void {
+    this.showRegenerateDialog = true;
+    this.lessonsError = '';
+    this.actionMessage = '';
+  }
+
+  cancelRegenerateLessons(): void {
+    if (this.isRegeneratingLessons) {
+      return;
+    }
+
+    this.showRegenerateDialog = false;
+  }
+
+  regenerateUpcomingLessons(): void {
+    if (!this.timetableId || this.isRegeneratingLessons || !this.subjectId) {
+      return;
+    }
+
+    this.isRegeneratingLessons = true;
+    this.lessonsError = '';
+    this.actionMessage = '';
+
+    this.backendService.post<TimetableRegenerationResult, Record<string, never>>(`timetable/${this.timetableId}/regenerate-lessons`, {}).subscribe({
+      next: (result) => {
+        this.actionMessage = `Regenerated ${result.createdLessonsCount} upcoming lesson${result.createdLessonsCount === 1 ? '' : 's'}. Removed ${result.deletedLessonsCount} old upcoming lesson${result.deletedLessonsCount === 1 ? '' : 's'} and ${result.deletedStudentLessonsCount} linked student record${result.deletedStudentLessonsCount === 1 ? '' : 's'}.`;
+        this.showRegenerateDialog = false;
+        this.loadLessons(this.timetableId!);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.lessonsError = error.error?.message || 'Failed to regenerate upcoming lessons.';
+      },
+      complete: () => {
+        this.isRegeneratingLessons = false;
+      },
+    });
+  }
+
   exportLessons(): void {
     if (!this.filteredLessons.length) {
       this.lessonsError = 'No lessons available to export for the current filters.';
@@ -459,6 +496,20 @@ export class TimetableDetail implements OnInit {
         if (!this.isLoadingLessons && !this.isLoadingStudentLessons) {
           this.isLoading = false;
         }
+      },
+    });
+  }
+
+  private loadTimetableDetails(subjectId: number, timetableId: number): void {
+    this.backendService.get<TimetableEntry>(`timetable/${timetableId}`).subscribe({
+      next: (timetable) => {
+        this.timetable = this.mapTimetable(timetable);
+        this.loadAssignedStudents(subjectId);
+        this.loadLessons(timetableId);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to load timetable details.';
+        this.isLoading = false;
       },
     });
   }

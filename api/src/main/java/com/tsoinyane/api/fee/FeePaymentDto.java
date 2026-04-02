@@ -2,39 +2,42 @@ package com.tsoinyane.api.fee;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Value;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
-@Value
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class FeePaymentDto {
-    Long id;
-    Instant createdAt;
-    Long studentId;
-    String studentName;
-    String studentNumber;
-    Long feeStructureId;
-    String gradeName;
-    String term;
-    String academicYear;
+    private Long id;
+    private Instant createdAt;
+    private Long studentId;
+    private String studentName;
+    private String studentNumber;
+    private Long feeStructureId;
+    private String gradeName;
+    private String term;
+    private String academicYear;
 
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "0.01", message = "Amount must be greater than zero")
-    BigDecimal amount;
+    private Double amount;
 
     @NotNull(message = "Payment date is required")
-    LocalDate paymentDate;
+    private LocalDate paymentDate;
 
     @NotNull(message = "Payment method is required")
-    PaymentMethod paymentMethod;
+    private PaymentMethod paymentMethod;
 
-    String referenceNumber;
-    String notes;
-    BigDecimal totalFee;
-    BigDecimal totalPaid;
-    BigDecimal balance;
+    private String referenceNumber;
+    private String notes;
+    private Double totalFee;
+    private Double totalPaid;
+    private Double balance;
 }

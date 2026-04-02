@@ -3,6 +3,7 @@ package com.tsoinyane.api.timetable;
 import com.tsoinyane.api.lesson.Lesson;
 import com.tsoinyane.api.lesson.LessonRepository;
 import com.tsoinyane.api.lesson.LessonStatus;
+import com.tsoinyane.api.lesson.StudentLessonRepository;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.student.Student;
@@ -33,6 +34,7 @@ public class TimetableService {
     private final TimetableRepository timetableRepository;
     private final SubjectRepository subjectRepository;
     private final LessonRepository lessonRepository;
+    private final StudentLessonRepository studentLessonRepository;
     private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
@@ -103,6 +105,42 @@ public class TimetableService {
         }
 
         timetableRepository.deleteById(id);
+    }
+
+    @Transactional
+    public TimetableRegenerationResultDto regenerateUpcomingLessons(Long id) {
+        Timetable timetable = timetableRepository.findWithAssociationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Timetable not found: " + id));
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Lesson> allLessons = lessonRepository.findAllByTimetableId(id);
+        List<Lesson> upcomingLessons = allLessons.stream()
+                .filter(lesson -> isUpcoming(lesson, now))
+                .toList();
+        List<Long> upcomingLessonIds = upcomingLessons.stream()
+                .map(Lesson::getId)
+                .filter(lessonId -> lessonId != null && lessonId > 0)
+                .toList();
+
+        int deletedStudentLessonsCount = 0;
+        if (!upcomingLessonIds.isEmpty()) {
+            deletedStudentLessonsCount = studentLessonRepository.findAllByLessonIdIn(upcomingLessonIds).size();
+            if (deletedStudentLessonsCount > 0) {
+                studentLessonRepository.deleteAllByLessonIdIn(upcomingLessonIds);
+            }
+            lessonRepository.deleteAllById(upcomingLessonIds);
+        }
+
+        User actor = currentUserService.getCurrentUser();
+        List<Lesson> createdLessons = generateRecurringLessons(timetable, actor);
+        lessonRepository.saveAll(createdLessons);
+
+        return new TimetableRegenerationResultDto(
+                upcomingLessonIds.size(),
+                deletedStudentLessonsCount,
+                createdLessons.size(),
+                allLessons.size() - upcomingLessonIds.size()
+        );
     }
 
     private Subject resolveSubject(Long subjectId) {
@@ -239,6 +277,11 @@ public class TimetableService {
         }
 
         return lessons;
+    }
+
+    private boolean isUpcoming(Lesson lesson, LocalDateTime now) {
+        LocalDateTime startTime = lesson.getStartTime() != null ? lesson.getStartTime() : lesson.getDate();
+        return startTime != null && !startTime.isBefore(now);
     }
 
     private boolean timesOverlap(LocalTime startTime, LocalTime endTime, LocalTime existingStart, LocalTime existingEnd) {

@@ -4,31 +4,43 @@ import com.tsoinyane.api.school.Term;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Value;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 
-@Value
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class FeeStructureDto {
-    Long id;
-    Instant createdAt;
-    Long schoolId;
-    String schoolName;
-    Long gradeId;
-    String gradeName;
+    private Long id;
+    private Instant createdAt;
+    private Long schoolId;
+    private String schoolName;
+    private Long gradeId;
+    private String gradeName;
 
     @NotNull(message = "Term is required")
-    Term term;
+    private Term term;
 
     @NotBlank(message = "Academic year is required")
-    String academicYear;
+    private String academicYear;
 
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0.01", message = "Amount must be greater than zero")
-    BigDecimal amount;
+    @NotNull(message = "Registration fee is required")
+    @DecimalMin(value = "0.00", message = "Registration fee cannot be negative")
+    private Double registrationFee;
 
-    String description;
+    @NotNull(message = "School fee is required")
+    @DecimalMin(value = "0.00", message = "School fee cannot be negative")
+    private Double schoolFee;
+
+    @NotNull(message = "Exam fee is required")
+    @DecimalMin(value = "0.00", message = "Exam fee cannot be negative")
+    private Double examFee;
+
+    private String description;
+    private Double totalAmount;
 }

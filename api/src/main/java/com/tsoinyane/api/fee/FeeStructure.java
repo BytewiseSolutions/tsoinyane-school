@@ -20,8 +20,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.math.BigDecimal;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -47,8 +45,14 @@ public class FeeStructure extends BaseEntity {
     @Column(name = "academic_year", nullable = false, length = 10)
     private String academicYear;
 
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal amount;
+    @Column(name = "registration_fee", nullable = false)
+    private Double registrationFee;
+
+    @Column(name = "school_fee", nullable = false)
+    private Double schoolFee;
+
+    @Column(name = "exam_fee", nullable = false)
+    private Double examFee;
 
     @Column(length = 500)
     private String description;

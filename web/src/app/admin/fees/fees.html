@@ -1,0 +1,135 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>Fee Structure</h2>
+      <p>Manage registration fee, school fees, and exam fee for the selected school.</p>
+    </div>
+    <div class="header-actions">
+      <button class="add-btn" type="button" (click)="openForm()">
+        <i class="fa-solid fa-plus"></i> Add Fee Structure
+      </button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Structures</h4>
+      <p>{{ totalStructures }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Registration Fees</h4>
+      <p>{{ totalRegistrationFees | number:'1.2-2' }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>School Fees</h4>
+      <p>{{ totalSchoolFees | number:'1.2-2' }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Exam Fees</h4>
+      <p>{{ totalExamFees | number:'1.2-2' }}</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="table-card error-card">{{ errorMessage }}</div>
+  }
+
+  @if (actionMessage) {
+    <div class="table-card action-card">{{ actionMessage }}</div>
+  }
+
+  <div class="table-card">
+    <div class="toolbar">
+      <input
+        type="text"
+        placeholder="Search by grade, year or description..."
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFiltersChanged()"
+        name="feeStructureSearch"
+      />
+      <select [(ngModel)]="selectedGradeFilter" (ngModelChange)="onFiltersChanged()" name="feeStructureGradeFilter">
+        <option [ngValue]="null">All Grades</option>
+        @for (grade of gradeOptions; track grade.id) {
+          <option [ngValue]="grade.id ?? null">{{ grade.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedTermFilter" (ngModelChange)="onFiltersChanged()" name="feeStructureTermFilter">
+        <option [ngValue]="'ALL'">All Terms</option>
+        @for (term of termOptions; track term) {
+          <option [ngValue]="term">{{ getTermLabel(term) }}</option>
+        }
+      </select>
+    </div>
+
+    @if (isLoading) {
+      <div class="empty-state">Loading fee structures...</div>
+    } @else if (filteredStructures.length > 0) {
+      <table>
+        <thead>
+          <tr>
+            <th>Grade</th>
+            <th>Term</th>
+            <th>Academic Year</th>
+            <th>Registration Fee</th>
+            <th>School Fees</th>
+            <th>Exam Fee</th>
+            <th>Total</th>
+            <th>Description</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (structure of filteredStructures; track structure.id) {
+            <tr>
+              <td>{{ structure.gradeName || 'N/A' }}</td>
+              <td>{{ getTermLabel(structure.term) }}</td>
+              <td>{{ structure.academicYear }}</td>
+              <td>{{ structure.registrationFee | number:'1.2-2' }}</td>
+              <td>{{ structure.schoolFee | number:'1.2-2' }}</td>
+              <td>{{ structure.examFee | number:'1.2-2' }}</td>
+              <td class="total-cell">{{ structure.totalAmount | number:'1.2-2' }}</td>
+              <td>{{ structure.description || 'N/A' }}</td>
+              <td class="actions">
+                <button class="action-btn edit" type="button" (click)="openForm(structure)">Edit</button>
+                <button class="action-btn danger" type="button" (click)="confirmDelete(structure)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <div class="empty-state">No fee structures found for the selected filters.</div>
+    }
+  </div>
+</div>
+
+@if (showForm) {
+  <app-fee-structure-form
+    [existingStructure]="editingStructure"
+    [selectedSchoolId]="selectedSchoolId"
+    [selectedSchoolName]="selectedSchoolName"
+    [gradeOptions]="gradeOptions"
+    (closed)="closeForm()"
+    (saved)="saveStructure($event)"
+  ></app-fee-structure-form>
+}
+
+@if (showDeleteDialog && structureToDelete) {
+  <div class="confirm-overlay" (click)="cancelDelete()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete Fee Structure</h3>
+      <p>
+        Are you sure you want to delete the fee structure for
+        <strong>{{ structureToDelete.gradeName }}</strong>
+        in <strong>{{ getTermLabel(structureToDelete.term) }}</strong>
+        {{ structureToDelete.academicYear }}?
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelDelete()">Cancel</button>
+        <button type="button" class="delete-btn" [disabled]="isProcessing" (click)="deleteStructure()">
+          {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

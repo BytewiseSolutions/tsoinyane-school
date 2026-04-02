@@ -5,6 +5,9 @@
       <h2>Timetable Details</h2>
       <p>View the selected timetable entry and manage its lesson sessions.</p>
     </div>
+    <button class="secondary-btn" type="button" [disabled]="isRegeneratingLessons" (click)="confirmRegenerateLessons()">
+      {{ isRegeneratingLessons ? 'Regenerating...' : 'Regenerate Upcoming Lessons' }}
+    </button>
   </div>
 
   @if (isLoading) {
@@ -12,6 +15,10 @@
   } @else if (errorMessage || !timetable) {
     <div class="state-card error">{{ errorMessage || 'Timetable not found.' }}</div>
   } @else {
+    @if (actionMessage) {
+      <div class="state-card success">{{ actionMessage }}</div>
+    }
+
     <div class="summary-card">
       <div class="summary-item">
         <span>Subject</span>
@@ -278,6 +285,31 @@
     </div>
   }
 </div>
+
+@if (showRegenerateDialog) {
+  <div class="dialog-overlay" (click)="cancelRegenerateLessons()">
+    <div class="dialog-card confirm-card" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <h3>Regenerate Upcoming Lessons</h3>
+        <button class="close-btn" type="button" [disabled]="isRegeneratingLessons" (click)="cancelRegenerateLessons()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <p>This will keep past lessons and replace all upcoming lessons for this timetable using the current schedule.</p>
+        <p>Any student links on those upcoming lessons will also be removed before the new lesson set is created.</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-btn" type="button" [disabled]="isRegeneratingLessons" (click)="cancelRegenerateLessons()">
+          Cancel
+        </button>
+        <button class="primary-btn" type="button" [disabled]="isRegeneratingLessons" (click)="regenerateUpcomingLessons()">
+          {{ isRegeneratingLessons ? 'Regenerating...' : 'Regenerate' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
 @if (pendingRemovalStudent) {
   <div class="dialog-overlay" (click)="cancelRemoveStudentLesson()">

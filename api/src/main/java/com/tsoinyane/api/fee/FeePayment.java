@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -38,8 +37,8 @@ public class FeePayment extends BaseEntity {
     @JoinColumn(name = "fee_structure_id", nullable = false)
     private FeeStructure feeStructure;
 
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal amount;
+    @Column(nullable = false)
+    private Double amount;
 
     @Column(name = "payment_date", nullable = false)
     private LocalDate paymentDate;
