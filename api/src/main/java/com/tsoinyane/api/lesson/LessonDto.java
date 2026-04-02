@@ -26,4 +26,13 @@ public class LessonDto extends BaseDto {
     private Long teacherId;
     private String teacherName;
     private Long timetableId;
+    private Integer studentCount;
+    private Integer attendancePresentCount;
+    private Integer attendanceLateCount;
+    private Integer attendanceAbsentCount;
+    private Integer attendancePendingCount;
+    private Integer homeworkDoneCount;
+    private Integer homeworkNotDoneCount;
+    private Integer homeworkNoneCount;
+    private Integer homeworkPendingCount;
 }

@@ -23,4 +23,6 @@ public class TimetableDto extends BaseDto {
     private Long subjectId;
     private String subjectName;
     private List<Long> studentIds;
+    private Integer studentCount;
+    private Integer lessonCount;
 }

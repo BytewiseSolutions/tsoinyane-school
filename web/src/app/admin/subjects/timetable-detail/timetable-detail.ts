@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import * as XLSX from 'xlsx';
 import { BackendService } from '../../../util/backend.service';
 import { Lesson } from '../lesson';
 import { StudentLesson } from '../student-lesson';
@@ -19,6 +20,8 @@ const SELECT_ALL_ID = -1;
   styleUrl: './timetable-detail.scss',
 })
 export class TimetableDetail implements OnInit {
+  readonly pageSizeOptions = [10, 25, 50];
+  readonly LessonStatus = LessonStatus;
   timetable: TimetableEntry | null = null;
   assignedStudents: StudentOption[] = [];
   lessons: Lesson[] = [];
@@ -45,6 +48,11 @@ export class TimetableDetail implements OnInit {
   isSavingStudentLesson = false;
   selectedStudentOption: StudentOption | null = null;
   selectedStudentOptions: StudentOption[] = [];
+  lessonSearchTerm = '';
+  selectedLessonStatusFilter: LessonStatus | 'ALL' = 'ALL';
+  selectedLessonSort = 'date-asc';
+  lessonPageSize = 10;
+  lessonCurrentPage = 1;
   studentLessonForm: StudentLesson = {
     lessonId: null,
     studentId: null,
@@ -130,12 +138,82 @@ export class TimetableDetail implements OnInit {
     return `${date} ${startTime} - ${endTime}`;
   }
 
+  get filteredLessons(): Lesson[] {
+    const query = this.lessonSearchTerm.trim().toLowerCase();
+
+    return [...this.lessons]
+      .filter(lesson => this.matchesLessonSearch(lesson, query))
+      .filter(lesson => this.selectedLessonStatusFilter === 'ALL' || lesson.status === this.selectedLessonStatusFilter)
+      .sort((left, right) => this.compareLessons(left, right));
+  }
+
+  get paginatedLessons(): Lesson[] {
+    const start = (this.safeLessonCurrentPage - 1) * this.lessonPageSize;
+    return this.filteredLessons.slice(start, start + this.lessonPageSize);
+  }
+
+  get totalLessons(): number {
+    return this.lessons.length;
+  }
+
+  get pendingLessonsCount(): number {
+    return this.lessons.filter(lesson => lesson.status === LessonStatus.PENDING || !lesson.status).length;
+  }
+
+  get submittedLessonsCount(): number {
+    return this.lessons.filter(lesson => lesson.status === LessonStatus.SUBMITTED).length;
+  }
+
+  get cancelledLessonsCount(): number {
+    return this.lessons.filter(lesson => lesson.status === LessonStatus.CANCELLED).length;
+  }
+
+  get lessonTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredLessons.length / this.lessonPageSize));
+  }
+
+  get safeLessonCurrentPage(): number {
+    return Math.min(this.lessonCurrentPage, this.lessonTotalPages);
+  }
+
+  get lessonPageStart(): number {
+    if (!this.filteredLessons.length) {
+      return 0;
+    }
+
+    return (this.safeLessonCurrentPage - 1) * this.lessonPageSize + 1;
+  }
+
+  get lessonPageEnd(): number {
+    return Math.min(this.safeLessonCurrentPage * this.lessonPageSize, this.filteredLessons.length);
+  }
+
   getAttendanceCompletion(_lesson: Lesson): string {
-    return 'P:0% | L:0% | A:0%';
+    const total = _lesson.studentCount ?? 0;
+    if (!total) {
+      return 'N/A';
+    }
+
+    const present = this.toPercent(_lesson.attendancePresentCount, total);
+    const late = this.toPercent(_lesson.attendanceLateCount, total);
+    const absent = this.toPercent(_lesson.attendanceAbsentCount, total);
+    const pending = this.toPercent(_lesson.attendancePendingCount, total);
+    const summary = [`P:${present}%`, `L:${late}%`, `A:${absent}%`];
+
+    if ((_lesson.attendancePendingCount ?? 0) > 0) {
+      summary.push(`Pending:${pending}%`);
+    }
+
+    return summary.join(' | ');
   }
 
   getHomeworkCompletion(_lesson: Lesson): string {
-    return '0%';
+    const total = _lesson.studentCount ?? 0;
+    if (!total) {
+      return 'N/A';
+    }
+
+    return `${this.toPercent(_lesson.homeworkDoneCount, total)}%`;
   }
 
   formatLessonTime(value: string | null | undefined): string {
@@ -204,6 +282,50 @@ export class TimetableDetail implements OnInit {
     this.loadStudentLessons();
   }
 
+  onLessonFiltersChanged(): void {
+    this.lessonCurrentPage = 1;
+  }
+
+  onLessonPageSizeChanged(): void {
+    this.lessonCurrentPage = 1;
+  }
+
+  goToPreviousLessonPage(): void {
+    if (this.safeLessonCurrentPage > 1) {
+      this.lessonCurrentPage = this.safeLessonCurrentPage - 1;
+    }
+  }
+
+  goToNextLessonPage(): void {
+    if (this.safeLessonCurrentPage < this.lessonTotalPages) {
+      this.lessonCurrentPage = this.safeLessonCurrentPage + 1;
+    }
+  }
+
+  exportLessons(): void {
+    if (!this.filteredLessons.length) {
+      this.lessonsError = 'No lessons available to export for the current filters.';
+      return;
+    }
+
+    const rows = this.filteredLessons.map(lesson => ({
+      Session: this.formatLessonSession(lesson),
+      Students: lesson.studentCount ?? 0,
+      Attendance: this.getAttendanceCompletion(lesson),
+      'Homework % Complete': this.getHomeworkCompletion(lesson),
+      Status: lesson.status || 'PENDING',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Lessons');
+    XLSX.writeFile(
+      workbook,
+      `lessons_${(this.timetable?.subjectName || 'timetable').replace(/\s+/g, '_')}_${(this.timetable?.dayOfWeek || 'schedule').toLowerCase()}.xlsx`
+    );
+    this.lessonsError = '';
+  }
+
   openStudentForm(): void {
     if (!this.selectedLessonId) {
       this.studentsError = 'Select a lesson first.';
@@ -263,6 +385,7 @@ export class TimetableDetail implements OnInit {
           completed++;
           if (completed === requests.length) {
             this.studentLessons = [...this.studentLessons, ...results];
+            this.syncSelectedLessonStats();
             this.selectedStudentOptions = [];
             this.isSavingStudentLesson = false;
           }
@@ -298,6 +421,7 @@ export class TimetableDetail implements OnInit {
     this.backendService.delete<void>(`student-lesson/${studentLessonId}`).subscribe({
       next: () => {
         this.studentLessons = this.studentLessons.filter(item => item.id !== studentLessonId);
+        this.syncSelectedLessonStats();
         this.refreshSelectableStudentsForLesson();
       },
       error: (error: HttpErrorResponse) => {
@@ -340,6 +464,7 @@ export class TimetableDetail implements OnInit {
     this.backendService.get<Lesson[]>('lesson', { timetableId }).subscribe({
       next: (lessons) => {
         this.lessons = (lessons ?? []).map(lesson => this.mapLesson(lesson));
+        this.lessonCurrentPage = 1;
         this.selectedLessonId = this.lessons[0]?.id ?? null;
         this.loadStudentLessons();
       },
@@ -372,6 +497,7 @@ export class TimetableDetail implements OnInit {
     this.backendService.get<StudentLesson[]>('student-lesson', { lessonId: this.selectedLessonId }).subscribe({
       next: (studentLessons) => {
         this.studentLessons = studentLessons ?? [];
+        this.syncSelectedLessonStats();
         this.refreshSelectableStudentsForLesson();
       },
       error: (error: HttpErrorResponse) => {
@@ -399,7 +525,52 @@ export class TimetableDetail implements OnInit {
       date: lesson.date ?? null,
       startTime: lesson.startTime ?? null,
       endTime: lesson.endTime ?? null,
+      studentCount: lesson.studentCount ?? 0,
+      attendancePresentCount: lesson.attendancePresentCount ?? 0,
+      attendanceLateCount: lesson.attendanceLateCount ?? 0,
+      attendanceAbsentCount: lesson.attendanceAbsentCount ?? 0,
+      attendancePendingCount: lesson.attendancePendingCount ?? 0,
+      homeworkDoneCount: lesson.homeworkDoneCount ?? 0,
+      homeworkNotDoneCount: lesson.homeworkNotDoneCount ?? 0,
+      homeworkNoneCount: lesson.homeworkNoneCount ?? 0,
+      homeworkPendingCount: lesson.homeworkPendingCount ?? 0,
     };
+  }
+
+  private matchesLessonSearch(lesson: Lesson, query: string): boolean {
+    if (!query) {
+      return true;
+    }
+
+    return this.formatLessonSession(lesson).toLowerCase().includes(query)
+      || (lesson.status || 'PENDING').toLowerCase().includes(query)
+      || String(lesson.studentCount ?? 0).includes(query);
+  }
+
+  private compareLessons(left: Lesson, right: Lesson): number {
+    switch (this.selectedLessonSort) {
+      case 'date-desc':
+        return this.compareLessonDate(right, left);
+      case 'status-asc':
+        return (left.status || 'PENDING').localeCompare(right.status || 'PENDING');
+      case 'status-desc':
+        return (right.status || 'PENDING').localeCompare(left.status || 'PENDING');
+      case 'students-desc':
+        return (right.studentCount ?? 0) - (left.studentCount ?? 0);
+      case 'students-asc':
+        return (left.studentCount ?? 0) - (right.studentCount ?? 0);
+      case 'homework-desc':
+        return this.getHomeworkPercent(right) - this.getHomeworkPercent(left);
+      case 'homework-asc':
+        return this.getHomeworkPercent(left) - this.getHomeworkPercent(right);
+      case 'date-asc':
+      default:
+        return this.compareLessonDate(left, right);
+    }
+  }
+
+  private compareLessonDate(left: Lesson, right: Lesson): number {
+    return (left.date || left.startTime || '').localeCompare(right.date || right.startTime || '');
   }
 
   private normalizeTime(value: string | null | undefined): string {
@@ -423,5 +594,86 @@ export class TimetableDetail implements OnInit {
     this.selectedStudentOptions = this.selectedStudentOptions.filter(selected =>
       selected.id === SELECT_ALL_ID || this.availableStudentsForLesson.some(student => student.id === selected.id)
     );
+  }
+
+  private syncSelectedLessonStats(): void {
+    if (!this.selectedLessonId) {
+      return;
+    }
+
+    const stats = this.calculateLessonStats(this.studentLessons);
+    this.lessons = this.lessons.map(lesson =>
+      lesson.id === this.selectedLessonId
+        ? {
+            ...lesson,
+            ...stats,
+          }
+        : lesson
+    );
+  }
+
+  private calculateLessonStats(studentLessons: StudentLesson[]): Pick<Lesson, 'studentCount' | 'attendancePresentCount' | 'attendanceLateCount' | 'attendanceAbsentCount' | 'attendancePendingCount' | 'homeworkDoneCount' | 'homeworkNotDoneCount' | 'homeworkNoneCount' | 'homeworkPendingCount'> {
+    const stats: Pick<Lesson, 'studentCount' | 'attendancePresentCount' | 'attendanceLateCount' | 'attendanceAbsentCount' | 'attendancePendingCount' | 'homeworkDoneCount' | 'homeworkNotDoneCount' | 'homeworkNoneCount' | 'homeworkPendingCount'> = {
+      studentCount: studentLessons.length,
+      attendancePresentCount: 0,
+      attendanceLateCount: 0,
+      attendanceAbsentCount: 0,
+      attendancePendingCount: 0,
+      homeworkDoneCount: 0,
+      homeworkNotDoneCount: 0,
+      homeworkNoneCount: 0,
+      homeworkPendingCount: 0,
+    };
+
+    studentLessons.forEach(studentLesson => {
+      switch (studentLesson.attendanceStatus) {
+        case AttendanceStatus.PRESENT:
+          stats.attendancePresentCount = (stats.attendancePresentCount ?? 0) + 1;
+          break;
+        case AttendanceStatus.LATE:
+          stats.attendanceLateCount = (stats.attendanceLateCount ?? 0) + 1;
+          break;
+        case AttendanceStatus.ABSENT:
+          stats.attendanceAbsentCount = (stats.attendanceAbsentCount ?? 0) + 1;
+          break;
+        default:
+          stats.attendancePendingCount = (stats.attendancePendingCount ?? 0) + 1;
+          break;
+      }
+
+      switch (studentLesson.homeworkStatus) {
+        case HomeworkStatus.DONE:
+          stats.homeworkDoneCount = (stats.homeworkDoneCount ?? 0) + 1;
+          break;
+        case HomeworkStatus.NOT_DONE:
+          stats.homeworkNotDoneCount = (stats.homeworkNotDoneCount ?? 0) + 1;
+          break;
+        case HomeworkStatus.NONE:
+          stats.homeworkNoneCount = (stats.homeworkNoneCount ?? 0) + 1;
+          break;
+        default:
+          stats.homeworkPendingCount = (stats.homeworkPendingCount ?? 0) + 1;
+          break;
+      }
+    });
+
+    return stats;
+  }
+
+  private toPercent(value: number | null | undefined, total: number): number {
+    if (!total) {
+      return 0;
+    }
+
+    return Math.round(((value ?? 0) / total) * 100);
+  }
+
+  private getHomeworkPercent(lesson: Lesson): number {
+    const total = lesson.studentCount ?? 0;
+    if (!total) {
+      return 0;
+    }
+
+    return this.toPercent(lesson.homeworkDoneCount, total);
   }
 }

@@ -189,35 +189,95 @@
             <div class="timetable-header">
               <div>
                 <h4>Timetable Entries</h4>
-                <p>Manage the periods for this subject.</p>
+                <p>Manage the periods for this subject and review the weekly schedule.</p>
               </div>
-              <button class="add-timetable-btn" type="button" (click)="openTimetableForm()">Add Timetable</button>
+              <div class="header-actions">
+                <button class="export-btn" type="button" [disabled]="filteredTimetables.length === 0" (click)="exportTimetables()">
+                  Export
+                </button>
+                <button class="add-timetable-btn" type="button" (click)="openTimetableForm()">Add Timetable</button>
+              </div>
             </div>
 
             @if (timetableError) {
               <p class="tab-error">{{ timetableError }}</p>
             }
 
+            <div class="summary-grid section-summary-grid">
+              <div class="summary-card compact-card">
+                <div class="summary-item">
+                  <span>Total Timetables</span>
+                  <strong>{{ totalTimetables }}</strong>
+                </div>
+              </div>
+              <div class="summary-card compact-card">
+                <div class="summary-item">
+                  <span>Scheduled Lessons</span>
+                  <strong>{{ totalTimetableLessons }}</strong>
+                </div>
+              </div>
+              <div class="summary-card compact-card">
+                <div class="summary-item">
+                  <span>Weekly Hours</span>
+                  <strong>{{ totalTimetableWeeklyHours }}</strong>
+                </div>
+              </div>
+              <div class="summary-card compact-card">
+                <div class="summary-item">
+                  <span>Earliest Start</span>
+                  <strong>{{ earliestTimetableStart }}</strong>
+                </div>
+              </div>
+            </div>
+
             @if (isLoadingTimetables) {
               <div class="state-card">Loading timetable entries...</div>
             } @else if (timetables.length > 0) {
+              <div class="table-toolbar">
+                <input
+                  type="text"
+                  placeholder="Search by day, time, students or lessons..."
+                  [(ngModel)]="timetableSearchTerm"
+                  (ngModelChange)="onTimetableFiltersChanged()"
+                  name="timetableSearch"
+                />
+                <select [(ngModel)]="selectedTimetableDayFilter" (ngModelChange)="onTimetableFiltersChanged()" name="timetableDayFilter">
+                  <option [ngValue]="'ALL'">All Days</option>
+                  @for (day of dayOfWeekOptions; track day) {
+                    <option [ngValue]="day">{{ getDayLabel(day) }}</option>
+                  }
+                </select>
+                <select [(ngModel)]="selectedTimetableSort" (ngModelChange)="onTimetableFiltersChanged()" name="timetableSort">
+                  <option value="day-asc">Day A-Z</option>
+                  <option value="day-desc">Day Z-A</option>
+                  <option value="time-asc">Start Time Early-Late</option>
+                  <option value="time-desc">Start Time Late-Early</option>
+                  <option value="students-desc">Students High-Low</option>
+                  <option value="students-asc">Students Low-High</option>
+                  <option value="lessons-desc">Lessons High-Low</option>
+                  <option value="lessons-asc">Lessons Low-High</option>
+                </select>
+              </div>
+
               <table class="students-table timetable-table">
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>Day</th>
-                    <th>Start Time</th>
-                    <th>End Time</th>
+                    <th>Time</th>
+                    <th>Students</th>
+                    <th>Lessons</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (entry of timetables; track entry.id) {
+                  @for (entry of paginatedTimetables; track entry.id) {
                     <tr>
-                      <td>{{ $index + 1 }}</td>
+                      <td>{{ timetablePageStart + $index }}</td>
                       <td>{{ getDayLabel(entry.dayOfWeek) }}</td>
-                      <td>{{ entry.startTime }}</td>
-                      <td>{{ entry.endTime }}</td>
+                      <td>{{ formatTimeRange(entry) }}</td>
+                      <td>{{ entry.studentCount ?? entry.studentIds?.length ?? 0 }}</td>
+                      <td>{{ entry.lessonCount ?? 0 }}</td>
                       <td class="actions">
                         <button class="transfer-btn" type="button" (click)="viewTimetable(entry)">View</button>
                         <button class="transfer-btn" type="button" (click)="openTimetableForm(entry)">Edit</button>
@@ -225,8 +285,38 @@
                       </td>
                     </tr>
                   }
+                  @if (filteredTimetables.length === 0) {
+                    <tr>
+                      <td colspan="6">No timetable entries match the current search, filters, or sort.</td>
+                    </tr>
+                  }
                 </tbody>
               </table>
+
+              @if (filteredTimetables.length > 0) {
+                <div class="pagination-bar">
+                  <div class="pagination-summary">
+                    Showing {{ timetablePageStart }}-{{ timetablePageEnd }} of {{ filteredTimetables.length }}
+                  </div>
+                  <div class="pagination-controls">
+                    <label class="page-size">
+                      <span>Rows</span>
+                      <select [(ngModel)]="timetablePageSize" (ngModelChange)="onTimetablePageSizeChanged()" name="timetablePageSize">
+                        @for (size of pageSizeOptions; track size) {
+                          <option [ngValue]="size">{{ size }}</option>
+                        }
+                      </select>
+                    </label>
+                    <button type="button" class="page-btn" [disabled]="safeTimetableCurrentPage === 1" (click)="goToPreviousTimetablePage()">
+                      Previous
+                    </button>
+                    <span class="page-indicator">Page {{ safeTimetableCurrentPage }} of {{ timetableTotalPages }}</span>
+                    <button type="button" class="page-btn" [disabled]="safeTimetableCurrentPage === timetableTotalPages" (click)="goToNextTimetablePage()">
+                      Next
+                    </button>
+                  </div>
+                </div>
+              }
             } @else {
               <p class="tab-placeholder">No timetable configured yet.</p>
             }

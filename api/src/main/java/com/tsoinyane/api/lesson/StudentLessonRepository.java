@@ -41,6 +41,13 @@ public interface StudentLessonRepository extends JpaRepository<StudentLesson, Lo
             """)
     Optional<StudentLesson> findWithAssociationsById(@Param("id") Long id);
 
+    @Query("""
+            select sl from StudentLesson sl
+            join fetch sl.lesson l
+            where l.id in :lessonIds
+            """)
+    List<StudentLesson> findAllByLessonIdIn(@Param("lessonIds") List<Long> lessonIds);
+
     boolean existsByLesson_IdAndStudent_Id(Long lessonId, Long studentId);
 
     @Query("""

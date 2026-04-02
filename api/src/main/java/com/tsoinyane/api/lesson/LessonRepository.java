@@ -11,6 +11,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     boolean existsByTeacher_Id(Long teacherId);
 
+    long countByTimetable_Id(Long timetableId);
+
     @Query("""
             select l.id from Lesson l
             where l.timetable.id in :timetableIds
@@ -38,4 +40,15 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
             where l.id = :id
             """)
     Optional<Lesson> findWithAssociationsById(@Param("id") Long id);
+
+    @Query("""
+            select l from Lesson l
+            left join fetch l.subject s
+            left join fetch l.teacher t
+            left join fetch t.user
+            left join fetch l.timetable tt
+            where l.timetable.id in :timetableIds
+            order by l.date asc, l.startTime asc, l.id asc
+            """)
+    List<Lesson> findAllByTimetableIdIn(@Param("timetableIds") List<Long> timetableIds);
 }

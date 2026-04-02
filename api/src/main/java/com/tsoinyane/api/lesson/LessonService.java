@@ -1,5 +1,7 @@
 package com.tsoinyane.api.lesson;
 
+import com.tsoinyane.api.attendance.AttendanceStatus;
+import com.tsoinyane.api.homework.HomeworkStatus;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.subject.Subject;
 import com.tsoinyane.api.subject.SubjectRepository;
@@ -15,13 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class LessonService {
 
     private final LessonRepository lessonRepository;
+    private final StudentLessonRepository studentLessonRepository;
     private final SubjectRepository subjectRepository;
     private final TeacherRepository teacherRepository;
     private final TimetableRepository timetableRepository;
@@ -29,15 +35,18 @@ public class LessonService {
 
     @Transactional(readOnly = true)
     public List<LessonDto> getLessons(Long timetableId) {
-        return lessonRepository.findAllByTimetableId(timetableId).stream()
-                .map(this::toDto)
+        List<Lesson> lessons = lessonRepository.findAllByTimetableId(timetableId);
+        Map<Long, LessonStats> statsByLessonId = loadLessonStats(lessons);
+
+        return lessons.stream()
+                .map(lesson -> toDto(lesson, statsByLessonId.getOrDefault(lesson.getId(), LessonStats.empty())))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public LessonDto getLesson(Long id) {
         return lessonRepository.findWithAssociationsById(id)
-                .map(this::toDto)
+                .map(lesson -> toDto(lesson, loadLessonStats(List.of(lesson)).getOrDefault(lesson.getId(), LessonStats.empty())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found: " + id));
     }
 
@@ -63,7 +72,7 @@ public class LessonService {
                 .updatedBy(actor)
                 .build();
 
-        return toDto(lessonRepository.save(lesson));
+        return toDto(lessonRepository.save(lesson), LessonStats.empty());
     }
 
     @Transactional
@@ -88,7 +97,7 @@ public class LessonService {
         lesson.setTimetable(timetable);
         lesson.setUpdatedBy(actor);
 
-        return toDto(lessonRepository.save(lesson));
+        return toDto(lessonRepository.save(lesson), loadLessonStats(List.of(lesson)).getOrDefault(lesson.getId(), LessonStats.empty()));
     }
 
     @Transactional
@@ -146,7 +155,35 @@ public class LessonService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private LessonDto toDto(Lesson lesson) {
+    private Map<Long, LessonStats> loadLessonStats(List<Lesson> lessons) {
+        if (lessons.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Long> lessonIds = lessons.stream()
+                .map(Lesson::getId)
+                .filter(id -> id != null && id > 0)
+                .toList();
+        if (lessonIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, LessonStats> statsByLessonId = new LinkedHashMap<>();
+        studentLessonRepository.findAllByLessonIdIn(lessonIds).forEach(studentLesson -> {
+            Long lessonId = studentLesson.getLesson() != null ? studentLesson.getLesson().getId() : null;
+            if (lessonId == null) {
+                return;
+            }
+
+            statsByLessonId
+                    .computeIfAbsent(lessonId, ignored -> new LessonStats())
+                    .include(studentLesson);
+        });
+
+        return statsByLessonId;
+    }
+
+    private LessonDto toDto(Lesson lesson, LessonStats stats) {
         Subject subject = lesson.getSubject();
         Teacher teacher = lesson.getTeacher();
         Timetable timetable = lesson.getTimetable();
@@ -172,6 +209,57 @@ public class LessonService {
                 .teacherId(teacher != null ? teacher.getId() : null)
                 .teacherName(teacher != null && teacher.getUser() != null ? teacher.getUser().getDisplayName() : null)
                 .timetableId(timetable != null ? timetable.getId() : null)
+                .studentCount(stats.studentCount)
+                .attendancePresentCount(stats.attendancePresentCount)
+                .attendanceLateCount(stats.attendanceLateCount)
+                .attendanceAbsentCount(stats.attendanceAbsentCount)
+                .attendancePendingCount(stats.attendancePendingCount)
+                .homeworkDoneCount(stats.homeworkDoneCount)
+                .homeworkNotDoneCount(stats.homeworkNotDoneCount)
+                .homeworkNoneCount(stats.homeworkNoneCount)
+                .homeworkPendingCount(stats.homeworkPendingCount)
                 .build();
+    }
+
+    private static final class LessonStats {
+        private int studentCount;
+        private int attendancePresentCount;
+        private int attendanceLateCount;
+        private int attendanceAbsentCount;
+        private int attendancePendingCount;
+        private int homeworkDoneCount;
+        private int homeworkNotDoneCount;
+        private int homeworkNoneCount;
+        private int homeworkPendingCount;
+
+        private void include(StudentLesson studentLesson) {
+            studentCount++;
+
+            AttendanceStatus attendanceStatus = studentLesson.getAttendanceStatus();
+            if (attendanceStatus == AttendanceStatus.PRESENT) {
+                attendancePresentCount++;
+            } else if (attendanceStatus == AttendanceStatus.LATE) {
+                attendanceLateCount++;
+            } else if (attendanceStatus == AttendanceStatus.ABSENT) {
+                attendanceAbsentCount++;
+            } else {
+                attendancePendingCount++;
+            }
+
+            HomeworkStatus homeworkStatus = studentLesson.getHomeworkStatus();
+            if (homeworkStatus == HomeworkStatus.DONE) {
+                homeworkDoneCount++;
+            } else if (homeworkStatus == HomeworkStatus.NOT_DONE) {
+                homeworkNotDoneCount++;
+            } else if (homeworkStatus == HomeworkStatus.NONE) {
+                homeworkNoneCount++;
+            } else {
+                homeworkPendingCount++;
+            }
+        }
+
+        private static LessonStats empty() {
+            return new LessonStats();
+        }
     }
 }

@@ -59,6 +59,17 @@
   padding: 16px;
 }
 
+.summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.compact-card {
+  padding: 14px 16px;
+  grid-template-columns: 1fr;
+}
+
 .summary-item {
   display: grid;
   gap: 4px;
@@ -130,6 +141,26 @@
     margin: 6px 0 0;
     color: #5f6e8f;
     font-size: 14px;
+  }
+}
+
+.table-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  input,
+  select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ccd6f0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--navy-blue);
+    background: #fff;
+    box-sizing: border-box;
+    outline: none;
   }
 }
 
@@ -320,6 +351,61 @@
   font-size: 16px;
 }
 
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0 0;
+}
+
+.pagination-summary,
+.page-indicator,
+.page-size span {
+  color: #5f6e8f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  select {
+    border: 1px solid #ccd6f0;
+    border-radius: 6px;
+    padding: 7px 10px;
+    background: #fff;
+    color: #2f3f63;
+    font-size: 13px;
+    outline: none;
+  }
+}
+
+.page-btn {
+  border: 1px solid #ccd7ee;
+  background: #fff;
+  color: #2b3f66;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.page-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 ::ng-deep .ng-dropdown-panel {
   z-index: 9999 !important;
 }
@@ -351,6 +437,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .table-toolbar {
+    grid-template-columns: 1fr;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -364,5 +454,10 @@
   .tab-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

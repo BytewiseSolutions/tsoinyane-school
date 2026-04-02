@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.DayOfWeek;
 
 public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
@@ -18,6 +19,7 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
             select distinct t from Timetable t
             join fetch t.subject s
             join fetch s.school
+            left join fetch s.teacher teacher
             left join fetch t.students
             where (:subjectId is null or s.id = :subjectId)
             order by t.dayOfWeek asc, t.startTime asc, t.id asc
@@ -28,8 +30,26 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
             select distinct t from Timetable t
             join fetch t.subject s
             join fetch s.school
+            left join fetch s.teacher teacher
             left join fetch t.students
             where t.id = :id
             """)
     Optional<Timetable> findWithAssociationsById(@Param("id") Long id);
+
+    @Query("""
+            select distinct t from Timetable t
+            join fetch t.subject s
+            join fetch s.school school
+            left join fetch s.teacher teacher
+            left join fetch t.students
+            where school.id = :schoolId
+              and t.dayOfWeek = :dayOfWeek
+              and (:excludeId is null or t.id <> :excludeId)
+            order by t.startTime asc, t.id asc
+            """)
+    List<Timetable> findPotentialConflicts(
+            @Param("schoolId") Long schoolId,
+            @Param("dayOfWeek") DayOfWeek dayOfWeek,
+            @Param("excludeId") Long excludeId
+    );
 }
