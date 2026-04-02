@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, catchError, finalize, forkJoin, of, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { SchoolContextService } from '../layout/school-context';
 import { Grade } from '../grades/grade';
@@ -18,6 +18,8 @@ import { Teacher } from '../teachers/teacher';
 })
 export class AdminSubjects implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
+  readonly Status = Status;
+  readonly pageSizeOptions = [10, 25, 50];
 
   showForm = false;
   selectedSubject: SchoolSubject | null = null;
@@ -26,6 +28,12 @@ export class AdminSubjects implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage = '';
   searchTerm = '';
+  selectedStatusFilter: Status | 'ALL' = 'ALL';
+  selectedGradeFilter: number | null = null;
+  selectedTeacherFilter: number | null = null;
+  selectedSort = 'code-asc';
+  pageSize = 10;
+  currentPage = 1;
   availableGrades: Grade[] = [];
   teacherOptions: SubjectTeacherOption[] = [];
 
@@ -54,16 +62,37 @@ export class AdminSubjects implements OnInit, OnDestroy {
 
   get filteredSubjects(): SchoolSubject[] {
     const query = this.searchTerm.trim().toLowerCase();
-    if (!query) {
-      return this.subjects;
+    return [...this.subjects]
+      .filter(subject => this.matchesSearch(subject, query))
+      .filter(subject => this.selectedStatusFilter === 'ALL' || subject.status === this.selectedStatusFilter)
+      .filter(subject => this.selectedGradeFilter === null || subject.gradeId === this.selectedGradeFilter)
+      .filter(subject => this.selectedTeacherFilter === null || subject.teacherId === this.selectedTeacherFilter)
+      .sort((left, right) => this.compareSubjects(left, right));
+  }
+
+  get paginatedSubjects(): SchoolSubject[] {
+    const start = (this.safeCurrentPage - 1) * this.pageSize;
+    return this.filteredSubjects.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredSubjects.length / this.pageSize));
+  }
+
+  get safeCurrentPage(): number {
+    return Math.min(this.currentPage, this.totalPages);
+  }
+
+  get pageStart(): number {
+    if (!this.filteredSubjects.length) {
+      return 0;
     }
 
-    return this.subjects.filter(subject =>
-      subject.code.toLowerCase().includes(query)
-      || subject.name.toLowerCase().includes(query)
-      || (subject.gradeName ?? '').toLowerCase().includes(query)
-      || (subject.teacherName ?? '').toLowerCase().includes(query)
-    );
+    return (this.safeCurrentPage - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.safeCurrentPage * this.pageSize, this.filteredSubjects.length);
   }
 
   openForm(subject: SchoolSubject | null = null) {
@@ -138,53 +167,108 @@ export class AdminSubjects implements OnInit, OnDestroy {
     return status === Status.INACTIVE ? 'Inactive' : 'Active';
   }
 
+  onFiltersChanged() {
+    this.currentPage = 1;
+  }
+
+  onPageSizeChanged() {
+    this.currentPage = 1;
+  }
+
+  goToPreviousPage() {
+    if (this.safeCurrentPage > 1) {
+      this.currentPage = this.safeCurrentPage - 1;
+    }
+  }
+
+  goToNextPage() {
+    if (this.safeCurrentPage < this.totalPages) {
+      this.currentPage = this.safeCurrentPage + 1;
+    }
+  }
+
+  private matchesSearch(subject: SchoolSubject, query: string): boolean {
+    if (!query) {
+      return true;
+    }
+
+    return subject.code.toLowerCase().includes(query)
+      || subject.name.toLowerCase().includes(query)
+      || (subject.gradeName ?? '').toLowerCase().includes(query)
+      || (subject.teacherName ?? '').toLowerCase().includes(query);
+  }
+
+  private compareSubjects(left: SchoolSubject, right: SchoolSubject): number {
+    switch (this.selectedSort) {
+      case 'code-desc':
+        return this.compareText(right.code, left.code);
+      case 'name-asc':
+        return this.compareText(left.name, right.name);
+      case 'name-desc':
+        return this.compareText(right.name, left.name);
+      case 'grade-asc':
+        return this.compareText(left.gradeName, right.gradeName);
+      case 'grade-desc':
+        return this.compareText(right.gradeName, left.gradeName);
+      case 'teacher-asc':
+        return this.compareText(left.teacherName, right.teacherName);
+      case 'teacher-desc':
+        return this.compareText(right.teacherName, left.teacherName);
+      case 'code-asc':
+      default:
+        return this.compareText(left.code, right.code);
+    }
+  }
+
+  private compareText(left: string | null | undefined, right: string | null | undefined): number {
+    return (left ?? '').localeCompare(right ?? '', undefined, { sensitivity: 'base' });
+  }
+
   private loadReferenceData() {
     if (!this.selectedSchoolId) {
       this.availableGrades = [];
       this.teacherOptions = [];
       this.subjects = [];
+      this.isLoading = false;
+      this.errorMessage = '';
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = '';
+    const errorMessages: string[] = [];
 
-    this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId }).subscribe({
-      next: (subjects) => {
-        this.subjects = (subjects ?? []).map(s => this.mapSavedSubject(s));
-      },
-      error: (error: HttpErrorResponse) => {
-        this.subjects = [];
-        this.errorMessage = error.error?.message || 'Failed to load subjects.';
-      },
-    });
-
-    this.backendService.get<Grade[]>('grade').subscribe({
-      next: (grades) => {
+    forkJoin({
+      subjects: this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId }).pipe(
+        catchError((error: HttpErrorResponse) => {
+          errorMessages.push(error.error?.message || 'Failed to load subjects.');
+          return of([] as SchoolSubject[]);
+        })
+      ),
+      grades: this.backendService.get<Grade[]>('grade').pipe(
+        catchError(() => of([] as Grade[]))
+      ),
+      teachers: this.backendService.get<Teacher[]>('teacher', { schoolId: this.selectedSchoolId }).pipe(
+        catchError((error: HttpErrorResponse) => {
+          errorMessages.push(error.error?.message || 'Failed to load teachers for subjects.');
+          return of([] as Teacher[]);
+        })
+      ),
+    })
+      .pipe(finalize(() => {
+        this.isLoading = false;
+      }))
+      .subscribe(({ subjects, grades, teachers }) => {
         this.availableGrades = (grades ?? []).filter(grade => grade.schoolId === this.selectedSchoolId);
-      },
-      error: () => {
-        this.availableGrades = [];
-      },
-    });
-
-    this.backendService.get<Teacher[]>('teacher', { schoolId: this.selectedSchoolId }).subscribe({
-      next: (teachers) => {
         this.teacherOptions = (teachers ?? []).map(teacher => ({
           id: teacher.id ?? 0,
           name: teacher.userFullName || teacher.userEmail || 'Unknown Teacher',
           schoolId: teacher.schoolId ?? null,
           gradeIds: teacher.gradeIds ?? [],
         })).filter(teacher => teacher.id > 0);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.teacherOptions = [];
-        this.errorMessage = error.error?.message || 'Failed to load teachers for subjects.';
-      },
-      complete: () => {
-        this.isLoading = false;
-      },
-    });
+        this.subjects = (subjects ?? []).map(subject => this.mapSavedSubject(subject));
+        this.errorMessage = errorMessages.join(' ');
+      });
   }
 
   private mapSavedSubject(subject: SchoolSubject): SchoolSubject {

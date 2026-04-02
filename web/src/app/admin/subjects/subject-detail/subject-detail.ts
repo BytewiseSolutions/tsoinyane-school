@@ -12,6 +12,7 @@ interface StudentOption {
   email: string | null;
   phone: string | null;
   studentId: string | null;
+  gradeId?: number | null;
 }
 
 const SELECT_ALL_ID = -1;
@@ -82,7 +83,7 @@ export class SubjectDetail implements OnInit {
     this.backendService.get<SchoolSubject>(`subject/${id}`).subscribe({
       next: (subject) => {
         this.subject = subject;
-        this.loadStudents(subject.schoolId);
+        this.loadStudents(subject.schoolId, subject.gradeId);
         this.loadAssignedStudents(id);
         this.loadTimetables(id);
       },
@@ -538,18 +539,21 @@ export class SubjectDetail implements OnInit {
       : parts[0];
   }
 
-  private loadStudents(schoolId: number | null) {
+  private loadStudents(schoolId: number | null, gradeId: number | null) {
     if (!schoolId) return;
 
     this.backendService.get<any[]>('student', { schoolId }).subscribe({
       next: (students) => {
-        this.availableStudents = (students ?? []).map(s => ({
-          id: s.id,
-          displayName: s.userFullName || s.userEmail || 'Unknown',
-          email: s.userEmail ?? null,
-          phone: s.userPhone ?? null,
-          studentId: s.studentNumber ?? null,
-        }));
+        this.availableStudents = (students ?? [])
+          .filter(student => gradeId == null || student.gradeId === gradeId)
+          .map(s => ({
+            id: s.id,
+            displayName: s.userFullName || s.userEmail || 'Unknown',
+            email: s.userEmail ?? null,
+            phone: s.userPhone ?? null,
+            studentId: s.studentNumber ?? null,
+            gradeId: s.gradeId ?? null,
+          }));
         this.selectableStudents = [
           { id: SELECT_ALL_ID, displayName: 'Select All', email: null, phone: null, studentId: null },
           ...this.availableStudents,
