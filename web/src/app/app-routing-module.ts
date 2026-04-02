@@ -17,6 +17,7 @@ import { UserDetails } from './admin/users/user-details/user-details';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
 import { SubjectsImport } from './admin/subjects/import/import';
+import { TimetableImport } from './admin/subjects/timetable-import/timetable-import';
 import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
 import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { AdminGrades } from './admin/grades/grades';
@@ -61,6 +62,7 @@ const routes: Routes = [
       { path: 'subjects', component: AdminSubjects, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects/import', component: SubjectsImport, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects/:id', component: SubjectDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'subjects/:id/timetable/import', component: TimetableImport, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'events', component: Events, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },

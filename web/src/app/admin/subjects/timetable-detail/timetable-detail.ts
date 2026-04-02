@@ -127,7 +127,13 @@ export class TimetableDetail implements OnInit {
     }
 
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+    return Number.isNaN(date.getTime())
+      ? value
+      : date.toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
   }
 
   formatLessonSession(lesson: Lesson): string {

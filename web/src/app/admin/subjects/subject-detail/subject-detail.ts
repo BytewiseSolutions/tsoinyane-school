@@ -497,6 +497,14 @@ export class SubjectDetail implements OnInit {
     this.router.navigate(['/admin/subjects', this.subject.id, 'timetable', entry.id]);
   }
 
+  viewTimetableImport(): void {
+    if (!this.subject?.id) {
+      return;
+    }
+
+    this.router.navigate(['/admin/subjects', this.subject.id, 'timetable', 'import']);
+  }
+
   cancelDeleteTimetable(): void {
     this.timetableToDelete = null;
     this.showDeleteTimetableDialog = false;

@@ -45,6 +45,7 @@ import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
 import { SubjectsImport } from './admin/subjects/import/import';
+import { TimetableImport } from './admin/subjects/timetable-import/timetable-import';
 import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
 import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { EventForm } from './admin/events/event-form/event-form';
@@ -92,6 +93,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     SubjectForm,
     SubjectDetail,
     SubjectsImport,
+    TimetableImport,
     TimetableDetail,
     LessonDetail,
     EventForm
