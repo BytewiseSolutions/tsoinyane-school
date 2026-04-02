@@ -37,6 +37,10 @@ import { Notifications } from './admin/notifications/notifications';
 import { NotificationForm } from './admin/notifications/notification-form/notification-form';
 import { Profile } from './admin/profile/profile';
 import { Reports } from './admin/reports/reports';
+import { Fees } from './admin/fees/fees';
+import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
+import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
+import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
@@ -79,6 +83,10 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     NotificationForm,
     Profile,
     Reports,
+    Fees,
+    MySubjects,
+    MyTimetable,
+    MyLessons,
     Settings,
     SubjectForm,
     SubjectDetail,

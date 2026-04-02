@@ -47,7 +47,7 @@ export class Login {
         storage.setItem('tokenType', response.tokenType);
         storage.setItem('expiresAt', String(response.expiresAt));
         storage.setItem('user', JSON.stringify(response.user));
-        this.router.navigate(['/admin/dashboard']);
+        this.router.navigate([this.resolveRedirect(response)]);
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error.error?.message || 'Invalid email or password.';
@@ -61,6 +61,12 @@ export class Login {
 
   onForgotPassword() {
     this.router.navigate(['/forgot-password']);
+  }
+
+  private resolveRedirect(response: LoginResponse): string {
+    const roles: string[] = response.user?.roles?.map((r: any) => String(r)) ?? [];
+    if (roles.includes('TEACHER')) return '/admin/dashboard';
+    return '/admin/dashboard';
   }
 
   private clearStoredAuth() {

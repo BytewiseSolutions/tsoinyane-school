@@ -20,6 +20,8 @@ export class Sidebar implements OnInit, OnDestroy {
   currentUserRole = 'Administrator';
   currentUserEmail = 'admin@tsoinyane.co.ls';
   isSystemAdmin = false;
+  isSchoolAdmin = false;
+  isTeacher = false;
 
   constructor(private sidebarState: SidebarStateService) {}
 
@@ -82,6 +84,8 @@ export class Sidebar implements OnInit, OnDestroy {
       this.currentUserEmail = user.email;
     }
     this.isSystemAdmin = hasRole('SYSTEM_ADMIN');
+    this.isSchoolAdmin = hasRole('SCHOOL_ADMIN');
+    this.isTeacher = hasRole('TEACHER');
   }
 
   private formatRole(role: string): string {

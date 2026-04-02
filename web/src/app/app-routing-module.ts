@@ -25,6 +25,10 @@ import { ActivityLogs } from './admin/activity-logs/activity-logs';
 import { Notifications } from './admin/notifications/notifications';
 import { Profile } from './admin/profile/profile';
 import { Reports } from './admin/reports/reports';
+import { Fees } from './admin/fees/fees';
+import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
+import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
+import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
 import { AuthGuard } from './auth/auth-guard';
@@ -48,21 +52,25 @@ const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminMain },
-      { path: 'users', component: Users },
-      { path: 'users/import', component: UserImportComponent },
-      { path: 'users/:id', component: UserDetails },
-      { path: 'grades', component: AdminGrades },
-      { path: 'grades/import', component: GradeImportComponent },
-      { path: 'subjects', component: AdminSubjects },
-      { path: 'subjects/:id', component: SubjectDetail },
-      { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail },
-      { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail },
-      { path: 'events', component: Events },
+      { path: 'users', component: Users, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'users/import', component: UserImportComponent, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'users/:id', component: UserDetails, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'grades', component: AdminGrades, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'grades/import', component: GradeImportComponent, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'subjects', component: AdminSubjects, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'subjects/:id', component: SubjectDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'events', component: Events, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'fees', component: Fees, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'activity-logs', component: ActivityLogs, data: { roles: ['SYSTEM_ADMIN'] } },
       { path: 'notifications', component: Notifications },
       { path: 'profile', component: Profile },
-      { path: 'reports', component: Reports },
-      { path: 'settings', component: Settings },
+      { path: 'reports', component: Reports, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'settings', component: Settings, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'my-subjects', component: MySubjects, data: { roles: ['TEACHER'] } },
+      { path: 'my-timetable', component: MyTimetable, data: { roles: ['TEACHER'] } },
+      { path: 'my-lessons', component: MyLessons, data: { roles: ['TEACHER'] } },
     ]
   },
   { path: '**', component: NotFound },

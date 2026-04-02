@@ -27,53 +27,95 @@
       @if (collapsed) { <span class="tooltip">Dashboard</span> }
     </a>
 
-    @if (!collapsed) { <span class="nav-section-label">Management</span> }
+    @if (isSystemAdmin || isSchoolAdmin) {
 
-    <a routerLink="/admin/users" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-users"></i>
-      @if (!collapsed) { <span>Users</span> }
-      @if (collapsed) { <span class="tooltip">Users</span> }
-    </a>
-    <a routerLink="/admin/grades" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-layer-group"></i>
-      @if (!collapsed) { <span>Grades</span> }
-      @if (collapsed) { <span class="tooltip">Grades</span> }
-    </a>
-    <a routerLink="/admin/subjects" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-book-open"></i>
-      @if (!collapsed) { <span>Subjects</span> }
-      @if (collapsed) { <span class="tooltip">Subjects</span> }
-    </a>
-    <a routerLink="/admin/events" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-calendar-days"></i>
-      @if (!collapsed) { <span>Events</span> }
-      @if (collapsed) { <span class="tooltip">Events</span> }
-    </a>
-    <a routerLink="/admin/reports" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-chart-bar"></i>
-      @if (!collapsed) { <span>Reports</span> }
-      @if (collapsed) { <span class="tooltip">Reports</span> }
-    </a>
+      @if (!collapsed) { <span class="nav-section-label">Management</span> }
 
-    @if (!collapsed) { <span class="nav-section-label">System</span> }
+      @if (isSystemAdmin || isSchoolAdmin) {
+        <a routerLink="/admin/users" routerLinkActive="active" (click)="closeOnMobile()">
+          <i class="fa-solid fa-users"></i>
+          @if (!collapsed) { <span>Users</span> }
+          @if (collapsed) { <span class="tooltip">Users</span> }
+        </a>
+      }
+      <a routerLink="/admin/grades" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-layer-group"></i>
+        @if (!collapsed) { <span>Grades</span> }
+        @if (collapsed) { <span class="tooltip">Grades</span> }
+      </a>
+      <a routerLink="/admin/subjects" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-book-open"></i>
+        @if (!collapsed) { <span>Subjects</span> }
+        @if (collapsed) { <span class="tooltip">Subjects</span> }
+      </a>
+      <a routerLink="/admin/events" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-calendar-days"></i>
+        @if (!collapsed) { <span>Events</span> }
+        @if (collapsed) { <span class="tooltip">Events</span> }
+      </a>
+      <a routerLink="/admin/fees" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-money-bill-wave"></i>
+        @if (!collapsed) { <span>Fees</span> }
+        @if (collapsed) { <span class="tooltip">Fees</span> }
+      </a>
 
-    <a routerLink="/admin/notifications" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-bell"></i>
-      @if (!collapsed) { <span>Notifications</span> }
-      @if (collapsed) { <span class="tooltip">Notifications</span> }
-    </a>
-    @if (isSystemAdmin) {
-      <a routerLink="/admin/activity-logs" routerLinkActive="active" (click)="closeOnMobile()">
-        <i class="fa-solid fa-clipboard-list"></i>
-        @if (!collapsed) { <span>Activity Logs</span> }
-        @if (collapsed) { <span class="tooltip">Activity Logs</span> }
+      @if (!collapsed) { <span class="nav-section-label">Reports & Communication</span> }
+
+      <a routerLink="/admin/reports" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-chart-bar"></i>
+        @if (!collapsed) { <span>Reports</span> }
+        @if (collapsed) { <span class="tooltip">Reports</span> }
+      </a>
+      <a routerLink="/admin/notifications" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-bell"></i>
+        @if (!collapsed) { <span>Notifications</span> }
+        @if (collapsed) { <span class="tooltip">Notifications</span> }
+      </a>
+
+      @if (!collapsed) { <span class="nav-section-label">System</span> }
+
+      @if (isSystemAdmin) {
+        <a routerLink="/admin/activity-logs" routerLinkActive="active" (click)="closeOnMobile()">
+          <i class="fa-solid fa-clipboard-list"></i>
+          @if (!collapsed) { <span>Activity Logs</span> }
+          @if (collapsed) { <span class="tooltip">Activity Logs</span> }
+        </a>
+      }
+      <a routerLink="/admin/settings" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-gear"></i>
+        @if (!collapsed) { <span>Settings</span> }
+        @if (collapsed) { <span class="tooltip">Settings</span> }
       </a>
     }
-    <a routerLink="/admin/settings" routerLinkActive="active" (click)="closeOnMobile()">
-      <i class="fa-solid fa-gear"></i>
-      @if (!collapsed) { <span>Settings</span> }
-      @if (collapsed) { <span class="tooltip">Settings</span> }
-    </a>
+
+    @if (isTeacher) {
+
+      @if (!collapsed) { <span class="nav-section-label">My Work</span> }
+
+      <a routerLink="/admin/my-subjects" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-book-open"></i>
+        @if (!collapsed) { <span>My Subjects</span> }
+        @if (collapsed) { <span class="tooltip">My Subjects</span> }
+      </a>
+      <a routerLink="/admin/my-timetable" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-calendar-week"></i>
+        @if (!collapsed) { <span>My Timetable</span> }
+        @if (collapsed) { <span class="tooltip">My Timetable</span> }
+      </a>
+      <a routerLink="/admin/my-lessons" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-chalkboard-teacher"></i>
+        @if (!collapsed) { <span>My Lessons</span> }
+        @if (collapsed) { <span class="tooltip">My Lessons</span> }
+      </a>
+
+      @if (!collapsed) { <span class="nav-section-label">Communication</span> }
+
+      <a routerLink="/admin/notifications" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-bell"></i>
+        @if (!collapsed) { <span>Notifications</span> }
+        @if (collapsed) { <span class="tooltip">Notifications</span> }
+      </a>
+    }
 
   </nav>
 
@@ -86,3 +128,5 @@
       </div>
     }
   </a>
+
+</aside>
