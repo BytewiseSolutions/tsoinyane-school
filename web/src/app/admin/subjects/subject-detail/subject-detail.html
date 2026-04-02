@@ -31,6 +31,10 @@
         <span>Teacher</span>
         <strong>{{ subject.teacherName || 'N/A' }}</strong>
       </div>
+      <div class="summary-item">
+        <span>Students</span>
+        <strong>{{ subject.studentCount ?? assignedStudents.length }}</strong>
+      </div>
     </div>
 
     <div class="tabs-card">
@@ -268,6 +272,7 @@
         } @else {
           <p>Transfer <strong>{{ transferringStudent.displayName }}</strong> to another subject.</p>
         }
+        <p>Select a target subject from the same grade only.</p>
         <div class="form-group">
           <label>Select Subject</label>
           <select [(ngModel)]="targetSubjectId" name="targetSubject">

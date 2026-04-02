@@ -119,6 +119,7 @@ export class SubjectDetail implements OnInit {
       s => s.id !== SELECT_ALL_ID && !this.assignedStudents.some(a => a.id === s.id)
     );
     this.assignedStudents = [...this.assignedStudents, ...toAdd];
+    this.syncSubjectStudentCount();
     this.selectedStudents = [];
     this.saveAssignedStudents();
   }
@@ -234,10 +235,22 @@ export class SubjectDetail implements OnInit {
     if (!this.availableSubjects.length && this.subject?.schoolId) {
       this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.subject.schoolId }).subscribe({
         next: (subjects) => {
-          this.availableSubjects = (subjects ?? []).filter(s => s.id !== this.subject!.id);
+          this.availableSubjects = (subjects ?? []).filter(s =>
+            s.id !== this.subject!.id
+            && s.gradeId === this.subject!.gradeId
+          );
+          this.studentsError = this.availableSubjects.length
+            ? ''
+            : `No other subjects are available for ${this.subject?.gradeName || 'this grade'}.`;
         },
       });
+      return;
     }
+
+    this.availableSubjects = this.availableSubjects.filter(s => s.gradeId === this.subject?.gradeId);
+    this.studentsError = this.availableSubjects.length
+      ? ''
+      : `No other subjects are available for ${this.subject?.gradeName || 'this grade'}.`;
   }
 
   cancelTransfer() {
@@ -450,6 +463,7 @@ export class SubjectDetail implements OnInit {
           phone: s.userPhone,
           studentId: s.studentNumber ?? null,
         }));
+        this.syncSubjectStudentCount();
         this.selectedAssignedStudentIds = [];
         this.currentPage = 1;
       },
@@ -574,5 +588,15 @@ export class SubjectDetail implements OnInit {
     const idsToRemove = new Set(studentIds);
     this.assignedStudents = this.assignedStudents.filter(student => !idsToRemove.has(student.id));
     this.selectedAssignedStudentIds = this.selectedAssignedStudentIds.filter(id => !idsToRemove.has(id));
+    this.syncSubjectStudentCount();
+  }
+
+  private syncSubjectStudentCount() {
+    if (this.subject) {
+      this.subject = {
+        ...this.subject,
+        studentCount: this.assignedStudents.length,
+      };
+    }
   }
 }

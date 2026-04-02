@@ -10,5 +10,6 @@ export interface SchoolSubject {
   gradeName?: string | null;
   teacherId: number | null;
   teacherName?: string | null;
+  studentCount?: number | null;
   status: Status | null;
 }

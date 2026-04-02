@@ -6,7 +6,23 @@
     </div>
     <div class="header-actions">
       <a class="import-btn" routerLink="/admin/subjects/import"><i class="fa-solid fa-file-import"></i> Import</a>
+      <button class="export-btn" type="button" [disabled]="filteredSubjects.length === 0" (click)="exportSubjects()"><i class="fa-solid fa-file-excel"></i> Export</button>
       <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Subjects</h4>
+      <p>{{ totalSubjects }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Active Subjects</h4>
+      <p>{{ activeSubjectsCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Inactive Subjects</h4>
+      <p>{{ inactiveSubjectsCount }}</p>
     </div>
   </div>
 
@@ -52,6 +68,7 @@
           <th>Subject</th>
           <th>Grade</th>
           <th>Teacher</th>
+          <th>Students</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -59,7 +76,7 @@
       <tbody>
         @if (isLoading) {
           <tr>
-            <td colspan="6">Loading subject options...</td>
+            <td colspan="7">Loading subject options...</td>
           </tr>
         }
         @for (subject of paginatedSubjects; track subject.id ?? (subject.code + subject.name)) {
@@ -68,17 +85,21 @@
             <td>{{ subject.name }}</td>
             <td>{{ subject.gradeName || 'N/A' }}</td>
             <td>{{ subject.teacherName || 'N/A' }}</td>
+            <td>{{ subject.studentCount ?? 0 }}</td>
             <td><span class="badge" [class.active]="getStatusLabel(subject.status) === 'Active'" [class.inactive]="getStatusLabel(subject.status) === 'Inactive'">{{ getStatusLabel(subject.status) }}</span></td>
             <td class="actions">
               <button class="view-btn" (click)="viewSubject(subject)"><i class="fa-solid fa-eye"></i></button>
               <button class="edit-btn" (click)="openForm(subject)"><i class="fa-solid fa-pen"></i></button>
+              <button class="status-btn" (click)="toggleStatus(subject)">
+                {{ getStatusLabel(subject.status) === 'Active' ? 'Deactivate' : 'Activate' }}
+              </button>
               <button class="delete-btn" (click)="deleteSubject(subject)"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>
         }
         @if (!isLoading && filteredSubjects.length === 0) {
           <tr>
-            <td colspan="6">No subjects match the current search, filters, or sort.</td>
+            <td colspan="7">No subjects match the current search, filters, or sort.</td>
           </tr>
         }
       </tbody>
@@ -120,4 +141,38 @@
     [teacherOptions]="teacherOptions"
     (closed)="closeForm()"
     (saved)="onSaved($event)" />
+}
+
+@if (showDeleteDialog && subjectToDelete) {
+  <div class="confirm-overlay" (click)="cancelDeleteSubject()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete Subject</h3>
+      <p>Are you sure you want to delete <strong>{{ subjectToDelete.name }}</strong> ({{ subjectToDelete.code }})?</p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelDeleteSubject()">Cancel</button>
+        <button type="button" class="delete-confirm-btn" [disabled]="isProcessing" (click)="confirmDeleteSubject()">
+          {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showStatusDialog && subjectToToggleStatus) {
+  <div class="confirm-overlay" (click)="cancelToggleStatus()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>{{ pendingStatus === Status.INACTIVE ? 'Deactivate Subject' : 'Activate Subject' }}</h3>
+      <p>
+        Are you sure you want to
+        <strong>{{ pendingStatus === Status.INACTIVE ? 'deactivate' : 'activate' }}</strong>
+        <strong>{{ subjectToToggleStatus.name }}</strong> ({{ subjectToToggleStatus.code }})?
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelToggleStatus()">Cancel</button>
+        <button type="button" class="status-confirm-btn" [disabled]="isProcessing" (click)="confirmToggleStatus()">
+          {{ isProcessing ? 'Saving...' : (pendingStatus === Status.INACTIVE ? 'Deactivate' : 'Activate') }}
+        </button>
+      </div>
+    </div>
+  </div>
 }

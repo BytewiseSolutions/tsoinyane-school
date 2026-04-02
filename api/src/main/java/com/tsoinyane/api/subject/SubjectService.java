@@ -19,13 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -60,6 +55,28 @@ public class SubjectService {
         List<Student> students = studentIds == null || studentIds.isEmpty()
                 ? List.of()
                 : studentRepository.findAllById(studentIds);
+
+        if (studentIds != null && students.size() != studentIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more selected students were not found");
+        }
+
+        Long subjectSchoolId = subject.getSchool() != null ? subject.getSchool().getId() : null;
+        Long subjectGradeId = subject.getGrade() != null ? subject.getGrade().getId() : null;
+
+        boolean hasInvalidStudent = students.stream().anyMatch(student -> {
+            Long studentSchoolId = student.getSchool() != null ? student.getSchool().getId() : null;
+            Long studentGradeId = student.getGrade() != null ? student.getGrade().getId() : null;
+
+            return !java.util.Objects.equals(studentSchoolId, subjectSchoolId)
+                    || !java.util.Objects.equals(studentGradeId, subjectGradeId);
+        });
+
+        if (hasInvalidStudent) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Students assigned to a subject must belong to the same school and grade as that subject"
+            );
+        }
 
         subject.setStudents(new java.util.LinkedHashSet<>(students));
         subjectRepository.save(subject);
@@ -160,144 +177,6 @@ public class SubjectService {
     }
 
     @Transactional
-    public SubjectImportResult importSubjects(MultipartFile file, Long schoolId) {
-        if (file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is empty");
-        }
-
-        if (!file.getOriginalFilename().toLowerCase().endsWith(".csv")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only CSV files are supported");
-        }
-
-        School school = resolveSchool(schoolId);
-        User actor = currentUserService.getCurrentUser();
-        
-        List<String> errors = new ArrayList<>();
-        int totalRows = 0;
-        int successfulImports = 0;
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            boolean isFirstLine = true;
-            int rowNumber = 0;
-
-            while ((line = reader.readLine()) != null) {
-                rowNumber++;
-                
-                if (isFirstLine) {
-                    isFirstLine = false;
-                    continue; // Skip header row
-                }
-
-                totalRows++;
-                String[] columns = parseCSVLine(line);
-
-                if (columns.length < 5) {
-                    errors.add("Row " + rowNumber + ": Invalid number of columns. Expected 5, got " + columns.length);
-                    continue;
-                }
-
-                try {
-                    String code = normalize(columns[0]);
-                    String name = normalize(columns[1]);
-                    String gradeName = normalize(columns[2]);
-                    String teacherName = normalize(columns[3]);
-                    String statusStr = normalize(columns[4]);
-
-                    if (code.isBlank()) {
-                        errors.add("Row " + rowNumber + ": Subject code is required");
-                        continue;
-                    }
-
-                    if (name.isBlank()) {
-                        errors.add("Row " + rowNumber + ": Subject name is required");
-                        continue;
-                    }
-
-                    // Check if subject code already exists
-                    if (subjectRepository.existsByCodeAndSchoolId(code, schoolId)) {
-                        errors.add("Row " + rowNumber + ": Subject code '" + code + "' already exists");
-                        continue;
-                    }
-
-                    // Find grade by name
-                    Grade grade = gradeRepository.findByNameAndSchoolId(gradeName, schoolId)
-                            .orElse(null);
-                    if (grade == null) {
-                        errors.add("Row " + rowNumber + ": Grade '" + gradeName + "' not found");
-                        continue;
-                    }
-
-                    // Find teacher by name
-                    Teacher teacher = teacherRepository.findByUserFullNameAndSchoolId(teacherName, schoolId)
-                            .orElse(null);
-                    if (teacher == null) {
-                        errors.add("Row " + rowNumber + ": Teacher '" + teacherName + "' not found");
-                        continue;
-                    }
-
-                    // Parse status
-                    Status status;
-                    try {
-                        status = Status.valueOf(statusStr.toUpperCase());
-                    } catch (IllegalArgumentException e) {
-                        status = Status.ACTIVE; // Default to ACTIVE if invalid
-                    }
-
-                    // Create subject
-                    Subject subject = Subject.builder()
-                            .code(code)
-                            .name(name)
-                            .school(school)
-                            .grade(grade)
-                            .teacher(teacher)
-                            .status(status)
-                            .createdBy(actor)
-                            .updatedBy(actor)
-                            .build();
-
-                    subjectRepository.save(subject);
-                    successfulImports++;
-
-                } catch (Exception e) {
-                    errors.add("Row " + rowNumber + ": " + e.getMessage());
-                }
-            }
-
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process CSV file: " + e.getMessage());
-        }
-
-        return SubjectImportResult.builder()
-                .totalRows(totalRows)
-                .successfulImports(successfulImports)
-                .errors(errors)
-                .build();
-    }
-
-    private String[] parseCSVLine(String line) {
-        List<String> result = new ArrayList<>();
-        boolean inQuotes = false;
-        StringBuilder currentField = new StringBuilder();
-        
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            
-            if (c == '"') {
-                inQuotes = !inQuotes;
-            } else if (c == ',' && !inQuotes) {
-                result.add(currentField.toString());
-                currentField = new StringBuilder();
-            } else {
-                currentField.append(c);
-            }
-        }
-        
-        result.add(currentField.toString());
-        return result.toArray(new String[0]);
-    }
-
-    @Transactional
     public void deleteSubject(Long id) {
         if (!subjectRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + id);
@@ -379,6 +258,7 @@ public class SubjectService {
                 .gradeName(grade != null ? grade.getName() : null)
                 .teacherId(teacher != null ? teacher.getId() : null)
                 .teacherName(teacher != null && teacher.getUser() != null ? teacher.getUser().getDisplayName() : null)
+                .studentCount(subject.getStudents() != null ? subject.getStudents().size() : 0)
                 .status(subject.getStatus())
                 .createdById(subject.getCreatedBy() != null ? subject.getCreatedBy().getId() : null)
                 .createdByName(subject.getCreatedBy() != null ? subject.getCreatedBy().getDisplayName() : null)
