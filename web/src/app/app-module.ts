@@ -39,6 +39,7 @@ import { Profile } from './admin/profile/profile';
 import { Reports } from './admin/reports/reports';
 import { Fees } from './admin/fees/fees';
 import { FeeStructureForm } from './admin/fees/fee-structure-form/fee-structure-form';
+import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
 import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
 import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
 import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
@@ -88,6 +89,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     Reports,
     Fees,
     FeeStructureForm,
+    FeeStructureDetail,
     MySubjects,
     MyTimetable,
     MyLessons,

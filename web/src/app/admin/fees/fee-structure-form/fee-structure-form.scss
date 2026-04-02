@@ -127,6 +127,21 @@
   }
 }
 
+.calculated-value {
+  border: 1px solid #ccd6f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy-blue);
+  background: #f8fbff;
+}
+
+.school-fee-total {
+  align-content: start;
+}
+
 .helper-text {
   color: #5f6e8f;
   font-size: 12px;

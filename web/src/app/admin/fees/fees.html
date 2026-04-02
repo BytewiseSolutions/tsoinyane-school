@@ -13,20 +13,20 @@
 
   <div class="summary-grid">
     <div class="summary-card">
-      <h4>Total Structures</h4>
-      <p>{{ totalStructures }}</p>
-    </div>
-    <div class="summary-card">
-      <h4>Registration Fees</h4>
-      <p>{{ totalRegistrationFees | number:'1.2-2' }}</p>
+      <h4>Registration Fee</h4>
+      <p>{{ summaryRegistrationFee }}</p>
     </div>
     <div class="summary-card">
       <h4>School Fees</h4>
-      <p>{{ totalSchoolFees | number:'1.2-2' }}</p>
+      <p>{{ summarySchoolFee }}</p>
     </div>
     <div class="summary-card">
       <h4>Exam Fees</h4>
-      <p>{{ totalExamFees | number:'1.2-2' }}</p>
+      <p>{{ summaryExamFee }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Display Term</h4>
+      <p>{{ summaryTermLabel }}</p>
     </div>
   </div>
 
@@ -63,35 +63,36 @@
 
     @if (isLoading) {
       <div class="empty-state">Loading fee structures...</div>
-    } @else if (filteredStructures.length > 0) {
+    } @else if (filteredRows.length > 0) {
       <table>
         <thead>
           <tr>
-            <th>Grade</th>
             <th>Term</th>
+            <th>Grade</th>
             <th>Academic Year</th>
             <th>Registration Fee</th>
             <th>School Fees</th>
             <th>Exam Fee</th>
-            <th>Total</th>
-            <th>Description</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (structure of filteredStructures; track structure.id) {
+          @for (row of filteredRows; track row.term + '-' + row.academicYear + '-' + row.gradeLabel + '-' + row.registrationFee + '-' + row.schoolFee + '-' + row.examFee) {
             <tr>
-              <td>{{ structure.gradeName || 'N/A' }}</td>
-              <td>{{ getTermLabel(structure.term) }}</td>
-              <td>{{ structure.academicYear }}</td>
-              <td>{{ structure.registrationFee | number:'1.2-2' }}</td>
-              <td>{{ structure.schoolFee | number:'1.2-2' }}</td>
-              <td>{{ structure.examFee | number:'1.2-2' }}</td>
-              <td class="total-cell">{{ structure.totalAmount | number:'1.2-2' }}</td>
-              <td>{{ structure.description || 'N/A' }}</td>
+              <td>{{ getTermLabel(row.term) }}</td>
+              <td>{{ row.gradeLabel }}</td>
+              <td>{{ row.academicYear }}</td>
+              <td>{{ row.registrationFee | number:'1.2-2' }}</td>
+              <td>{{ row.schoolFee | number:'1.2-2' }}</td>
+              <td>{{ row.examFee | number:'1.2-2' }}</td>
               <td class="actions">
-                <button class="action-btn edit" type="button" (click)="openForm(structure)">Edit</button>
-                <button class="action-btn danger" type="button" (click)="confirmDelete(structure)">Delete</button>
+                @if (canView(row)) {
+                  <button class="action-btn view" type="button" [routerLink]="['/admin/fees', row.primaryStructureId]">View</button>
+                }
+                @if (canManageRow(row) && getPrimaryStructure(row); as primaryStructure) {
+                  <button class="action-btn edit" type="button" (click)="openForm(primaryStructure)">Edit</button>
+                  <button class="action-btn danger" type="button" (click)="confirmDelete(primaryStructure)">Delete</button>
+                }
               </td>
             </tr>
           }

@@ -3,8 +3,7 @@ import { Grade } from '../../grades/grade';
 import { Term } from '../../settings/term';
 import { FeeStructure } from '../fee-structure';
 import { FeeStructureFormSubmission } from '../fee-structure-form-submission';
-
-const SELECT_ALL_GRADES_ID = -1;
+import { FeeType } from '../fee-type';
 
 @Component({
   selector: 'app-fee-structure-form',
@@ -21,6 +20,11 @@ export class FeeStructureForm implements OnInit {
   @Output() saved = new EventEmitter<FeeStructureFormSubmission>();
 
   readonly termOptions = [Term.TERM_1, Term.TERM_2, Term.TERM_3, Term.TERM_4];
+  readonly feeTypeOptions: Array<{ value: FeeType; label: string }> = [
+    { value: FeeType.REGISTRATION_FEE, label: 'Registration Fee' },
+    { value: FeeType.SCHOOL_FEES, label: 'School Fees' },
+    { value: FeeType.EXAM_FEE, label: 'Exam Fee' },
+  ];
 
   feeStructure: FeeStructure = {
     schoolId: null,
@@ -29,20 +33,15 @@ export class FeeStructureForm implements OnInit {
     academicYear: '',
     registrationFee: 0,
     schoolFee: 0,
+    foodFee: 0,
+    booksFee: 0,
+    generalFee: 0,
     examFee: 0,
-    description: '',
+    description: null,
   };
   selectedGradeIds: number[] = [];
-
-  get gradeSelectionOptions(): Array<{ id: number; name: string }> {
-    return [
-      { id: SELECT_ALL_GRADES_ID, name: 'All Grades' },
-      ...this.gradeOptions.map(grade => ({
-        id: grade.id ?? 0,
-        name: grade.name,
-      })).filter(grade => grade.id > 0),
-    ];
-  }
+  selectedFeeType: FeeType = FeeType.REGISTRATION_FEE;
+  amount = 0;
 
   ngOnInit(): void {
     if (this.existingStructure) {
@@ -50,20 +49,23 @@ export class FeeStructureForm implements OnInit {
         ...this.existingStructure,
         registrationFee: this.existingStructure.registrationFee ?? 0,
         schoolFee: this.existingStructure.schoolFee ?? 0,
+        foodFee: this.existingStructure.foodFee ?? 0,
+        booksFee: this.existingStructure.booksFee ?? 0,
+        generalFee: this.existingStructure.generalFee ?? 0,
         examFee: this.existingStructure.examFee ?? 0,
       };
       this.selectedGradeIds = this.existingStructure.gradeId ? [this.existingStructure.gradeId] : [];
+      this.initializeFeeTypeAndAmount();
       return;
     }
 
     this.feeStructure.schoolId = this.selectedSchoolId;
     this.feeStructure.schoolName = this.selectedSchoolName || null;
+    this.syncSelectedGradeIds();
   }
 
   get totalAmount(): number {
-    return (this.feeStructure.registrationFee ?? 0)
-      + (this.feeStructure.schoolFee ?? 0)
-      + (this.feeStructure.examFee ?? 0);
+    return Number(this.amount ?? 0);
   }
 
   getTermLabel(term: Term | null | undefined): string {
@@ -74,38 +76,26 @@ export class FeeStructureForm implements OnInit {
     return !!this.existingStructure?.id;
   }
 
-  onGradeSelectionChange(selectedIds: number[] | null): void {
-    const ids = selectedIds ?? [];
-
-    if (this.isEditMode) {
-      this.selectedGradeIds = ids;
-      this.feeStructure.gradeId = ids[0] ?? null;
-      return;
-    }
-
-    if (ids.includes(SELECT_ALL_GRADES_ID)) {
-      this.selectedGradeIds = this.gradeOptions
-        .map(grade => grade.id ?? 0)
-        .filter(id => id > 0);
-    } else {
-      this.selectedGradeIds = ids.filter(id => id > 0);
+  get feeTypeHelperText(): string {
+    switch (this.selectedFeeType) {
+      case FeeType.REGISTRATION_FEE:
+        return 'This will apply to all grades.';
+      case FeeType.SCHOOL_FEES:
+        return 'This will apply to all grades.';
+      case FeeType.EXAM_FEE:
+        return 'This will apply to Grade 11 only.';
+      default:
+        return '';
     }
   }
 
-  get selectedGradesLabel(): string {
-    if (!this.selectedGradeIds.length) {
-      return 'No grades selected';
-    }
-
-    if (this.selectedGradeIds.length === this.gradeOptions.length) {
-      return 'All grades selected';
-    }
-
-    return `${this.selectedGradeIds.length} grade${this.selectedGradeIds.length === 1 ? '' : 's'} selected`;
+  onFeeTypeChange(): void {
+    this.syncSelectedGradeIds();
   }
 
   onSubmit(): void {
     const academicYear = this.feeStructure.academicYear.trim();
+    this.syncSelectedGradeIds();
 
     if (!this.selectedSchoolId || !this.selectedGradeIds.length || !this.feeStructure.term || !academicYear) {
       return;
@@ -115,6 +105,23 @@ export class FeeStructureForm implements OnInit {
       ? (this.selectedGradeIds[0] ?? null)
       : (this.selectedGradeIds[0] ?? null);
     const selectedGrade = this.gradeOptions.find(grade => grade.id === primaryGradeId);
+    const normalizedAmount = Number(this.amount ?? 0);
+
+    let registrationFee = 0;
+    let schoolFee = 0;
+    let examFee = 0;
+    let foodFee = 0;
+    let booksFee = 0;
+    let generalFee = 0;
+
+    if (this.selectedFeeType === FeeType.REGISTRATION_FEE) {
+      registrationFee = normalizedAmount;
+    } else if (this.selectedFeeType === FeeType.SCHOOL_FEES) {
+      schoolFee = normalizedAmount;
+      generalFee = normalizedAmount;
+    } else if (this.selectedFeeType === FeeType.EXAM_FEE) {
+      examFee = normalizedAmount;
+    }
 
     this.saved.emit({
       feeStructure: {
@@ -124,11 +131,14 @@ export class FeeStructureForm implements OnInit {
         gradeId: primaryGradeId,
         gradeName: selectedGrade?.name ?? null,
         academicYear,
-        registrationFee: Number(this.feeStructure.registrationFee ?? 0),
-        schoolFee: Number(this.feeStructure.schoolFee ?? 0),
-        examFee: Number(this.feeStructure.examFee ?? 0),
+        registrationFee,
+        schoolFee,
+        foodFee,
+        booksFee,
+        generalFee,
+        examFee,
         totalAmount: this.totalAmount,
-        description: this.feeStructure.description?.trim() || null,
+        description: null,
       },
       selectedGradeIds: [...this.selectedGradeIds],
     });
@@ -137,5 +147,54 @@ export class FeeStructureForm implements OnInit {
 
   close(): void {
     this.closed.emit();
+  }
+
+  private initializeFeeTypeAndAmount(): void {
+    const registrationFee = Number(this.feeStructure.registrationFee ?? 0);
+    const schoolFee = Number(this.feeStructure.schoolFee ?? 0);
+    const examFee = Number(this.feeStructure.examFee ?? 0);
+
+    if (registrationFee > 0) {
+      this.selectedFeeType = FeeType.REGISTRATION_FEE;
+      this.amount = registrationFee;
+      return;
+    }
+
+    if (examFee > 0) {
+      this.selectedFeeType = FeeType.EXAM_FEE;
+      this.amount = examFee;
+      return;
+    }
+
+    this.selectedFeeType = FeeType.SCHOOL_FEES;
+    this.amount = schoolFee;
+  }
+
+  private syncSelectedGradeIds(): void {
+    if (this.isEditMode) {
+      this.selectedGradeIds = this.existingStructure?.gradeId ? [this.existingStructure.gradeId] : [];
+      return;
+    }
+
+    if (this.selectedFeeType === FeeType.EXAM_FEE) {
+      this.selectedGradeIds = this.gradeOptions
+        .filter(grade => this.isGrade11(grade))
+        .map(grade => grade.id ?? 0)
+        .filter(id => id > 0);
+      return;
+    }
+
+    this.selectedGradeIds = this.gradeOptions
+      .map(grade => grade.id ?? 0)
+      .filter(id => id > 0);
+  }
+
+  private isGrade11(grade: Grade | undefined): boolean {
+    if (!grade?.name) {
+      return false;
+    }
+
+    const digitsOnly = grade.name.replace(/[^0-9]/g, '');
+    return digitsOnly === '11';
   }
 }

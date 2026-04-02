@@ -37,6 +37,18 @@ public class FeeStructureDto {
     @DecimalMin(value = "0.00", message = "School fee cannot be negative")
     private Double schoolFee;
 
+    @NotNull(message = "Food fee is required")
+    @DecimalMin(value = "0.00", message = "Food fee cannot be negative")
+    private Double foodFee;
+
+    @NotNull(message = "Books fee is required")
+    @DecimalMin(value = "0.00", message = "Books fee cannot be negative")
+    private Double booksFee;
+
+    @NotNull(message = "General fee is required")
+    @DecimalMin(value = "0.00", message = "General fee cannot be negative")
+    private Double generalFee;
+
     @NotNull(message = "Exam fee is required")
     @DecimalMin(value = "0.00", message = "Exam fee cannot be negative")
     private Double examFee;

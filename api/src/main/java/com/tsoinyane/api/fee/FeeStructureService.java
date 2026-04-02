@@ -43,17 +43,28 @@ public class FeeStructureService {
         School school = resolveSchool(request.getSchoolId());
         Grade grade = resolveGrade(request.getGradeId(), school.getId());
         String academicYear = normalizeAcademicYear(request.getAcademicYear());
-        validateRequest(request, school.getId(), grade.getId(), null, academicYear);
+        validateRequest(request, school.getId(), grade, null, academicYear);
         User actor = currentUserService.getCurrentUser();
+
+        double registrationFee = normalizeRegistrationFee(request.getRegistrationFee(), request.getTerm());
+        double foodFee = normalizeAmount(request.getFoodFee(), "Food fee");
+        double booksFee = normalizeAmount(request.getBooksFee(), "Books fee");
+        double generalFee = normalizeAmount(request.getGeneralFee(), "General fee");
+        double schoolFee = calculateSchoolFee(foodFee, booksFee, generalFee);
+        double examFee = normalizeExamFee(request.getExamFee(), grade, request.getTerm());
 
         FeeStructure feeStructure = FeeStructure.builder()
                 .school(school)
                 .grade(grade)
                 .term(request.getTerm())
                 .academicYear(academicYear)
-                .registrationFee(normalizeAmount(request.getRegistrationFee(), "Registration fee"))
-                .schoolFee(normalizeAmount(request.getSchoolFee(), "School fee"))
-                .examFee(normalizeAmount(request.getExamFee(), "Exam fee"))
+                .registrationFee(registrationFee)
+                .schoolFee(schoolFee)
+                .foodFee(foodFee)
+                .booksFee(booksFee)
+                .generalFee(generalFee)
+                .examFee(examFee)
+                .amount(calculateTotalAmount(registrationFee, schoolFee, examFee))
                 .description(normalizeDescription(request.getDescription()))
                 .createdBy(actor)
                 .updatedBy(actor)
@@ -71,16 +82,26 @@ public class FeeStructureService {
         School school = resolveSchool(request.getSchoolId());
         Grade grade = resolveGrade(request.getGradeId(), school.getId());
         String academicYear = normalizeAcademicYear(request.getAcademicYear());
-        validateRequest(request, school.getId(), grade.getId(), id, academicYear);
+        validateRequest(request, school.getId(), grade, id, academicYear);
         User actor = currentUserService.getCurrentUser();
+        double registrationFee = normalizeRegistrationFee(request.getRegistrationFee(), request.getTerm());
+        double foodFee = normalizeAmount(request.getFoodFee(), "Food fee");
+        double booksFee = normalizeAmount(request.getBooksFee(), "Books fee");
+        double generalFee = normalizeAmount(request.getGeneralFee(), "General fee");
+        double schoolFee = calculateSchoolFee(foodFee, booksFee, generalFee);
+        double examFee = normalizeExamFee(request.getExamFee(), grade, request.getTerm());
 
         existing.setSchool(school);
         existing.setGrade(grade);
         existing.setTerm(request.getTerm());
         existing.setAcademicYear(academicYear);
-        existing.setRegistrationFee(normalizeAmount(request.getRegistrationFee(), "Registration fee"));
-        existing.setSchoolFee(normalizeAmount(request.getSchoolFee(), "School fee"));
-        existing.setExamFee(normalizeAmount(request.getExamFee(), "Exam fee"));
+        existing.setRegistrationFee(registrationFee);
+        existing.setSchoolFee(schoolFee);
+        existing.setFoodFee(foodFee);
+        existing.setBooksFee(booksFee);
+        existing.setGeneralFee(generalFee);
+        existing.setExamFee(examFee);
+        existing.setAmount(calculateTotalAmount(registrationFee, schoolFee, examFee));
         existing.setDescription(normalizeDescription(request.getDescription()));
         existing.setUpdatedBy(actor);
 
@@ -95,16 +116,27 @@ public class FeeStructureService {
         feeStructureRepository.delete(existing);
     }
 
-    private void validateRequest(FeeStructureDto request, Long schoolId, Long gradeId, Long existingId, String academicYear) {
+    private void validateRequest(FeeStructureDto request, Long schoolId, Grade grade, Long existingId, String academicYear) {
         if (request.getTerm() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Term is required");
         }
 
-        normalizeAmount(request.getRegistrationFee(), "Registration fee");
-        normalizeAmount(request.getSchoolFee(), "School fee");
-        normalizeAmount(request.getExamFee(), "Exam fee");
+        normalizeRegistrationFee(request.getRegistrationFee(), request.getTerm());
+        double foodFee = normalizeAmount(request.getFoodFee(), "Food fee");
+        double booksFee = normalizeAmount(request.getBooksFee(), "Books fee");
+        double generalFee = normalizeAmount(request.getGeneralFee(), "General fee");
+        double expectedSchoolFee = calculateSchoolFee(foodFee, booksFee, generalFee);
+        double requestSchoolFee = normalizeAmount(request.getSchoolFee(), "School fee");
+        double examFee = normalizeExamFee(request.getExamFee(), grade, request.getTerm());
 
-        feeStructureRepository.findBySchoolIdAndGradeIdAndTermAndAcademicYear(schoolId, gradeId, request.getTerm(), academicYear)
+        if (Double.compare(expectedSchoolFee, requestSchoolFee) != 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "School fee must equal the sum of Food fee, Books fee, and General fee"
+            );
+        }
+
+        feeStructureRepository.findBySchoolIdAndGradeIdAndTermAndAcademicYear(schoolId, grade.getId(), request.getTerm(), academicYear)
                 .ifPresent(existing -> {
                     if (existingId == null || !existing.getId().equals(existingId)) {
                         throw new ResponseStatusException(
@@ -168,11 +200,70 @@ public class FeeStructureService {
         return Math.round(value * 100.0) / 100.0;
     }
 
+    private Double normalizeRegistrationFee(Double value, Term term) {
+        double registrationFee = normalizeAmount(value, "Registration fee");
+
+        if (term != Term.TERM_1) {
+            if (registrationFee > 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Registration fee is a once-off annual charge and can only be set in Term 1"
+                );
+            }
+            return 0.0;
+        }
+
+        return registrationFee;
+    }
+
+    private Double normalizeExamFee(Double value, Grade grade, Term term) {
+        double examFee = normalizeAmount(value, "Exam fee");
+
+        if (!isGrade11(grade)) {
+            if (examFee > 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exam fee only applies to Grade 11");
+            }
+            return 0.0;
+        }
+
+        if (term != Term.TERM_2) {
+            if (examFee > 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Exam fee for Grade 11 can only be set in Term 2"
+                );
+            }
+            return 0.0;
+        }
+
+        return examFee;
+    }
+
+    private boolean isGrade11(Grade grade) {
+        if (grade == null || grade.getName() == null) {
+            return false;
+        }
+
+        String digitsOnly = grade.getName().replaceAll("[^0-9]", "");
+        return "11".equals(digitsOnly);
+    }
+
+    private Double calculateSchoolFee(double foodFee, double booksFee, double generalFee) {
+        return Math.round((foodFee + booksFee + generalFee) * 100.0) / 100.0;
+    }
+
+    private Double calculateTotalAmount(double registrationFee, double schoolFee, double examFee) {
+        return Math.round((registrationFee + schoolFee + examFee) * 100.0) / 100.0;
+    }
+
     private FeeStructureDto toDto(FeeStructure feeStructure) {
         School school = feeStructure.getSchool();
         Grade grade = feeStructure.getGrade();
         double registrationFee = feeStructure.getRegistrationFee() != null ? feeStructure.getRegistrationFee() : 0.0;
         double schoolFee = feeStructure.getSchoolFee() != null ? feeStructure.getSchoolFee() : 0.0;
+        double foodFee = feeStructure.getFoodFee() != null ? feeStructure.getFoodFee() : 0.0;
+        double booksFee = feeStructure.getBooksFee() != null ? feeStructure.getBooksFee() : 0.0;
+        double generalFee = feeStructure.getGeneralFee() != null ? feeStructure.getGeneralFee() : 0.0;
         double examFee = feeStructure.getExamFee() != null ? feeStructure.getExamFee() : 0.0;
 
         return FeeStructureDto.builder()
@@ -186,6 +277,9 @@ public class FeeStructureService {
                 .academicYear(feeStructure.getAcademicYear())
                 .registrationFee(registrationFee)
                 .schoolFee(schoolFee)
+                .foodFee(foodFee)
+                .booksFee(booksFee)
+                .generalFee(generalFee)
                 .examFee(examFee)
                 .description(feeStructure.getDescription())
                 .totalAmount(registrationFee + schoolFee + examFee)

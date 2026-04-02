@@ -1,0 +1,5 @@
+export enum FeeType {
+  REGISTRATION_FEE = 'REGISTRATION_FEE',
+  SCHOOL_FEES = 'SCHOOL_FEES',
+  EXAM_FEE = 'EXAM_FEE',
+}

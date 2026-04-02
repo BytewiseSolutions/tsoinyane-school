@@ -51,8 +51,20 @@ public class FeeStructure extends BaseEntity {
     @Column(name = "school_fee", nullable = false)
     private Double schoolFee;
 
+    @Column(name = "food_fee")
+    private Double foodFee;
+
+    @Column(name = "books_fee")
+    private Double booksFee;
+
+    @Column(name = "general_fee")
+    private Double generalFee;
+
     @Column(name = "exam_fee", nullable = false)
     private Double examFee;
+
+    @Column(nullable = false)
+    private Double amount;
 
     @Column(length = 500)
     private String description;

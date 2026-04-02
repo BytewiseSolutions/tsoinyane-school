@@ -1,0 +1,79 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <a class="back-link" routerLink="/admin/fees">
+        <i class="fa-solid fa-arrow-left"></i>
+        Back To Fees
+      </a>
+      <h2>Fee Structure Details</h2>
+      <p>View the selected fee structure and its school fee breakdown.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="table-card empty-state">Loading fee structure details...</div>
+  } @else if (errorMessage) {
+    <div class="table-card error-card">{{ errorMessage }}</div>
+  } @else if (feeStructure) {
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>Grade</h4>
+        <p>{{ feeStructure.gradeName || 'N/A' }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Term</h4>
+        <p>{{ getTermLabel(feeStructure.term) }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Registration Fee</h4>
+        <p>{{ feeStructure.registrationFee | number:'1.2-2' }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Exam Fee</h4>
+        <p>{{ feeStructure.examFee | number:'1.2-2' }}</p>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="table-card detail-card">
+        <h3>School Fee Breakdown</h3>
+        <div class="breakdown-list">
+          <div class="breakdown-item">
+            <span>Food</span>
+            <strong>{{ feeStructure.foodFee | number:'1.2-2' }}</strong>
+          </div>
+          <div class="breakdown-item">
+            <span>Books</span>
+            <strong>{{ feeStructure.booksFee | number:'1.2-2' }}</strong>
+          </div>
+          <div class="breakdown-item">
+            <span>General Fee</span>
+            <strong>{{ feeStructure.generalFee | number:'1.2-2' }}</strong>
+          </div>
+          <div class="breakdown-item total">
+            <span>School Fees Total</span>
+            <strong>{{ feeStructure.schoolFee | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card detail-card">
+        <h3>Fee Summary</h3>
+        <div class="meta-list">
+          <div class="meta-item">
+            <span>Academic Year</span>
+            <strong>{{ feeStructure.academicYear }}</strong>
+          </div>
+          <div class="meta-item">
+            <span>Total Amount</span>
+            <strong>{{ feeStructure.totalAmount | number:'1.2-2' }}</strong>
+          </div>
+          <div class="meta-item">
+            <span>Description</span>
+            <strong>{{ feeStructure.description || 'N/A' }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
