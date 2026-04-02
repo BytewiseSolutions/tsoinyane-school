@@ -16,6 +16,7 @@ import { UserImportComponent } from './admin/users/import/import';
 import { UserDetails } from './admin/users/user-details/user-details';
 import { AdminSubjects } from './admin/subjects/subjects';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
+import { SubjectsImport } from './admin/subjects/import/import';
 import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
 import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { AdminGrades } from './admin/grades/grades';
@@ -58,6 +59,7 @@ const routes: Routes = [
       { path: 'grades', component: AdminGrades, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'grades/import', component: GradeImportComponent, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects', component: AdminSubjects, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'subjects/import', component: SubjectsImport, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects/:id', component: SubjectDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects/:id/timetable/:timetableId', component: TimetableDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },

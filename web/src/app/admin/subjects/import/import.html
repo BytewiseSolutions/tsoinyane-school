@@ -1,0 +1,120 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>Import Subjects</h2>
+      <p>Upload a CSV file to import multiple subjects at once.</p>
+    </div>
+    <div class="header-actions">
+      <button class="back-btn" type="button" (click)="goBack()">
+        <i class="fa-solid fa-arrow-left"></i> Back to Subjects
+      </button>
+    </div>
+  </div>
+
+  @if (!selectedSchoolId) {
+    <div class="alert alert-warning">
+      <i class="fa-solid fa-exclamation-triangle"></i>
+      <span>Select the current school from the top header before importing.</span>
+    </div>
+  } @else {
+    <div class="import-card">
+      <div class="import-section">
+        <h3>Step 1: Download Template</h3>
+        <p>Download the CSV template to see the required format and column headers.</p>
+        <button class="template-btn" type="button" (click)="downloadTemplate()">
+          <i class="fa-solid fa-download"></i> Download Template
+        </button>
+      </div>
+
+      <div class="import-section">
+        <h3>Step 2: Prepare Your Data</h3>
+        <div class="instructions">
+          <h4>CSV Format Requirements:</h4>
+          <ul>
+            <li><strong>Subject Code:</strong> Unique identifier (e.g., MATH-01, ENG-01)</li>
+            <li><strong>Subject Name:</strong> Full name of the subject (e.g., Mathematics, English)</li>
+            <li><strong>Grade Name:</strong> Must match existing grade names exactly</li>
+            <li><strong>Teacher Name:</strong> Must match existing teacher names exactly</li>
+            <li><strong>Status:</strong> Either "ACTIVE" or "INACTIVE"</li>
+          </ul>
+          
+          @if (availableGrades.length > 0) {
+            <div class="reference-data">
+              <h4>Available Grades in {{ selectedSchoolName }}:</h4>
+              <div class="reference-list">
+                @for (grade of availableGrades; track grade.id) {
+                  <span class="reference-item">{{ grade.name }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          @if (availableTeachers.length > 0) {
+            <div class="reference-data">
+              <h4>Available Teachers in {{ selectedSchoolName }}:</h4>
+              <div class="reference-list">
+                @for (teacher of availableTeachers; track teacher.id) {
+                  <span class="reference-item">{{ teacher.userFullName || teacher.userEmail }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="import-section">
+        <h3>Step 3: Upload File</h3>
+        <div class="file-upload">
+          <input
+            type="file"
+            accept=".csv"
+            (change)="onFileSelected($event)"
+            id="fileInput"
+            class="file-input"
+          />
+          <label for="fileInput" class="file-label">
+            <i class="fa-solid fa-cloud-upload-alt"></i>
+            {{ selectedFile ? selectedFile.name : 'Choose CSV file' }}
+          </label>
+        </div>
+
+        @if (selectedFile) {
+          <button
+            class="upload-btn"
+            type="button"
+            (click)="uploadFile()"
+            [disabled]="isUploading"
+          >
+            <i class="fa-solid fa-upload"></i>
+            {{ isUploading ? 'Importing...' : 'Import Subjects' }}
+          </button>
+        }
+      </div>
+
+      @if (errorMessage) {
+        <div class="alert alert-error">
+          <i class="fa-solid fa-exclamation-circle"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+      }
+
+      @if (successMessage) {
+        <div class="alert alert-success">
+          <i class="fa-solid fa-check-circle"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+      }
+
+      @if (importResult && importResult.errors.length > 0) {
+        <div class="import-errors">
+          <h4>Import Errors:</h4>
+          <ul>
+            @for (error of importResult.errors; track error) {
+              <li>{{ error }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -17,4 +17,6 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
 
     @Query("select count(g) from Grade g where (:schoolId is null or g.school.id = :schoolId)")
     long countBySchoolId(@Param("schoolId") Long schoolId);
+
+    Optional<Grade> findByNameAndSchoolId(String name, Long schoolId);
 }

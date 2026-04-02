@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -51,6 +52,13 @@ public class SubjectController {
     @PutMapping("/{id}")
     public SubjectDto updateSubject(@PathVariable Long id, @RequestBody SubjectDto request) {
         return subjectService.updateSubject(id, request);
+    }
+
+    @PostMapping("/import")
+    public SubjectImportResult importSubjects(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("schoolId") Long schoolId) {
+        return subjectService.importSubjects(file, schoolId);
     }
 
     @DeleteMapping("/{id}")

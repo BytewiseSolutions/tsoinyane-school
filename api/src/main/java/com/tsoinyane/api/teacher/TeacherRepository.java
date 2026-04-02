@@ -42,4 +42,13 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
             where t.id = :id
             """)
     Optional<Teacher> findWithUserAndSchoolById(@Param("id") Long id);
+
+    @Query("""
+            select t from Teacher t
+            join fetch t.user u
+            join fetch t.school
+            where concat(u.firstName, ' ', u.lastName) = :fullName
+            and t.school.id = :schoolId
+            """)
+    Optional<Teacher> findByUserFullNameAndSchoolId(@Param("fullName") String fullName, @Param("schoolId") Long schoolId);
 }

@@ -4,7 +4,10 @@
       <h2>Subjects</h2>
       <p>Manage subjects for the currently selected school.</p>
     </div>
-    <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+    <div class="header-actions">
+      <a class="import-btn" routerLink="/admin/subjects/import"><i class="fa-solid fa-file-import"></i> Import</a>
+      <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+    </div>
   </div>
 
   @if (errorMessage) {
