@@ -6,7 +6,7 @@
     <h3>Admin Dashboard</h3>
   </div>
   <div class="header-right">
-    @if (isSystemAdmin) {
+    @if (isSystemAdmin || isSchoolAdmin()) {
       <div class="school-selector">
         <label for="schoolContext">School</label>
         <select id="schoolContext" [(ngModel)]="selectedSchoolId" name="schoolContext" (ngModelChange)="onSchoolChange()">

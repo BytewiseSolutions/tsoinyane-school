@@ -6,6 +6,7 @@ import { Role } from './role';
 import { Status } from './status';
 import { finalize, Subject, takeUntil } from 'rxjs';
 import { SchoolContextService } from '../layout/school-context';
+import { hasRole } from '../../auth/auth-session';
 
 @Component({
   selector: 'app-users',
@@ -303,6 +304,41 @@ export class Users implements OnInit, OnDestroy {
       default:
         return 'Inactive';
     }
+  }
+
+  get availableRoleFilters(): Array<{value: string, label: string}> {
+    const isSystemAdmin = hasRole('SYSTEM_ADMIN');
+    
+    const filters = [{value: 'All', label: 'All Roles'}];
+    
+    if (isSystemAdmin) {
+      filters.push(
+        {value: 'SYSTEM_ADMIN', label: 'System Admin'},
+        {value: 'SCHOOL_ADMIN', label: 'School Admin'}
+      );
+    }
+    
+    filters.push(
+      {value: 'TEACHER', label: 'Teacher'},
+      {value: 'STUDENT', label: 'Student'}
+    );
+    
+    return filters;
+  }
+
+  canEditUser(user: User): boolean {
+    const isSystemAdmin = hasRole('SYSTEM_ADMIN');
+    
+    if (isSystemAdmin) {
+      return true;
+    }
+    
+    const userRoles = this.getUserRoles(user);
+    return !userRoles.includes(Role.SYSTEM_ADMIN) && !userRoles.includes(Role.SCHOOL_ADMIN);
+  }
+
+  canDeleteUser(user: User): boolean {
+    return this.canEditUser(user);
   }
 
   private getUserRoles(user: User): Role[] {

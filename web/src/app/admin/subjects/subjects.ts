@@ -174,6 +174,7 @@ export class AdminSubjects implements OnInit, OnDestroy {
           id: teacher.id ?? 0,
           name: teacher.userFullName || teacher.userEmail || 'Unknown Teacher',
           schoolId: teacher.schoolId ?? null,
+          gradeIds: teacher.gradeIds ?? [],
         })).filter(teacher => teacher.id > 0);
       },
       error: (error: HttpErrorResponse) => {

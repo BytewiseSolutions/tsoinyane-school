@@ -26,7 +26,7 @@ public class CurrentUserService {
 
     public User getCurrentUser() {
         Long userId = getCurrentUserId();
-        return userRepository.findById(userId)
+        return userRepository.findWithSchoolsAndRolesById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
     }
 }

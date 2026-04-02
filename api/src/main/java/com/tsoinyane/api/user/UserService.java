@@ -54,7 +54,30 @@ public class UserService {
     }
 
     public List<UserDto> getUsers(Long schoolId, Role role) {
+        User currentUser = currentUserService.getCurrentUser();
+        boolean isSystemAdmin = currentUser.getRoles() != null && currentUser.getRoles().contains(Role.SYSTEM_ADMIN);
+        
         return userRepository.findAllByOrderByIdAsc().stream()
+                .filter(user -> {
+                    if (isSystemAdmin) {
+                        return true;
+                    }
+                    
+                    if (user.getRoles() != null && user.getRoles().contains(Role.SYSTEM_ADMIN)) {
+                        return false;
+                    }
+                    
+                    if (currentUser.getSchools() != null && !currentUser.getSchools().isEmpty()) {
+                        Set<Long> currentUserSchoolIds = currentUser.getSchools().stream()
+                                .map(School::getId)
+                                .collect(Collectors.toSet());
+                        
+                        return user.getSchools() != null && user.getSchools().stream()
+                                .anyMatch(school -> currentUserSchoolIds.contains(school.getId()));
+                    }
+                    
+                    return false;
+                })
                 .filter(user -> schoolId == null || user.getSchools().stream().anyMatch(s -> s.getId().equals(schoolId)))
                 .filter(user -> role == null || (user.getRoles() != null && user.getRoles().contains(role)))
                 .map(this::toDto)
@@ -93,6 +116,12 @@ public class UserService {
 
     @Transactional
     public UserDto createUser(UserDto request) {
+        User currentUser = currentUserService.getCurrentUser();
+        boolean isSystemAdmin = currentUser.getRoles() != null && currentUser.getRoles().contains(Role.SYSTEM_ADMIN);
+        
+        Set<Role> requestedRoles = resolveRoles(request.getRoles());
+        validateRolePermissions(requestedRoles, isSystemAdmin);
+        
         String normalizedEmail = normalizeEmail(request.getEmail());
         if (normalizedEmail.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
@@ -114,12 +143,12 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Last name is required");
         }
 
-        Set<Role> roles = resolveRoles(request.getRoles());
+        Set<Role> roles = requestedRoles;
         Status status = request.getStatus() != null ? request.getStatus() : Status.ACTIVE;
         String studentId = roles.contains(Role.STUDENT) ? generateNextStudentId() : null;
 
         Set<School> schools = resolveSchools(request.getSchoolIds());
-        User actor = currentUserService.getCurrentUser();
+        User actor = currentUser;
 
         User newUser = User.builder()
                 .studentId(studentId)
@@ -152,8 +181,20 @@ public class UserService {
 
     @Transactional
     public UserDto updateUser(Long id, UserDto request) {
+        User currentUser = currentUserService.getCurrentUser();
+        boolean isSystemAdmin = currentUser.getRoles() != null && currentUser.getRoles().contains(Role.SYSTEM_ADMIN);
+        
         User existingUser = userRepository.findWithSchoolsAndRolesById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Validate role permissions for the requested roles
+        Set<Role> requestedRoles = resolveRoles(request.getRoles());
+        validateRolePermissions(requestedRoles, isSystemAdmin);
+        
+        // School admins cannot edit system admin users
+        if (!isSystemAdmin && existingUser.getRoles() != null && existingUser.getRoles().contains(Role.SYSTEM_ADMIN)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have permission to edit this user");
+        }
 
         String normalizedEmail = normalizeEmail(request.getEmail());
         if (normalizedEmail.isBlank()) {
@@ -181,9 +222,9 @@ public class UserService {
         existingUser.setEmail(normalizedEmail);
         existingUser.setPhone(trimToNull(request.getPhone()));
         existingUser.setStatus(request.getStatus() != null ? request.getStatus() : existingUser.getStatus());
-        existingUser.setUpdatedBy(currentUserService.getCurrentUser());
+        existingUser.setUpdatedBy(currentUser);
 
-        Set<Role> roles = resolveRoles(request.getRoles());
+        Set<Role> roles = requestedRoles;
         existingUser.setRoles(roles);
 
         if (roles.contains(Role.STUDENT)) {
@@ -210,8 +251,16 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
-        User user = userRepository.findById(id)
+        User currentUser = currentUserService.getCurrentUser();
+        boolean isSystemAdmin = currentUser.getRoles() != null && currentUser.getRoles().contains(Role.SYSTEM_ADMIN);
+        
+        User user = userRepository.findWithSchoolsAndRolesById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        
+        if (!isSystemAdmin && user.getRoles() != null && user.getRoles().contains(Role.SYSTEM_ADMIN)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have permission to delete this user");
+        }
+        
         studentRepository.findByUser_Id(id).ifPresent(student -> {
             studentLessonRepository.deleteAllByStudentId(student.getId());
             timetableRepository.deleteStudentAssignments(student.getId());
@@ -439,6 +488,23 @@ public class UserService {
         }
 
         return new LinkedHashSet<>(grades);
+    }
+
+    private void validateRolePermissions(Set<Role> requestedRoles, boolean isSystemAdmin) {
+        if (isSystemAdmin) {
+            // System admins can assign any role
+            return;
+        }
+        
+        // School admins can only assign TEACHER and STUDENT roles
+        for (Role role : requestedRoles) {
+            if (role == Role.SYSTEM_ADMIN || role == Role.SCHOOL_ADMIN) {
+                throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, 
+                    "You don't have permission to assign " + role + " role"
+                );
+            }
+        }
     }
 
     private Set<Role> resolveRoles(List<Role> requestedRoles) {

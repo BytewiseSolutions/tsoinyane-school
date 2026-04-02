@@ -7,6 +7,7 @@ import { Status } from '../status';
 import { Title } from '../title';
 import { SchoolContextService } from '../../layout/school-context';
 import { Grade } from '../../grades/grade';
+import { hasRole } from '../../../auth/auth-session';
 
 @Component({
   selector: 'app-user-form',
@@ -24,11 +25,20 @@ export class UserForm implements OnInit {
   successMessage = '';
 
   readonly titleOptions = Object.values(Title);
-  readonly roleOptions = Object.values(Role);
   readonly statusOptions = Object.values(Status);
   selectedRoles: Role[] = [Role.STUDENT];
   isEdit = false;
   availableGrades: Grade[] = [];
+
+  get roleOptions(): Role[] {
+    const isSystemAdmin = hasRole('SYSTEM_ADMIN');
+    
+    if (isSystemAdmin) {
+      return Object.values(Role);
+    } else {
+      return [Role.TEACHER, Role.STUDENT];
+    }
+  }
 
   form: User = {
     id: 0,
@@ -52,6 +62,8 @@ export class UserForm implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const isSystemAdmin = hasRole('SYSTEM_ADMIN');
+    
     if (!this.existingUser) {
       const selectedSchool = this.schoolContext.selectedSchool;
       if (selectedSchool) {
@@ -62,6 +74,19 @@ export class UserForm implements OnInit {
     }
 
     this.isEdit = true;
+    
+    // Check if school admin is trying to edit a user with restricted roles
+    if (!isSystemAdmin && this.existingUser.roles) {
+      const hasRestrictedRoles = this.existingUser.roles.some(role => 
+        role === Role.SYSTEM_ADMIN || role === Role.SCHOOL_ADMIN
+      );
+      
+      if (hasRestrictedRoles) {
+        this.errorMessage = "You don't have permission to edit this user.";
+        return;
+      }
+    }
+    
     this.form = {
       ...this.existingUser,
       id: this.existingUser.id,
@@ -72,7 +97,7 @@ export class UserForm implements OnInit {
     };
 
     this.selectedRoles = this.existingUser.roles?.length
-      ? this.existingUser.roles
+      ? this.existingUser.roles.filter(role => this.roleOptions.includes(role))
       : (this.existingUser.role ? [this.existingUser.role] : [Role.STUDENT]);
 
     const schoolId = this.form.schoolIds?.[0];
