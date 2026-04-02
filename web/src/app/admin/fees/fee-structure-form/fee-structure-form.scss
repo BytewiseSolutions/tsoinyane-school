@@ -148,6 +148,32 @@
   font-weight: 600;
 }
 
+.grade-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 6px 0 2px;
+}
+
+.grade-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #2f3f63;
+  font-size: 14px;
+  font-weight: 600;
+
+  input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+  }
+}
+
+.grade-checkbox.disabled {
+  opacity: 0.55;
+}
+
 ::ng-deep .grade-select .ng-select-container {
   min-height: 44px;
   border: 1px solid #ccd6f0 !important;

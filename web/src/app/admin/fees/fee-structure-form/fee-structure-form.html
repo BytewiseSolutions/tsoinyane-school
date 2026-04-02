@@ -45,6 +45,23 @@
           <span>Amount</span>
           <input type="number" min="0" step="0.01" [(ngModel)]="amount" name="feeAmount" />
         </label>
+
+        <div class="form-field full-width">
+          <span>Grade</span>
+          <div class="grade-checkboxes">
+            @for (grade of visibleGradeOptions; track grade.id) {
+              <label class="grade-checkbox" [class.disabled]="isGradeDisabled(grade)">
+                <input
+                  type="checkbox"
+                  [checked]="isGradeSelected(grade.id)"
+                  [disabled]="isGradeDisabled(grade)"
+                  (change)="onGradeToggle(grade.id, $any($event.target).checked)"
+                />
+                <span>{{ grade.name }}</span>
+              </label>
+            }
+          </div>
+        </div>
       </div>
 
       <div class="total-card">
