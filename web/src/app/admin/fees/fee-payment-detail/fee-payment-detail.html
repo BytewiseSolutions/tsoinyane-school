@@ -1,0 +1,178 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back To Fee Payments</button>
+      <h2>Fee Payment Details</h2>
+      <p>View the selected learner payment, print a receipt, and review the learner's payment history.</p>
+    </div>
+    @if (payment) {
+      <div class="page-actions">
+        <button type="button" class="print-btn" (click)="printReceipt()">Print Receipt</button>
+      </div>
+    }
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading fee payment details...</div>
+  } @else if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  } @else if (payment) {
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Student</span>
+        <strong>{{ payment.studentName || 'Unknown Student' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Student No.</span>
+        <strong>{{ payment.studentNumber || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Grade</span>
+        <strong>{{ payment.gradeName || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Term</span>
+        <strong>{{ getTermLabel(payment.term) }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Academic Year</span>
+        <strong>{{ payment.academicYear || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Status</span>
+        <strong class="status-pill" [class.paid]="paymentStatus === 'paid'" [class.outstanding]="paymentStatus === 'outstanding'">
+          {{ paymentStatusLabel }}
+        </strong>
+      </div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <span>Amount Paid</span>
+        <strong>{{ formatCurrency(payment.amount) }}</strong>
+      </div>
+      <div class="metric-card">
+        <span>Total Paid So Far</span>
+        <strong>{{ formatCurrency(payment.totalPaid) }}</strong>
+      </div>
+      <div class="metric-card">
+        <span>Outstanding Balance</span>
+        <strong>{{ formatCurrency(payment.balance) }}</strong>
+      </div>
+    </div>
+
+    <div class="details-grid">
+      <section class="details-card">
+        <div class="card-heading">
+          <div>
+            <h3>Payment Details</h3>
+            <p>All recorded information for this learner payment.</p>
+          </div>
+        </div>
+        <div class="detail-row">
+          <span>Payment Date</span>
+          <strong>{{ payment.paymentDate | date:'dd MMM yyyy' }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Payment Method</span>
+          <strong>{{ payment.paymentMethod?.replace('_', ' ') || 'N/A' }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Amount Paid</span>
+          <strong>{{ formatCurrency(payment.amount) }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Reference Number</span>
+          <strong>{{ payment.referenceNumber || 'N/A' }}</strong>
+        </div>
+        <div class="detail-row notes-row">
+          <span>Notes</span>
+          <strong>{{ payment.notes || 'N/A' }}</strong>
+        </div>
+      </section>
+
+      <section class="details-card">
+        <div class="card-heading">
+          <div>
+            <h3>Balance Summary</h3>
+            <p>Snapshot of the full fee, what has already been paid, and what is still owing.</p>
+          </div>
+        </div>
+        <div class="detail-row">
+          <span>Total Fee</span>
+          <strong>{{ formatCurrency(payment.totalFee) }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Total Paid</span>
+          <strong>{{ formatCurrency(payment.totalPaid) }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Outstanding Balance</span>
+          <strong>{{ formatCurrency(payment.balance) }}</strong>
+        </div>
+      </section>
+    </div>
+
+    <section class="details-card history-card">
+      <div class="card-heading">
+        <div>
+          <h3>Learner Payment History</h3>
+          <p>Review all recorded payments for this learner, grouped by term with clear paid and outstanding status.</p>
+        </div>
+      </div>
+
+      @if (isLoadingHistory) {
+        <div class="inline-state">Loading learner payment history...</div>
+      } @else if (historyGroups.length > 0) {
+        <div class="history-groups">
+          @for (group of historyGroups; track group.key) {
+            <div class="history-group">
+              <div class="history-group-header">
+                <div>
+                  <h4>{{ group.label }}</h4>
+                  <p>{{ group.payments.length }} payment{{ group.payments.length === 1 ? '' : 's' }} recorded</p>
+                </div>
+                <span class="status-pill" [class.paid]="group.status === 'paid'" [class.outstanding]="group.status === 'outstanding'">
+                  {{ group.status === 'paid' ? 'Fully Paid' : 'Outstanding' }}
+                </span>
+              </div>
+
+              <div class="history-group-summary">
+                <div class="history-summary-item">
+                  <span>Total Fee</span>
+                  <strong>{{ formatCurrency(group.totalFee) }}</strong>
+                </div>
+                <div class="history-summary-item">
+                  <span>Total Paid</span>
+                  <strong>{{ formatCurrency(group.totalPaid) }}</strong>
+                </div>
+                <div class="history-summary-item">
+                  <span>Balance</span>
+                  <strong>{{ formatCurrency(group.balance) }}</strong>
+                </div>
+              </div>
+
+              <div class="history-list">
+                @for (history of group.payments; track history.id) {
+                  <div class="history-row" [class.current]="history.id === payment.id">
+                    <div class="history-main">
+                      <strong>{{ history.paymentDate | date:'dd MMM yyyy' }}</strong>
+                      <span>{{ history.paymentMethod?.replace('_', ' ') || 'N/A' }}</span>
+                    </div>
+                    <div class="history-meta">
+                      <span>{{ formatCurrency(history.amount) }}</span>
+                      <span>{{ history.referenceNumber || 'No reference' }}</span>
+                      <span>Balance {{ formatCurrency(history.balance) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="inline-state">No learner payment history found yet.</div>
+      }
+    </section>
+  }
+</div>

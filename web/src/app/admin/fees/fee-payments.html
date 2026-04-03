@@ -1,0 +1,215 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>Fee Payments</h2>
+    </div>
+    <div class="header-actions">
+      <div class="module-switch">
+        <a routerLink="/admin/fees" class="switch-link">Fee Structure</a>
+        <a routerLink="/admin/fees/payments" class="switch-link active">Fee Payments</a>
+      </div>
+      <button class="export-btn" type="button" (click)="exportPaymentsCsv()">Export Payments CSV</button>
+      <button class="add-btn" type="button" (click)="openForm()">
+        <i class="fa-solid fa-plus"></i> Record Payment
+      </button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Collected</h4>
+      <p>{{ totalCollected }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Payments</h4>
+      <p>{{ paymentsCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Learners Paid</h4>
+      <p>{{ learnersWithPaymentsCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Outstanding</h4>
+      <p>{{ outstandingBalance }}</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="table-card error-card">{{ errorMessage }}</div>
+  }
+
+  <div class="table-card">
+    <div class="toolbar">
+      <input
+        type="text"
+        placeholder="Search by student, grade or year..."
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFiltersChanged()"
+        name="feePaymentSearch"
+      />
+      <select [(ngModel)]="selectedGradeFilter" (ngModelChange)="onFiltersChanged()" name="feePaymentGradeFilter">
+        <option [ngValue]="null">All Grades</option>
+        @for (grade of gradeOptions; track grade.id) {
+          <option [ngValue]="grade.id ?? null">{{ grade.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedTermFilter" (ngModelChange)="onFiltersChanged()" name="feePaymentTermFilter">
+        <option value="ALL">All Terms</option>
+        <option value="TERM_1">TERM 1</option>
+        <option value="TERM_2">TERM 2</option>
+        <option value="TERM_3">TERM 3</option>
+        <option value="TERM_4">TERM 4</option>
+      </select>
+    </div>
+
+    <div class="view-switch">
+      <button type="button" class="view-tab" [class.active]="activeView === 'payments'" (click)="selectView('payments')">
+        Payment Records
+      </button>
+      <button type="button" class="view-tab" [class.active]="activeView === 'outstanding'" (click)="selectView('outstanding')">
+        Outstanding Learners
+      </button>
+    </div>
+
+    @if (isLoading) {
+      <div class="empty-state">Loading fee payments...</div>
+    } @else if (activeView === 'payments' && filteredPayments.length > 0) {
+      <table>
+        <thead>
+          <tr>
+            <th>Student No.</th>
+            <th>Student</th>
+            <th>Grade</th>
+            <th>Term</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (payment of paginatedPayments; track payment.id) {
+            <tr>
+              <td>{{ payment.studentNumber || 'N/A' }}</td>
+              <td>{{ payment.studentName || 'Unknown Student' }}</td>
+              <td>{{ payment.gradeName || 'N/A' }}</td>
+              <td>{{ getTermLabel(payment.term) }}</td>
+              <td class="actions">
+                <button class="action-btn view" type="button" (click)="viewPayment(payment)">View</button>
+                <button class="action-btn edit" type="button" (click)="openForm(payment)">Edit</button>
+                <button class="action-btn danger" type="button" (click)="confirmDelete(payment)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else if (activeView === 'outstanding' && outstandingLearners.length > 0) {
+      <table>
+        <thead>
+          <tr>
+            <th>Student No.</th>
+            <th>Student</th>
+            <th>Grade</th>
+            <th>Terms</th>
+            <th>Total Fee</th>
+            <th>Total Paid</th>
+            <th>Balance</th>
+            <th>Payments</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (learner of paginatedOutstandingLearners; track learner.studentId) {
+            <tr>
+              <td>{{ learner.studentNumber }}</td>
+              <td>{{ learner.studentName }}</td>
+              <td>{{ learner.gradeName }}</td>
+              <td>{{ learner.terms }}</td>
+              <td>{{ formatCurrency(learner.totalFee) }}</td>
+              <td>{{ formatCurrency(learner.totalPaid) }}</td>
+              <td>{{ formatCurrency(learner.balance) }}</td>
+              <td>{{ learner.paymentCount }}</td>
+              <td class="actions">
+                <button class="action-btn view" type="button" (click)="viewLearnerHistory(learner.studentId)">View History</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <div class="empty-state">
+        {{ activeView === 'payments'
+          ? 'No fee payments found for the selected filters.'
+          : 'No outstanding learners found for the selected filters.' }}
+      </div>
+    }
+
+    @if ((activeView === 'payments' && filteredPayments.length > 0) || (activeView === 'outstanding' && outstandingLearners.length > 0)) {
+      <div class="pagination-bar">
+        <div class="pagination-summary">
+          Showing {{ pageStart }}-{{ pageEnd }} of {{ activeView === 'payments' ? filteredPayments.length : outstandingLearners.length }}
+        </div>
+        <div class="pagination-controls">
+          <label class="page-size">
+            <span>Rows</span>
+            <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()" name="feePaymentPageSize">
+              @for (size of pageSizeOptions; track size) {
+                <option [ngValue]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
+            Previous
+          </button>
+          <span class="page-indicator">Page {{ safeCurrentPage }} of {{ totalPages }}</span>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === totalPages" (click)="goToNextPage()">
+            Next
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+@if (showForm) {
+  <app-fee-payment-form
+    [existingPayment]="editingPayment"
+    [selectedSchoolId]="selectedSchoolId"
+    [selectedSchoolName]="selectedSchoolName"
+    [students]="students"
+    [feeStructures]="feeStructures"
+    [payments]="payments"
+    (closed)="closeForm()"
+    (saved)="savePayment($event)"
+  ></app-fee-payment-form>
+}
+
+@if (showDeleteDialog && paymentToDelete) {
+  <div class="confirm-overlay" (click)="cancelDelete()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete Fee Payment</h3>
+      <p>
+        Are you sure you want to delete this payment for
+        <strong>{{ paymentToDelete.studentName || 'the selected learner' }}</strong>
+        made on <strong>{{ paymentToDelete.paymentDate | date:'dd MMM yyyy' }}</strong>?
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelDelete()">Cancel</button>
+        <button type="button" class="delete-btn" [disabled]="isProcessing" (click)="deletePayment()">
+          {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (actionMessage) {
+  <div class="success-modal-overlay" (click)="closeActionMessage()">
+    <div class="success-modal-card" (click)="$event.stopPropagation()">
+      <div class="success-modal-header">
+        <h3>Success</h3>
+        <p>{{ actionMessage }}</p>
+      </div>
+      <div class="success-modal-actions">
+        <button type="button" class="cancel-btn" (click)="closeActionMessage()">OK</button>
+      </div>
+    </div>
+  </div>
+}

@@ -5,6 +5,10 @@
       <p>Manage registration fee, school fees, and exam fee for the selected school.</p>
     </div>
     <div class="header-actions">
+      <div class="module-switch">
+        <a routerLink="/admin/fees" class="switch-link active">Fee Structure</a>
+        <a routerLink="/admin/fees/payments" class="switch-link">Fee Payments</a>
+      </div>
       <button class="add-btn" type="button" (click)="openForm()">
         <i class="fa-solid fa-plus"></i> Add Fee Structure
       </button>

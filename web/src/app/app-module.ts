@@ -38,6 +38,9 @@ import { NotificationForm } from './admin/notifications/notification-form/notifi
 import { Profile } from './admin/profile/profile';
 import { Reports } from './admin/reports/reports';
 import { Fees } from './admin/fees/fees';
+import { FeePayments } from './admin/fees/fee-payments';
+import { FeePaymentForm } from './admin/fees/fee-payment-form/fee-payment-form';
+import { FeePaymentDetail } from './admin/fees/fee-payment-detail/fee-payment-detail';
 import { FeeStructureForm } from './admin/fees/fee-structure-form/fee-structure-form';
 import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
 import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
@@ -88,6 +91,9 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     Profile,
     Reports,
     Fees,
+    FeePayments,
+    FeePaymentForm,
+    FeePaymentDetail,
     FeeStructureForm,
     FeeStructureDetail,
     MySubjects,

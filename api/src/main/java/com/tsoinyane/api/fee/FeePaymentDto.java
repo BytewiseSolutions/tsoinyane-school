@@ -17,10 +17,12 @@ import java.time.LocalDate;
 public class FeePaymentDto {
     private Long id;
     private Instant createdAt;
+    private Long schoolId;
     private Long studentId;
     private String studentName;
     private String studentNumber;
     private Long feeStructureId;
+    private Long gradeId;
     private String gradeName;
     private String term;
     private String academicYear;

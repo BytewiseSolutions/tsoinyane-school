@@ -28,7 +28,9 @@ import { Notifications } from './admin/notifications/notifications';
 import { Profile } from './admin/profile/profile';
 import { Reports } from './admin/reports/reports';
 import { Fees } from './admin/fees/fees';
+import { FeePayments } from './admin/fees/fee-payments';
 import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
+import { FeePaymentDetail } from './admin/fees/fee-payment-detail/fee-payment-detail';
 import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
 import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
 import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
@@ -68,6 +70,8 @@ const routes: Routes = [
       { path: 'subjects/:id/timetable/:timetableId/lessons/:lessonId', component: LessonDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'events', component: Events, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'fees', component: Fees, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'fees/payments', component: FeePayments, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'fees/payments/:id', component: FeePaymentDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'fees/:id', component: FeeStructureDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'activity-logs', component: ActivityLogs, data: { roles: ['SYSTEM_ADMIN'] } },
       { path: 'notifications', component: Notifications },
