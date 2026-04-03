@@ -11,6 +11,10 @@
         <a routerLink="/admin/fees/reports" class="switch-link">Reports</a>
       </div>
       <button class="export-btn" type="button" (click)="exportPaymentsCsv()">Export Payments CSV</button>
+      <button class="export-btn secondary" type="button" (click)="openAdvancedSearch()">Advanced Search</button>
+      @if (hasActiveAdvancedSearch) {
+        <button class="export-btn secondary" type="button" (click)="clearAdvancedSearch()">Clear Advanced</button>
+      }
       <button class="add-btn" type="button" (click)="openForm()">
         <i class="fa-solid fa-plus"></i> Record Payment
       </button>
@@ -63,6 +67,12 @@
         <option value="TERM_4">TERM 4</option>
       </select>
     </div>
+
+    @if (hasActiveAdvancedSearch) {
+      <div class="advanced-search-summary">
+        Advanced filters are active for this list.
+      </div>
+    }
 
     <div class="view-switch">
       <button type="button" class="view-tab" [class.active]="activeView === 'payments'" (click)="selectView('payments')">
@@ -200,6 +210,15 @@
     (closed)="closeForm()"
     (saved)="savePayment($event)"
   ></app-fee-payment-form>
+}
+
+@if (showAdvancedSearch) {
+  <app-fee-payment-advanced-search
+    [gradeOptions]="gradeOptions"
+    [initialCriteria]="advancedSearchCriteria"
+    (searchChanged)="applyAdvancedSearch($event)"
+    (closed)="closeAdvancedSearch()"
+  ></app-fee-payment-advanced-search>
 }
 
 @if (showDeleteDialog && paymentToDelete) {

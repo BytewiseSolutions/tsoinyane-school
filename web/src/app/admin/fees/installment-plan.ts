@@ -1,4 +1,5 @@
 import { InstallmentSchedule } from './installment-schedule';
+import { Term } from '../settings/term';
 
 export interface InstallmentPlan {
   id?: number;
@@ -8,7 +9,7 @@ export interface InstallmentPlan {
   gradeId: number;
   gradeName: string;
   feeStructureId: number;
-  term: string;
+  term: Term;
   academicYear: string;
   totalAmount: number;
   installments: InstallmentSchedule[];

@@ -5,6 +5,7 @@ import { filter, Subject, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { Grade } from '../grades/grade';
 import { SchoolContextService } from '../layout/school-context';
+import { AdvancedSearchCriteria } from './advanced-search-criteria';
 import { FeePayment } from './fee-payment';
 import { FeeReceiptService } from './fee-receipt.service';
 import { FeeStudent } from './fee-student';
@@ -35,6 +36,7 @@ export class FeePayments implements OnInit, OnDestroy {
   readonly pageSizeOptions = [10, 20, 50];
   selectedGradeFilter: number | null = null;
   selectedTermFilter = 'ALL';
+  advancedSearchCriteria: AdvancedSearchCriteria = {};
   payments: FeePayment[] = [];
   students: FeeStudent[] = [];
   feeStructures: FeeStructure[] = [];
@@ -45,6 +47,7 @@ export class FeePayments implements OnInit, OnDestroy {
   editingPayment: FeePayment | null = null;
   preferredStudentId: number | null = null;
   preferredFeeStructureId: number | null = null;
+  showAdvancedSearch = false;
   showDeleteDialog = false;
   paymentToDelete: FeePayment | null = null;
 
@@ -111,6 +114,10 @@ export class FeePayments implements OnInit, OnDestroy {
   get totalCollected(): string {
     const total = this.filteredPayments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
     return this.formatCurrency(total);
+  }
+
+  get hasActiveAdvancedSearch(): boolean {
+    return this.getAdvancedSearchParamKeys().length > 0;
   }
 
   get paymentsCount(): number {
@@ -186,8 +193,8 @@ export class FeePayments implements OnInit, OnDestroy {
 
     const student = this.students.find(s => s.id === learner.studentId);
     const matchingStructure = this.feeStructures.find(structure =>
-      structure.gradeId === student?.gradeId &&
-      structure.schoolId === this.selectedSchoolId
+      (structure.grade_id || structure.gradeId) === student?.gradeId &&
+      (structure.school_id || structure.schoolId) === this.selectedSchoolId
     ) ?? null;
 
     this.errorMessage = '';
@@ -213,6 +220,35 @@ export class FeePayments implements OnInit, OnDestroy {
     this.actionMessage = '';
   }
 
+  openAdvancedSearch(): void {
+    this.showAdvancedSearch = true;
+  }
+
+  closeAdvancedSearch(): void {
+    this.showAdvancedSearch = false;
+  }
+
+  applyAdvancedSearch(criteria: AdvancedSearchCriteria): void {
+    this.advancedSearchCriteria = { ...criteria };
+    this.currentPage = 1;
+    this.actionMessage = '';
+    this.showAdvancedSearch = false;
+    this.loadPayments();
+  }
+
+  clearAdvancedSearch(): void {
+    if (!this.hasActiveAdvancedSearch) {
+      this.closeAdvancedSearch();
+      return;
+    }
+
+    this.advancedSearchCriteria = {};
+    this.currentPage = 1;
+    this.actionMessage = '';
+    this.showAdvancedSearch = false;
+    this.loadPayments();
+  }
+
   savePayment(payment: FeePayment): void {
     const isEdit = !!this.editingPayment?.id;
     const request$ = isEdit
@@ -223,18 +259,13 @@ export class FeePayments implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     request$.subscribe({
-      next: savedPayment => {
-        const normalizedPayment = this.normalizePayment(savedPayment);
-        if (isEdit) {
-          this.payments = this.payments.map(item => item.id === normalizedPayment.id ? normalizedPayment : item);
-          this.closeForm();
-          this.actionMessage = 'Fee payment updated successfully.';
-        } else {
-          this.payments = [normalizedPayment, ...this.payments.filter(item => item.id !== normalizedPayment.id)];
-          this.closeForm();
-          this.loadOutstanding();
-          this.actionMessage = 'Fee payment recorded successfully.';
-        }
+      next: () => {
+        this.closeForm();
+        this.actionMessage = isEdit
+          ? 'Fee payment updated successfully.'
+          : 'Fee payment recorded successfully.';
+        this.loadPayments();
+        this.loadOutstanding();
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error.error?.message || 'Failed to save fee payment.';
@@ -263,8 +294,8 @@ export class FeePayments implements OnInit, OnDestroy {
 
     this.backendService.delete<void>(`fee-payment/${this.paymentToDelete.id}`).subscribe({
       next: () => {
-        this.payments = this.payments.filter(payment => payment.id !== this.paymentToDelete?.id);
         this.cancelDelete();
+        this.loadPayments();
         this.loadOutstanding();
         this.actionMessage = 'Fee payment deleted successfully.';
       },
@@ -373,26 +404,29 @@ export class FeePayments implements OnInit, OnDestroy {
       next: structures => {
         this.feeStructures = (structures ?? []).map(structure => ({
           ...structure,
-          registrationFee: Number(structure.registrationFee ?? 0),
-          schoolFee: Number(structure.schoolFee ?? 0),
-          examFee: Number(structure.examFee ?? 0),
+          schoolId: structure.schoolId ?? structure.school_id ?? null,
+          gradeId: structure.gradeId ?? structure.grade_id ?? null,
+          academicYear: structure.academicYear ?? structure.academic_year ?? null,
+          registrationFee: Number(structure.registrationFee ?? structure.registration_fee ?? 0),
+          registration_fee: Number(structure.registrationFee ?? structure.registration_fee ?? 0),
+          schoolFee: Number(structure.schoolFee ?? structure.school_fee ?? 0),
+          school_fee: Number(structure.schoolFee ?? structure.school_fee ?? 0),
+          examFee: Number(structure.examFee ?? structure.exam_fee ?? 0),
+          exam_fee: Number(structure.examFee ?? structure.exam_fee ?? 0),
+          booksFee: Number(structure.booksFee ?? structure.books_fee ?? 0),
+          books_fee: Number(structure.booksFee ?? structure.books_fee ?? 0),
+          foodFee: Number(structure.foodFee ?? structure.food_fee ?? 0),
+          food_fee: Number(structure.foodFee ?? structure.food_fee ?? 0),
+          generalFee: Number(structure.generalFee ?? structure.general_fee ?? 0),
+          general_fee: Number(structure.generalFee ?? structure.general_fee ?? 0),
           amount: Number(structure.amount ?? 0),
-          totalAmount: Number(structure.totalAmount ?? 0),
+          totalAmount: Number(structure.totalAmount ?? structure.amount ?? 0),
         }));
       },
       error: () => { this.feeStructures = []; },
     });
 
-    this.backendService.get<FeePayment[]>('fee-payment', { schoolId: this.selectedSchoolId }).subscribe({
-      next: payments => {
-        this.payments = (payments ?? []).map(payment => this.normalizePayment(payment));
-      },
-      error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to load fee payments.';
-      },
-      complete: () => { this.isLoading = false; },
-    });
-
+    this.loadPayments();
     this.loadOutstanding();
   }
 
@@ -442,5 +476,55 @@ export class FeePayments implements OnInit, OnDestroy {
       return `"${stringValue.replace(/"/g, '""')}"`;
     }
     return stringValue;
+  }
+
+  private loadPayments(): void {
+    if (!this.selectedSchoolId) {
+      this.payments = [];
+      this.isLoading = false;
+      return;
+    }
+
+    this.isLoading = true;
+
+    const endpoint = this.hasActiveAdvancedSearch ? 'fee-payment/search' : 'fee-payment';
+    const params = this.hasActiveAdvancedSearch
+      ? this.buildAdvancedSearchParams()
+      : { schoolId: this.selectedSchoolId };
+
+    this.backendService.get<FeePayment[]>(endpoint, params).subscribe({
+      next: payments => {
+        this.payments = (payments ?? []).map(payment => this.normalizePayment(payment));
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to load fee payments.';
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private buildAdvancedSearchParams(): Record<string, string | number | boolean> {
+    const params: Record<string, string | number | boolean> = {
+      schoolId: this.selectedSchoolId!,
+    };
+
+    for (const [key, value] of Object.entries(this.advancedSearchCriteria)) {
+      if (value === null || value === undefined || value === '') {
+        continue;
+      }
+
+      params[key] = value;
+    }
+
+    return params;
+  }
+
+  private getAdvancedSearchParamKeys(): string[] {
+    return Object.entries(this.advancedSearchCriteria)
+      .filter(([key, value]) => key !== 'includeReversed' && value !== null && value !== undefined && value !== '')
+      .map(([key]) => key)
+      .concat(this.advancedSearchCriteria.includeReversed ? ['includeReversed'] : []);
   }
 }

@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -283,6 +282,44 @@ public class FeePaymentService {
     @Transactional(readOnly = true)
     public List<FeePaymentDto> getFeePayments(Long schoolId) {
         return feePaymentRepository.findAllWithAssociations(schoolId).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FeePaymentDto> searchFeePayments(FeePaymentSearchCriteria criteria) {
+        if (criteria == null) {
+            return List.of();
+        }
+
+        LocalDate dateFrom = criteria.getDateFrom();
+        LocalDate dateTo = criteria.getDateTo();
+        Double amountFrom = normalizeSearchAmount(criteria.getAmountFrom());
+        Double amountTo = normalizeSearchAmount(criteria.getAmountTo());
+
+        if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "From date cannot be after to date");
+        }
+
+        if (amountFrom != null && amountTo != null && amountFrom > amountTo) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Minimum amount cannot be greater than maximum amount");
+        }
+
+        return feePaymentRepository.searchWithAssociations(
+                        criteria.getSchoolId(),
+                        normalizeOptionalText(criteria.getStudentName()),
+                        normalizeOptionalText(criteria.getStudentNumber()),
+                        criteria.getGradeId(),
+                        criteria.getTerm(),
+                        normalizeOptionalText(criteria.getAcademicYear()),
+                        criteria.getPaymentMethod(),
+                        dateFrom,
+                        dateTo,
+                        amountFrom,
+                        amountTo,
+                        normalizeOptionalText(criteria.getReferenceNumber()),
+                        Boolean.TRUE.equals(criteria.getIncludeReversed())
+                ).stream()
                 .map(this::toDto)
                 .toList();
     }
@@ -588,6 +625,18 @@ public class FeePaymentService {
 
         if (value <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be greater than zero");
+        }
+
+        return roundAmount(value);
+    }
+
+    private Double normalizeSearchAmount(Double value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search amounts cannot be negative");
         }
 
         return roundAmount(value);

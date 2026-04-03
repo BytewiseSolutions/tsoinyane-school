@@ -10,6 +10,7 @@ import { InstallmentPlan } from '../installment-plan';
 import { InstallmentSchedule } from '../installment-schedule';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PaymentMethod } from '../payment-method';
+import { Term } from '../../settings/term';
 
 @Component({
   selector: 'app-installment-plans',
@@ -72,7 +73,7 @@ export class InstallmentPlans implements OnInit, OnDestroy {
         return plan.studentName.toLowerCase().includes(query)
           || plan.studentNumber.toLowerCase().includes(query)
           || plan.gradeName.toLowerCase().includes(query)
-          || plan.term.toLowerCase().includes(query);
+          || this.getTermLabel(plan.term).toLowerCase().includes(query);
       });
   }
 
@@ -136,20 +137,22 @@ export class InstallmentPlans implements OnInit, OnDestroy {
     });
   }
 
-  saveInstallmentPayment(paymentData: {
-    installmentId: number;
-    amount: number;
-    paymentDate: string;
-    paymentMethod: PaymentMethod;
-    referenceNumber?: string | null;
-    notes?: string | null;
-  }): void {
+  saveInstallmentPayment(payment: FeePayment): void {
     if (!this.selectedPlanForPayment?.id) {
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = '';
+
+    const paymentData = {
+      installmentId: this.selectedInstallmentForPayment?.id || 0,
+      amount: payment.amount || 0,
+      paymentDate: payment.paymentDate || '',
+      paymentMethod: payment.paymentMethod || 'CASH',
+      referenceNumber: payment.referenceNumber,
+      notes: payment.notes
+    };
 
     this.backendService.post<InstallmentPlan, typeof paymentData>(
       `installment-plan/${this.selectedPlanForPayment.id}/payment`,
@@ -222,6 +225,27 @@ export class InstallmentPlans implements OnInit, OnDestroy {
     return plan.status === 'ACTIVE' && !plan.installments.some(installment => Number(installment.paidAmount ?? 0) > 0);
   }
 
+  getTermLabel(term: Term | string | null | undefined): string {
+    if (!term) return '';
+    
+    switch (term) {
+      case Term.TERM_1:
+        return 'Term 1';
+      case Term.TERM_2:
+        return 'Term 2';
+      case Term.TERM_3:
+        return 'Term 3';
+      case Term.TERM_4:
+        return 'Term 4';
+      default:
+        return String(term);
+    }
+  }
+
+  refreshFeeStructures(term?: Term, academicYear?: string): void {
+    this.loadFeeStructures(term, academicYear);
+  }
+
   private loadData(): void {
     if (!this.selectedSchoolId) {
       this.resetData();
@@ -245,15 +269,32 @@ export class InstallmentPlans implements OnInit, OnDestroy {
       });
     }
 
-    if (this.selectedSchoolId) {
-      this.backendService.get<FeeStructure[]>('fee-structure', { schoolId: this.selectedSchoolId }).subscribe({
-        next: structures => { this.feeStructures = structures ?? []; },
-        error: () => { this.feeStructures = []; },
-      });
-    }
-
+    // Load all fee structures initially - could be optimized to load on-demand
+    this.loadFeeStructures();
     this.loadPayments();
     this.loadInstallmentPlans();
+  }
+
+  private loadFeeStructures(term?: Term, academicYear?: string): void {
+    if (!this.selectedSchoolId) {
+      this.feeStructures = [];
+      return;
+    }
+
+    const params: any = { school_id: this.selectedSchoolId };
+    if (term) params.term = term;
+    if (academicYear) params.academic_year = academicYear;
+
+    this.backendService.get<FeeStructure[]>('fee-structure', params).subscribe({
+      next: structures => { 
+        this.feeStructures = structures ?? [];
+        console.log('Loaded fee structures:', this.feeStructures);
+      },
+      error: (error) => { 
+        console.error('Error loading fee structures:', error);
+        this.feeStructures = [];
+      },
+    });
   }
 
   private loadPayments(): void {

@@ -15,6 +15,15 @@
     <div class="table-card error-card">{{ errorMessage }}</div>
   }
 
+  @if (actionMessage) {
+    <div class="table-card success-card">
+      {{ actionMessage }}
+      <button class="close-btn" type="button" (click)="closeActionMessage()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  }
+
   <div class="table-card">
     <div class="toolbar">
       <input
@@ -46,8 +55,10 @@
             <div class="plan-header">
               <div class="plan-student">
                 <h4>{{ plan.studentName }}</h4>
-                <span class="student-number">{{ plan.studentNumber }}</span>
-                <span class="student-grade">{{ plan.gradeName }}</span>
+                <div class="student-meta">
+                  <span class="student-number">{{ plan.studentNumber }}</span>
+                  <span class="student-grade">{{ plan.gradeName }}</span>
+                </div>
               </div>
               <span class="plan-status" [class]="getStatusClass(plan.status)">
                 {{ plan.status }}
@@ -55,12 +66,18 @@
             </div>
 
             <div class="plan-details">
-              <div class="plan-info">
-                <span class="plan-term">{{ plan.term.replace('_', ' ') }} • {{ plan.academicYear }}</span>
-                <span class="plan-amount">Total: {{ formatCurrency(plan.totalAmount) }}</span>
+              <div class="plan-info-grid">
+                <div class="plan-info-card">
+                  <span class="plan-label">Term</span>
+                  <span class="plan-term">{{ getTermLabel(plan.term) }} • {{ plan.academicYear }}</span>
+                </div>
+                <div class="plan-info-card">
+                  <span class="plan-label">Total</span>
+                  <span class="plan-amount">{{ formatCurrency(plan.totalAmount) }}</span>
+                </div>
               </div>
-              
-              <div class="plan-progress">
+
+              <div class="plan-progress-card">
                 @if (getInstallmentProgress(plan); as progress) {
                   <div class="progress-bar">
                     <div class="progress-fill" [style.width.%]="progress.percentage"></div>
@@ -80,13 +97,13 @@
                   </div>
                   <div class="installment-actions">
                     @if (installment.status === 'PENDING') {
-                      <button class="action-btn pay" type="button" (click)="recordPayment(plan, installment)">
+                      <button class="action-btn pay" type="button" (click)="openPaymentForm(plan, installment)">
                         Record Payment
                       </button>
                     } @else if (installment.status === 'PAID') {
                       <span class="paid-date">Paid: {{ installment.paidDate | date:'dd MMM' }}</span>
                     } @else if (installment.status === 'OVERDUE') {
-                      <button class="action-btn pay urgent" type="button" (click)="recordPayment(plan, installment)">
+                      <button class="action-btn pay urgent" type="button" (click)="openPaymentForm(plan, installment)">
                         Pay Overdue
                       </button>
                     }
@@ -113,3 +130,30 @@
     }
   </div>
 </div>
+
+@if (showForm) {
+  <app-installment-plan-form
+    [plan]="editingPlan"
+    [students]="students"
+    [feeStructures]="feeStructures"
+    [payments]="payments"
+    [selectedSchoolName]="selectedSchoolName"
+    [parentComponent]="this"
+    (save)="savePlan($event)"
+    (cancel)="closeForm()"
+  ></app-installment-plan-form>
+}
+
+@if (showPaymentForm && selectedPlanForPayment && selectedInstallmentForPayment) {
+  <app-fee-payment-form
+    [preferredStudentId]="selectedPlanForPayment.studentId"
+    [preferredFeeStructureId]="selectedPlanForPayment.feeStructureId"
+    [selectedSchoolId]="selectedSchoolId"
+    [selectedSchoolName]="selectedSchoolName"
+    [students]="students"
+    [feeStructures]="feeStructures"
+    [payments]="payments"
+    (saved)="saveInstallmentPayment($event)"
+    (closed)="closePaymentForm()"
+  ></app-fee-payment-form>
+}

@@ -77,11 +77,11 @@ export class Fees implements OnInit, OnDestroy {
       .filter(structure => this.selectedTermFilter === 'ALL' || structure.term === this.selectedTermFilter)
       .filter(structure => {
         if (!query) {
-        return true;
-      }
+          return true;
+        }
 
-      return (structure.gradeName ?? '').toLowerCase().includes(query)
-          || structure.academicYear.toLowerCase().includes(query);
+        return (structure.gradeName ?? '').toLowerCase().includes(query)
+          || (structure.academicYear ?? '').toLowerCase().includes(query);
       });
   }
 
@@ -433,7 +433,8 @@ export class Fees implements OnInit, OnDestroy {
 
   private get summaryAcademicYear(): string | null {
     const currentYear = `${new Date().getFullYear()}`;
-    const years = [...new Set(this.structures.map(structure => structure.academicYear).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+    const years = [...new Set(this.structures.map(structure => structure.academicYear).filter(Boolean) as string[])]
+      .sort((a, b) => b.localeCompare(a));
 
     if (years.includes(currentYear)) {
       return currentYear;
@@ -455,7 +456,7 @@ export class Fees implements OnInit, OnDestroy {
   }
 
   private get tableAcademicYear(): string {
-    const filteredYears = [...new Set(this.filteredStructures.map(structure => structure.academicYear).filter(Boolean))]
+    const filteredYears = [...new Set(this.filteredStructures.map(structure => structure.academicYear).filter(Boolean) as string[])]
       .sort((a, b) => b.localeCompare(a));
 
     if (filteredYears.length > 0) {

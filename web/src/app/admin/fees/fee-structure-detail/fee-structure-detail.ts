@@ -48,13 +48,7 @@ export class FeeStructureDetail implements OnInit {
 
     this.backendService.get<FeeStructure>(`fee-structure/${id}`).subscribe({
       next: structure => {
-        this.feeStructure = {
-          ...structure,
-          registrationFee: Number(structure.registrationFee ?? 0),
-          schoolFee: Number(structure.schoolFee ?? 0),
-          examFee: Number(structure.examFee ?? 0),
-          totalAmount: Number(structure.totalAmount ?? 0),
-        };
+        this.feeStructure = this.normalizeStructure(structure);
         this.syncDateForm();
 
         this.loadRelatedStructures(this.feeStructure.schoolId);
@@ -177,13 +171,7 @@ export class FeeStructureDetail implements OnInit {
 
     this.backendService.put<FeeStructure, FeeStructure>(`fee-structure/${this.feeStructure.id}`, payload).subscribe({
       next: structure => {
-        this.feeStructure = {
-          ...structure,
-          registrationFee: Number(structure.registrationFee ?? 0),
-          schoolFee: Number(structure.schoolFee ?? 0),
-          examFee: Number(structure.examFee ?? 0),
-          totalAmount: Number(structure.totalAmount ?? 0),
-        };
+        this.feeStructure = this.normalizeStructure(structure);
         this.relatedStructures = this.relatedStructures.map(item => item.id === structure.id ? this.feeStructure! : item);
         this.isEditingDates = false;
         this.syncDateForm();
@@ -243,18 +231,39 @@ export class FeeStructureDetail implements OnInit {
 
     this.backendService.get<FeeStructure[]>('fee-structure', { schoolId }).subscribe({
       next: structures => {
-        this.relatedStructures = (structures ?? []).map(structure => ({
-          ...structure,
-          registrationFee: Number(structure.registrationFee ?? 0),
-          schoolFee: Number(structure.schoolFee ?? 0),
-          examFee: Number(structure.examFee ?? 0),
-          totalAmount: Number(structure.totalAmount ?? 0),
-        }));
+        this.relatedStructures = (structures ?? []).map(structure => this.normalizeStructure(structure));
       },
       error: () => {
         this.relatedStructures = this.feeStructure ? [this.feeStructure] : [];
       },
     });
+  }
+
+  private normalizeStructure(structure: FeeStructure): FeeStructure {
+    const schoolId = structure.schoolId ?? structure.school_id ?? null;
+    const gradeId = structure.gradeId ?? structure.grade_id ?? null;
+    const academicYear = structure.academicYear ?? structure.academic_year ?? null;
+    const registrationFee = Number(structure.registrationFee ?? structure.registration_fee ?? 0);
+    const schoolFee = Number(structure.schoolFee ?? structure.school_fee ?? 0);
+    const examFee = Number(structure.examFee ?? structure.exam_fee ?? 0);
+    const totalAmount = Number(structure.totalAmount ?? structure.amount ?? registrationFee + schoolFee + examFee);
+
+    return {
+      ...structure,
+      schoolId,
+      school_id: schoolId,
+      gradeId,
+      grade_id: gradeId,
+      academicYear,
+      academic_year: academicYear,
+      registrationFee,
+      registration_fee: registrationFee,
+      schoolFee,
+      school_fee: schoolFee,
+      examFee,
+      exam_fee: examFee,
+      totalAmount,
+    };
   }
 
   private getTabAmount(structure: FeeStructure, tab: 'registration' | 'school' | 'exam'): number {

@@ -55,6 +55,11 @@ public class FeePaymentController {
         return feePaymentService.getFeePayments(schoolId);
     }
 
+    @GetMapping("/search")
+    public List<FeePaymentDto> searchFeePayments(FeePaymentSearchCriteria criteria) {
+        return feePaymentService.searchFeePayments(criteria);
+    }
+
     @GetMapping("/{id}")
     public FeePaymentDto getFeePayment(@PathVariable Long id) {
         return feePaymentService.getFeePayment(id);

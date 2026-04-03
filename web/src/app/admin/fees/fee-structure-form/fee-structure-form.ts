@@ -28,12 +28,25 @@ export class FeeStructureForm implements OnInit {
 
   feeStructure: FeeStructure = {
     schoolId: null,
+    school_id: null,
     gradeId: null,
+    grade_id: null,
     term: Term.TERM_1,
     academicYear: '',
+    academic_year: '',
     registrationFee: 0,
+    registration_fee: 0,
     schoolFee: 0,
+    school_fee: 0,
     examFee: 0,
+    exam_fee: 0,
+    booksFee: 0,
+    books_fee: 0,
+    foodFee: 0,
+    food_fee: 0,
+    generalFee: 0,
+    general_fee: 0,
+    amount: 0,
   };
   selectedGradeIds: number[] = [];
   selectedFeeType: FeeType = FeeType.REGISTRATION_FEE;
@@ -47,16 +60,33 @@ export class FeeStructureForm implements OnInit {
     if (this.existingStructure) {
       this.feeStructure = {
         ...this.existingStructure,
-        registrationFee: this.existingStructure.registrationFee ?? 0,
-        schoolFee: this.existingStructure.schoolFee ?? 0,
-        examFee: this.existingStructure.examFee ?? 0,
+        schoolId: this.existingStructure.schoolId ?? this.existingStructure.school_id ?? null,
+        school_id: this.existingStructure.schoolId ?? this.existingStructure.school_id ?? null,
+        gradeId: this.existingStructure.gradeId ?? this.existingStructure.grade_id ?? null,
+        grade_id: this.existingStructure.gradeId ?? this.existingStructure.grade_id ?? null,
+        academicYear: this.existingStructure.academicYear ?? this.existingStructure.academic_year ?? '',
+        academic_year: this.existingStructure.academicYear ?? this.existingStructure.academic_year ?? '',
+        registrationFee: this.existingStructure.registrationFee ?? this.existingStructure.registration_fee ?? 0,
+        registration_fee: this.existingStructure.registrationFee ?? this.existingStructure.registration_fee ?? 0,
+        schoolFee: this.existingStructure.schoolFee ?? this.existingStructure.school_fee ?? 0,
+        school_fee: this.existingStructure.schoolFee ?? this.existingStructure.school_fee ?? 0,
+        examFee: this.existingStructure.examFee ?? this.existingStructure.exam_fee ?? 0,
+        exam_fee: this.existingStructure.examFee ?? this.existingStructure.exam_fee ?? 0,
+        booksFee: this.existingStructure.booksFee ?? this.existingStructure.books_fee ?? 0,
+        books_fee: this.existingStructure.booksFee ?? this.existingStructure.books_fee ?? 0,
+        foodFee: this.existingStructure.foodFee ?? this.existingStructure.food_fee ?? 0,
+        food_fee: this.existingStructure.foodFee ?? this.existingStructure.food_fee ?? 0,
+        generalFee: this.existingStructure.generalFee ?? this.existingStructure.general_fee ?? 0,
+        general_fee: this.existingStructure.generalFee ?? this.existingStructure.general_fee ?? 0,
       };
-      this.selectedGradeIds = this.existingStructure.gradeId ? [this.existingStructure.gradeId] : [];
+      const existingGradeId = this.existingStructure.gradeId ?? this.existingStructure.grade_id ?? null;
+      this.selectedGradeIds = existingGradeId ? [existingGradeId] : [];
       this.initializeFeeTypeAndAmount();
       return;
     }
 
     this.feeStructure.schoolId = this.selectedSchoolId;
+    this.feeStructure.school_id = this.selectedSchoolId;
     this.feeStructure.schoolName = this.selectedSchoolName || null;
   }
 
@@ -132,7 +162,9 @@ export class FeeStructureForm implements OnInit {
   }
 
   onSubmit(): void {
-    const academicYear = this.feeStructure.academicYear.trim();
+    const academicYear = this.feeStructure.academicYear?.trim()
+      || this.feeStructure.academic_year?.trim()
+      || '';
 
     if (!this.selectedSchoolId || !this.selectedGradeIds.length || !this.feeStructure.term || !academicYear) {
       return;
@@ -159,15 +191,21 @@ export class FeeStructureForm implements OnInit {
       feeStructure: {
         ...this.feeStructure,
         schoolId: this.selectedSchoolId,
+        school_id: this.selectedSchoolId,
         schoolName: this.selectedSchoolName || null,
         gradeId: primaryGradeId,
+        grade_id: primaryGradeId,
         gradeName: selectedGrade?.name ?? null,
         academicYear,
+        academic_year: academicYear,
         feeType: this.selectedFeeType,
         amount: normalizedAmount,
         registrationFee,
+        registration_fee: registrationFee,
         schoolFee,
+        school_fee: schoolFee,
         examFee,
+        exam_fee: examFee,
         totalAmount: this.totalAmount,
       },
       selectedGradeIds: [...this.selectedGradeIds],
@@ -180,9 +218,9 @@ export class FeeStructureForm implements OnInit {
   }
 
   private initializeFeeTypeAndAmount(): void {
-    const registrationFee = Number(this.feeStructure.registrationFee ?? 0);
-    const schoolFee = Number(this.feeStructure.schoolFee ?? 0);
-    const examFee = Number(this.feeStructure.examFee ?? 0);
+    const registrationFee = Number(this.feeStructure.registrationFee ?? this.feeStructure.registration_fee ?? 0);
+    const schoolFee = Number(this.feeStructure.schoolFee ?? this.feeStructure.school_fee ?? 0);
+    const examFee = Number(this.feeStructure.examFee ?? this.feeStructure.exam_fee ?? 0);
 
     if (registrationFee > 0) {
       this.selectedFeeType = FeeType.REGISTRATION_FEE;

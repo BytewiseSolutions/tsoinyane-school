@@ -40,6 +40,7 @@ import { Reports } from './admin/reports/reports';
 import { Fees } from './admin/fees/fees';
 import { FeePaymentAdvancedSearch } from './admin/fees/fee-payment-advanced-search/fee-payment-advanced-search';
 import { InstallmentPlans } from './admin/fees/installment-plans/installment-plans';
+import { InstallmentPlanForm } from './admin/fees/installment-plans/installment-plan-form';
 import { FeeReports } from './admin/fees/fee-reports';
 import { FeePayments } from './admin/fees/fee-payments';
 import { FeePaymentForm } from './admin/fees/fee-payment-form/fee-payment-form';
@@ -100,6 +101,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     FeePaymentDetail,
     FeePaymentAdvancedSearch,
     InstallmentPlans,
+    InstallmentPlanForm,
     FeeStructureForm,
     FeeStructureDetail,
     MySubjects,
