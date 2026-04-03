@@ -113,6 +113,7 @@ export class FeePaymentForm implements OnInit {
       .filter(payment => payment.studentId === this.payment.studentId)
       .filter(payment => payment.feeStructureId === this.payment.feeStructureId)
       .filter(payment => payment.id !== this.payment.id)
+      .filter(payment => !payment.reversed) // Exclude reversed payments
       .reduce((total, payment) => total + Number(payment.amount ?? 0), 0);
   }
 

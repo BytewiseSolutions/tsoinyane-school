@@ -39,15 +39,15 @@ export class SchoolService {
   }
 
   loadPublicSchools(): void {
-    this.http.get<PublicSchool[]>(`${this.apiUrl}/public/schools`).subscribe({
+    this.http.get<PublicSchool[]>(`${this.apiUrl}/school`).subscribe({
       next: (schools) => {
         this.schoolsSubject.next(schools ?? []);
         if (schools?.length && !this.selectedSchoolSubject.value) {
           this.selectedSchoolSubject.next(schools[0]);
         }
       },
-      error: () => {
-
+      error: (error) => {
+        console.error('Error loading public schools:', error);
       }
     });
   }

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -161,6 +162,93 @@ public class FeePaymentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fee payment not found"));
     }
 
+    @Transactional(readOnly = true)
+    public StudentPaymentSummaryDto getStudentPaymentSummary(Long paymentId) {
+        FeePayment payment = feePaymentRepository.findWithAssociationsById(paymentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fee payment not found"));
+        
+        Long studentId = payment.getStudent().getId();
+        Long schoolId = payment.getStudent().getSchool().getId();
+        School school = payment.getStudent().getSchool();
+        
+        // Get current term and academic year from school
+        Term currentTerm = school.getCurrentTerm();
+        String academicYear = school.getAcademicYear();
+        
+        List<FeePayment> allStudentPayments = feePaymentRepository.findAllWithAssociations(schoolId)
+                .stream()
+                .filter(p -> p.getStudent().getId().equals(studentId))
+                .filter(p -> !Boolean.TRUE.equals(p.getReversed()))
+                .toList();
+        
+        // Only include fee structures for current academic year and up to current term
+        List<FeeStructure> allStructures = feeStructureRepository.findAllWithAssociations(schoolId)
+                .stream()
+                .filter(s -> s.getGrade().getId().equals(payment.getStudent().getGrade().getId()))
+                .filter(s -> academicYear != null && academicYear.equals(s.getAcademicYear()))
+                .filter(s -> currentTerm == null || s.getTerm() == null || termOrder(s.getTerm()) <= termOrder(currentTerm))
+                .toList();
+        
+        double totalFeesAcrossAllTerms = allStructures.stream()
+                .mapToDouble(this::resolveTotalFee)
+                .sum();
+        
+        double totalPaidAcrossAllTerms = allStudentPayments.stream()
+                .mapToDouble(p -> p.getAmount() != null ? p.getAmount() : 0.0)
+                .sum();
+        
+        double totalOutstandingAcrossAllTerms = Math.max(0, totalFeesAcrossAllTerms - totalPaidAcrossAllTerms);
+        
+        Map<String, List<FeeStructure>> structuresByTerm = allStructures.stream()
+                .collect(Collectors.groupingBy(s -> s.getTerm() + "-" + s.getAcademicYear()));
+        
+        List<StudentPaymentSummaryDto.TermSummaryDto> termSummaries = structuresByTerm.entrySet().stream()
+                .map(entry -> {
+                    String[] parts = entry.getKey().split("-", 2);
+                    String term = parts[0];
+                    String academicYearForTerm = parts.length > 1 ? parts[1] : "";
+                    
+                    List<FeeStructure> termStructures = entry.getValue();
+                    double termTotalFee = termStructures.stream().mapToDouble(this::resolveTotalFee).sum();
+                    
+                    double termTotalPaid = allStudentPayments.stream()
+                            .filter(p -> termStructures.stream().anyMatch(s -> s.getId().equals(p.getFeeStructure().getId())))
+                            .mapToDouble(p -> p.getAmount() != null ? p.getAmount() : 0.0)
+                            .sum();
+                    
+                    double termBalance = Math.max(0, termTotalFee - termTotalPaid);
+                    
+                    int paymentCount = (int) allStudentPayments.stream()
+                            .filter(p -> termStructures.stream().anyMatch(s -> s.getId().equals(p.getFeeStructure().getId())))
+                            .count();
+                    
+                    return StudentPaymentSummaryDto.TermSummaryDto.builder()
+                            .term(term)
+                            .academicYear(academicYearForTerm)
+                            .totalFee(roundAmount(termTotalFee))
+                            .totalPaid(roundAmount(termTotalPaid))
+                            .balance(roundAmount(termBalance))
+                            .status(termBalance <= 0.009 ? "PAID" : "OUTSTANDING")
+                            .paymentCount(paymentCount)
+                            .build();
+                })
+                .sorted(Comparator.comparing(StudentPaymentSummaryDto.TermSummaryDto::getAcademicYear)
+                        .thenComparing(s -> termOrder(Term.valueOf(s.getTerm()))))
+                .toList();
+        
+        return StudentPaymentSummaryDto.builder()
+                .studentId(studentId)
+                .studentName(resolveStudentName(payment.getStudent()))
+                .studentNumber(payment.getStudent().getStudentNumber())
+                .gradeId(payment.getStudent().getGrade().getId())
+                .gradeName(payment.getStudent().getGrade().getName())
+                .totalFeesAcrossAllTerms(roundAmount(totalFeesAcrossAllTerms))
+                .totalPaidAcrossAllTerms(roundAmount(totalPaidAcrossAllTerms))
+                .totalOutstandingAcrossAllTerms(roundAmount(totalOutstandingAcrossAllTerms))
+                .termSummaries(termSummaries)
+                .build();
+    }
+
     @Transactional
     public FeePaymentDto createFeePayment(FeePaymentDto request) {
         Student student = resolveStudent(request.getStudentId());
@@ -179,6 +267,7 @@ public class FeePaymentService {
                 .paymentMethod(normalizePaymentMethod(request.getPaymentMethod()))
                 .referenceNumber(normalizeOptionalText(request.getReferenceNumber()))
                 .notes(normalizeOptionalText(request.getNotes()))
+                .reversed(false)
                 .createdBy(actor)
                 .updatedBy(actor)
                 .build();

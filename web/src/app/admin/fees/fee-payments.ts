@@ -233,10 +233,7 @@ export class FeePayments implements OnInit, OnDestroy {
           this.payments = [normalizedPayment, ...this.payments.filter(item => item.id !== normalizedPayment.id)];
           this.closeForm();
           this.loadOutstanding();
-          this.feeReceiptService.printReceipt(normalizedPayment);
-          if (normalizedPayment.id) {
-            this.router.navigate(['/admin/fees/payments', normalizedPayment.id]);
-          }
+          this.actionMessage = 'Fee payment recorded successfully.';
         }
       },
       error: (error: HttpErrorResponse) => {

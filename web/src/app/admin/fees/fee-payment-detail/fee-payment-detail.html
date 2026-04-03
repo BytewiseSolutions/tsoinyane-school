@@ -48,15 +48,15 @@
     <div class="metric-grid">
       <div class="metric-card">
         <span>Amount Paid</span>
-        <strong>{{ formatCurrency(payment.amount) }}</strong>
+        <strong>{{ formatCurrency(payment.reversed ? 0 : payment.amount) }}</strong>
       </div>
       <div class="metric-card">
         <span>Total Paid So Far</span>
-        <strong>{{ formatCurrency(payment.totalPaid) }}</strong>
+        <strong>{{ formatCurrency(studentGrandTotal) }}</strong>
       </div>
       <div class="metric-card">
         <span>Outstanding Balance</span>
-        <strong>{{ formatCurrency(payment.balance) }}</strong>
+        <strong>{{ formatCurrency(studentTotalOutstanding) }}</strong>
       </div>
     </div>
 
@@ -194,6 +194,38 @@
     <div class="confirm-card" (click)="$event.stopPropagation()">
       <h3>Reverse Payment</h3>
       <p>This will mark the payment as reversed and restore the outstanding balance. This action cannot be undone.</p>
+      
+      @if (payment) {
+        <div class="reversal-payment-details">
+          <h4>Payment Being Reversed:</h4>
+          <div class="reversal-detail-row">
+            <span>Student:</span>
+            <strong>{{ payment.studentName }} ({{ payment.studentNumber }})</strong>
+          </div>
+          <div class="reversal-detail-row">
+            <span>Term:</span>
+            <strong>{{ getTermLabel(payment.term) }} • {{ payment.academicYear }}</strong>
+          </div>
+          <div class="reversal-detail-row">
+            <span>Amount:</span>
+            <strong>{{ formatCurrency(payment.amount) }}</strong>
+          </div>
+          <div class="reversal-detail-row">
+            <span>Payment Date:</span>
+            <strong>{{ payment.paymentDate | date:'dd MMM yyyy' }}</strong>
+          </div>
+          <div class="reversal-detail-row">
+            <span>Payment Method:</span>
+            <strong>{{ payment.paymentMethod?.replace('_', ' ') || 'N/A' }}</strong>
+          </div>
+          @if (payment.referenceNumber) {
+            <div class="reversal-detail-row">
+              <span>Reference:</span>
+              <strong>{{ payment.referenceNumber }}</strong>
+            </div>
+          }
+        </div>
+      }
       @if (reversalError) {
         <div class="reversal-error">{{ reversalError }}</div>
       }

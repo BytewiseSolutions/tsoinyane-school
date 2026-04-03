@@ -37,6 +37,11 @@ public class FeePaymentController {
         return feePaymentService.getFeePayment(id);
     }
 
+    @GetMapping("/{id}/student-summary")
+    public StudentPaymentSummaryDto getStudentPaymentSummary(@PathVariable Long id) {
+        return feePaymentService.getStudentPaymentSummary(id);
+    }
+
     @PostMapping
     public FeePaymentDto createFeePayment(@Valid @RequestBody FeePaymentDto request) {
         return feePaymentService.createFeePayment(request);

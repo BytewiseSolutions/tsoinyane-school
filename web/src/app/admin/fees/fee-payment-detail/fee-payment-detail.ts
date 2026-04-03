@@ -25,6 +25,7 @@ interface LearnerHistoryGroup {
 })
 export class FeePaymentDetail implements OnInit {
   payment: FeePayment | null = null;
+  studentSummary: any = null; // Will be properly typed
   learnerHistory: FeePayment[] = [];
   isLoading = true;
   isLoadingHistory = false;
@@ -59,6 +60,7 @@ export class FeePaymentDetail implements OnInit {
           totalPaid: Number(payment.totalPaid ?? 0),
           balance: Number(payment.balance ?? 0),
         };
+        this.loadStudentSummary(id);
         this.loadLearnerHistory(this.payment.schoolId ?? null, this.payment.studentId ?? null);
       },
       error: (error: HttpErrorResponse) => {
@@ -126,8 +128,16 @@ export class FeePaymentDetail implements OnInit {
       });
   }
 
+  get studentGrandTotal(): number {
+    return this.studentSummary?.totalPaidAcrossAllTerms ?? 0;
+  }
+
+  get studentTotalOutstanding(): number {
+    return this.studentSummary?.totalOutstandingAcrossAllTerms ?? 0;
+  }
+
   get paymentStatus(): 'paid' | 'outstanding' {
-    return Number(this.payment?.balance ?? 0) <= 0 ? 'paid' : 'outstanding';
+    return this.studentTotalOutstanding <= 0 ? 'paid' : 'outstanding';
   }
 
   get paymentStatusLabel(): string {
@@ -181,6 +191,8 @@ export class FeePaymentDetail implements OnInit {
           balance: Number(updated.balance ?? 0),
         };
         this.closeReversalDialog();
+        // Reload both student summary and learner history after reversal
+        this.loadStudentSummary(this.payment.id!);
         this.loadLearnerHistory(this.payment.schoolId ?? null, this.payment.studentId ?? null);
       },
       error: (error: HttpErrorResponse) => {
@@ -189,6 +201,17 @@ export class FeePaymentDetail implements OnInit {
       complete: () => {
         this.isReversing = false;
       },
+    });
+  }
+
+  private loadStudentSummary(paymentId: number): void {
+    this.backendService.get<any>(`fee-payment/${paymentId}/student-summary`).subscribe({
+      next: summary => {
+        this.studentSummary = summary;
+      },
+      error: () => {
+        this.studentSummary = null;
+      }
     });
   }
 

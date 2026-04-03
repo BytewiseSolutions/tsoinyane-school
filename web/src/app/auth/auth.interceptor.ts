@@ -17,9 +17,10 @@ export class AuthInterceptor implements HttpInterceptor {
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const isAuthRequest = req.url.includes('/auth/login') || req.url.includes('/auth/forgot-password');
+    const isPublicSchoolRequest = req.url.includes('/school') && req.method === 'GET';
     const authorizationHeader = getAuthorizationHeader();
 
-    if (!isAuthRequest && !authorizationHeader) {
+    if (!isAuthRequest && !isPublicSchoolRequest && !authorizationHeader) {
       clearStoredAuth();
       void this.router.navigate(['/login']);
       return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' }));
@@ -31,7 +32,7 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(authReq).pipe(
       catchError((error: HttpErrorResponse) => {
-        if ((error.status === 401 || error.status === 403) && !isAuthRequest) {
+        if ((error.status === 401 || error.status === 403) && !isAuthRequest && !isPublicSchoolRequest) {
           clearStoredAuth();
           void this.router.navigate(['/login']);
         }

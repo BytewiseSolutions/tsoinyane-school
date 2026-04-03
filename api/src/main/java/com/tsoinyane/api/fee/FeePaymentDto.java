@@ -42,7 +42,7 @@ public class FeePaymentDto {
     private Double totalFee;
     private Double totalPaid;
     private Double balance;
-    private boolean reversed;
+    private Boolean reversed;
     private Instant reversedAt;
     private String reversalReason;
 }
