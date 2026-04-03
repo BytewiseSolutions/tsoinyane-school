@@ -49,7 +49,7 @@ import { FeePaymentForm } from './admin/fees/fee-payment-form/fee-payment-form';
 import { FeePaymentDetail } from './admin/fees/fee-payment-detail/fee-payment-detail';
 import { FeeStructureForm } from './admin/fees/fee-structure-form/fee-structure-form';
 import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
-import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
+import { MySubjects } from './admin/teacher/my-subjects';
 import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
 import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
 import { Settings } from './admin/settings/settings';

@@ -2,7 +2,7 @@ package com.tsoinyane.api.timetable;
 
 import com.tsoinyane.api.common.BaseEntity;
 import com.tsoinyane.api.student.Student;
-import com.tsoinyane.api.subject.Subject;
+import com.tsoinyane.api.subjectassignment.SubjectAssignment;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -31,8 +32,8 @@ import java.util.Set;
 @SuperBuilder
 @Entity
 @Table(name = "timetable")
-@EqualsAndHashCode(callSuper = true, exclude = {"subject", "students"})
-@ToString(callSuper = true, exclude = {"subject", "students"})
+@EqualsAndHashCode(callSuper = true, exclude = {"subjectAssignment", "students"})
+@ToString(callSuper = true, exclude = {"subjectAssignment", "students"})
 public class Timetable extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
@@ -46,8 +47,8 @@ public class Timetable extends BaseEntity {
     private LocalTime endTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_id", nullable = false)
-    private Subject subject;
+    @JoinColumn(name = "subject_assignment_id", nullable = false)
+    private SubjectAssignment subjectAssignment;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -55,5 +56,6 @@ public class Timetable extends BaseEntity {
             joinColumns = @JoinColumn(name = "timetable_id"),
             inverseJoinColumns = @JoinColumn(name = "student_id")
     )
+    @Builder.Default
     private Set<Student> students = new LinkedHashSet<>();
 }

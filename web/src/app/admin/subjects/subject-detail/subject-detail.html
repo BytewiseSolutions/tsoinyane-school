@@ -24,18 +24,37 @@
         </strong>
       </div>
       <div class="summary-item">
+        <span>Assignments</span>
+        <strong>{{ subjectAssignments.length }}</strong>
+      </div>
+      <div class="summary-item">
         <span>Grade</span>
-        <strong>{{ subject.gradeName || 'N/A' }}</strong>
+        <strong>{{ activeAssignment?.gradeName || 'N/A' }}</strong>
       </div>
       <div class="summary-item">
         <span>Teacher</span>
-        <strong>{{ subject.teacherName || 'N/A' }}</strong>
+        <strong>{{ activeAssignment?.teacherName || 'N/A' }}</strong>
       </div>
       <div class="summary-item">
         <span>Students</span>
-        <strong>{{ subject.studentCount ?? assignedStudents.length }}</strong>
+        <strong>{{ activeAssignment?.studentCount ?? assignedStudents.length }}</strong>
       </div>
     </div>
+
+    @if (subjectAssignments.length > 1) {
+      <div class="summary-card">
+        <div class="summary-item">
+          <span>Active Assignment</span>
+          <select [(ngModel)]="activeAssignmentId" (ngModelChange)="onAssignmentChanged()" name="activeAssignmentId">
+            @for (assignment of subjectAssignments; track assignment.assignmentId) {
+              <option [ngValue]="assignment.assignmentId">
+                {{ assignment.gradeName || 'No grade' }} • {{ assignment.teacherName || 'No teacher' }}
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+    }
 
     <div class="tabs-card">
       <div class="tab-bar">
@@ -365,13 +384,13 @@
         } @else {
           <p>Transfer <strong>{{ transferringStudent.displayName }}</strong> to another subject.</p>
         }
-        <p>Select a target subject from the same grade only.</p>
+        <p>Select a target assignment from the same grade only.</p>
         <div class="form-group">
-          <label>Select Subject</label>
+          <label>Select Assignment</label>
           <select [(ngModel)]="targetSubjectId" name="targetSubject">
-            <option [ngValue]="null">Select a subject...</option>
-            @for (s of availableSubjects; track s.id) {
-              <option [ngValue]="s.id">{{ s.name }} ({{ s.code }})</option>
+            <option [ngValue]="null">Select an assignment...</option>
+            @for (s of availableSubjects; track s.assignmentId ?? s.id) {
+              <option [ngValue]="s.assignmentId">{{ s.name }} ({{ s.code }}) • {{ s.gradeName || 'No grade' }}</option>
             }
           </select>
         </div>
@@ -415,8 +434,11 @@
             <input type="time" [(ngModel)]="timetableForm.endTime" name="timetableEndTime" />
           </div>
           <div class="form-group full-width info-group">
-            <label>Students</label>
-            <p>This timetable will automatically apply to all students currently assigned to this subject.</p>
+            <label>Assignment</label>
+            <p>
+              {{ activeAssignment?.gradeName || 'No grade' }} • {{ activeAssignment?.teacherName || 'No teacher' }}.
+              This timetable will automatically apply to all students currently assigned to this assignment.
+            </p>
           </div>
         </div>
         @if (timetableError) {

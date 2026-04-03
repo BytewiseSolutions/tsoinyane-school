@@ -22,7 +22,8 @@ public interface StudentLessonRepository extends JpaRepository<StudentLesson, Lo
             select sl from StudentLesson sl
             join fetch sl.lesson l
             left join fetch l.timetable tt
-            left join fetch l.subject s
+            left join fetch l.subjectAssignment sa
+            left join fetch sa.subject s
             join fetch sl.student st
             join fetch st.user
             where (:lessonId is null or l.id = :lessonId)
@@ -34,7 +35,8 @@ public interface StudentLessonRepository extends JpaRepository<StudentLesson, Lo
             select sl from StudentLesson sl
             join fetch sl.lesson l
             left join fetch l.timetable tt
-            left join fetch l.subject s
+            left join fetch l.subjectAssignment sa
+            left join fetch sa.subject s
             join fetch sl.student st
             join fetch st.user
             where sl.id = :id
@@ -53,8 +55,9 @@ public interface StudentLessonRepository extends JpaRepository<StudentLesson, Lo
     @Query("""
             select sl from StudentLesson sl
             join fetch sl.lesson l
-            left join fetch l.subject s
-            left join fetch s.teacher t
+            left join fetch l.subjectAssignment sa
+            left join fetch sa.subject s
+            left join fetch sa.teacher t
             left join fetch t.user
             join fetch sl.student st
             join fetch st.user

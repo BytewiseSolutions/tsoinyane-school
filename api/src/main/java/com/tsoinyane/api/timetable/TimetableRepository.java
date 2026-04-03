@@ -17,9 +17,10 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
     @Query("""
             select distinct t from Timetable t
-            join fetch t.subject s
+            join fetch t.subjectAssignment sa
+            join fetch sa.subject s
             join fetch s.school
-            left join fetch s.teacher teacher
+            left join fetch sa.teacher teacher
             left join fetch t.students
             where (:subjectId is null or s.id = :subjectId)
             order by t.dayOfWeek asc, t.startTime asc, t.id asc
@@ -28,9 +29,10 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
     @Query("""
             select distinct t from Timetable t
-            join fetch t.subject s
+            join fetch t.subjectAssignment sa
+            join fetch sa.subject s
             join fetch s.school
-            left join fetch s.teacher teacher
+            left join fetch sa.teacher teacher
             left join fetch t.students
             where t.id = :id
             """)
@@ -38,9 +40,22 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
     @Query("""
             select distinct t from Timetable t
-            join fetch t.subject s
+            join fetch t.subjectAssignment sa
+            join fetch sa.subject s
+            join fetch s.school
+            left join fetch sa.teacher teacher
+            left join fetch t.students
+            where sa.id = :subjectAssignmentId
+            order by t.dayOfWeek asc, t.startTime asc, t.id asc
+            """)
+    List<Timetable> findAllBySubjectAssignmentId(@Param("subjectAssignmentId") Long subjectAssignmentId);
+
+    @Query("""
+            select distinct t from Timetable t
+            join fetch t.subjectAssignment sa
+            join fetch sa.subject s
             join fetch s.school school
-            left join fetch s.teacher teacher
+            left join fetch sa.teacher teacher
             left join fetch t.students
             where school.id = :schoolId
               and t.dayOfWeek = :dayOfWeek

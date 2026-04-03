@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Subject, catchError, finalize, forkJoin, of, takeUntil } from 'rxjs';
+import { Subject, catchError, finalize, forkJoin, map, of, switchMap, takeUntil } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { BackendService } from '../../util/backend.service';
 import { SchoolContextService } from '../layout/school-context';
@@ -45,6 +45,7 @@ export class AdminSubjects implements OnInit, OnDestroy {
   teacherOptions: SubjectTeacherOption[] = [];
 
   subjects: SchoolSubject[] = [];
+  subjectCatalog: SchoolSubject[] = [];
 
   constructor(
     private backendService: BackendService,
@@ -58,6 +59,7 @@ export class AdminSubjects implements OnInit, OnDestroy {
       .subscribe(school => {
         this.selectedSchoolId = school?.id ?? null;
         this.selectedSchoolName = school?.name ?? '';
+        this.resetFilters();
         this.loadReferenceData();
       });
   }
@@ -72,8 +74,8 @@ export class AdminSubjects implements OnInit, OnDestroy {
     return [...this.subjects]
       .filter(subject => this.matchesSearch(subject, query))
       .filter(subject => this.selectedStatusFilter === 'ALL' || subject.status === this.selectedStatusFilter)
-      .filter(subject => this.selectedGradeFilter === null || subject.gradeId === this.selectedGradeFilter)
-      .filter(subject => this.selectedTeacherFilter === null || subject.teacherId === this.selectedTeacherFilter)
+      .filter(subject => this.selectedGradeFilter === null || Number(subject.gradeId ?? 0) === Number(this.selectedGradeFilter))
+      .filter(subject => this.selectedTeacherFilter === null || Number(subject.teacherId ?? 0) === Number(this.selectedTeacherFilter))
       .sort((left, right) => this.compareSubjects(left, right));
   }
 
@@ -103,7 +105,21 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   get totalSubjects(): number {
-    return this.subjects.length;
+    return new Set(
+      this.subjects
+        .map(subject => Number(subject.subjectId ?? subject.id ?? 0))
+        .filter(subjectId => subjectId > 0)
+    ).size;
+  }
+
+  get teacherFilterOptions(): SubjectTeacherOption[] {
+    const teacherIdsWithSubjects = new Set(
+      this.subjects
+        .map(subject => Number(subject.teacherId ?? 0))
+        .filter(teacherId => teacherId > 0)
+    );
+
+    return this.teacherOptions.filter(teacher => teacherIdsWithSubjects.has(Number(teacher.id)));
   }
 
   get activeSubjectsCount(): number {
@@ -135,38 +151,17 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   onSaved(subject: SchoolSubject) {
-    if (this.selectedSubject) {
-      const id = this.selectedSubject.id!;
-      const payload: SchoolSubject = { ...subject, schoolId: this.selectedSchoolId };
-
-      this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${id}`, payload).subscribe({
-        next: (updated) => {
-          this.subjects = this.subjects.map(item =>
-            item.id === id ? this.mapSavedSubject(updated) : item
-          );
-          this.closeForm();
-        },
-        error: (error: HttpErrorResponse) => {
-          this.errorMessage = error.error?.message || 'Failed to update subject.';
-        },
-      });
-      return;
-    }
-
     const payload: SchoolSubject = {
       ...subject,
       schoolId: this.selectedSchoolId,
     };
 
-    this.backendService.post<SchoolSubject, SchoolSubject>('subject', payload).subscribe({
-      next: (savedSubject) => {
-        this.subjects = [this.mapSavedSubject(savedSubject), ...this.subjects];
-        this.closeForm();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to create subject.';
-      },
-    });
+    if (this.selectedSubject) {
+      this.updateSubjectAssignment(payload);
+      return;
+    }
+
+    this.createSubjectAssignment(payload);
   }
 
   deleteSubject(subject: SchoolSubject) {
@@ -182,14 +177,14 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   confirmDeleteSubject() {
-    if (!this.subjectToDelete?.id || this.isProcessing) return;
+    if (!this.subjectToDelete?.assignmentId || this.isProcessing) return;
 
     const targetSubject = this.subjectToDelete;
 
     this.isProcessing = true;
     this.errorMessage = '';
 
-    this.backendService.delete(`subject/${targetSubject.id}`)
+    this.backendService.delete(`subject-assignment/${targetSubject.assignmentId}`)
       .pipe(finalize(() => {
         this.isProcessing = false;
       }))
@@ -226,31 +221,31 @@ export class AdminSubjects implements OnInit, OnDestroy {
     }
 
     const targetSubject = this.subjectToToggleStatus;
+    this.isProcessing = true;
+    this.errorMessage = '';
+
     const payload: SchoolSubject = {
       ...targetSubject,
       schoolId: this.selectedSchoolId,
       status: this.pendingStatus,
     };
 
-    this.isProcessing = true;
-    this.errorMessage = '';
-
-    this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${targetSubject.id}`, payload)
-      .pipe(finalize(() => {
+    this.saveSubjectAssignment(payload, true, targetSubject).pipe(
+      finalize(() => {
         this.isProcessing = false;
-      }))
-      .subscribe({
-        next: (updatedSubject) => {
-          this.subjects = this.subjects.map(subject =>
-            subject.id === updatedSubject.id ? this.mapSavedSubject(updatedSubject) : subject
-          );
-          this.cancelToggleStatus();
-        },
-        error: (error: HttpErrorResponse) => {
-          this.errorMessage = error.error?.message || 'Failed to update subject status.';
-          this.cancelToggleStatus();
-        },
-      });
+      })
+    ).subscribe({
+      next: (updatedSubject) => {
+        this.subjects = this.subjects.map(subject =>
+          subject.assignmentId === updatedSubject.assignmentId ? this.mapSavedSubject(updatedSubject) : subject
+        );
+        this.cancelToggleStatus();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to update subject status.';
+        this.cancelToggleStatus();
+      },
+    });
   }
 
   getStatusLabel(status: Status | null | undefined): string {
@@ -363,6 +358,15 @@ export class AdminSubjects implements OnInit, OnDestroy {
       grades: this.backendService.get<Grade[]>('grade').pipe(
         catchError(() => of([] as Grade[]))
       ),
+      catalogSubjects: this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId }).pipe(
+        catchError(() => of([] as SchoolSubject[]))
+      ),
+      assignments: this.backendService.get<any[]>('subject-assignment', { schoolId: this.selectedSchoolId }).pipe(
+        catchError((error: HttpErrorResponse) => {
+          errorMessages.push(error.error?.message || 'Failed to load subject assignments.');
+          return of([] as any[]);
+        })
+      ),
       teachers: this.backendService.get<Teacher[]>('teacher', { schoolId: this.selectedSchoolId }).pipe(
         catchError((error: HttpErrorResponse) => {
           errorMessages.push(error.error?.message || 'Failed to load teachers for subjects.');
@@ -373,30 +377,159 @@ export class AdminSubjects implements OnInit, OnDestroy {
       .pipe(finalize(() => {
         this.isLoading = false;
       }))
-      .subscribe(({ subjects, grades, teachers }) => {
+      .subscribe(({ grades, catalogSubjects, assignments, teachers }) => {
         this.availableGrades = (grades ?? []).filter(grade => grade.schoolId === this.selectedSchoolId);
         this.teacherOptions = (teachers ?? []).map(teacher => ({
-          id: teacher.id ?? 0,
+          id: Number(teacher.id ?? 0),
           name: teacher.userFullName || teacher.userEmail || 'Unknown Teacher',
           schoolId: teacher.schoolId ?? null,
-          gradeIds: teacher.gradeIds ?? [],
+          gradeIds: (teacher.gradeIds ?? []).map(id => Number(id)),
         })).filter(teacher => teacher.id > 0);
-        this.subjects = (subjects ?? []).map(subject => this.mapSavedSubject(subject));
+        this.subjectCatalog = (catalogSubjects ?? []).map(subject => ({
+          ...subject,
+          id: Number(subject.id ?? 0),
+          subjectId: Number(subject.id ?? 0),
+        }));
+        this.subjects = (assignments ?? []).map(assignment => this.mapAssignmentToSubject(assignment));
+        this.ensureValidFilters();
         this.errorMessage = errorMessages.join(' ');
       });
   }
 
   private mapSavedSubject(subject: SchoolSubject): SchoolSubject {
-    const gradeName = this.availableGrades.find(grade => grade.id === subject.gradeId)?.name ?? subject.gradeName ?? null;
-    const teacherName = this.teacherOptions.find(teacher => teacher.id === subject.teacherId)?.name ?? subject.teacherName ?? null;
+    const gradeId = subject.gradeId != null ? Number(subject.gradeId) : null;
+    const teacherId = subject.teacherId != null ? Number(subject.teacherId) : null;
+    const gradeName = this.availableGrades.find(grade => Number(grade.id) === gradeId)?.name ?? subject.gradeName ?? null;
+    const teacherName = this.teacherOptions.find(teacher => teacher.id === teacherId)?.name ?? subject.teacherName ?? null;
 
     return {
       ...subject,
       schoolId: subject.schoolId ?? this.selectedSchoolId,
       schoolName: subject.schoolName ?? (this.selectedSchoolName || null),
+      gradeId,
       gradeName,
+      teacherId,
       teacherName,
-      studentCount: subject.studentCount ?? 0,
+      studentCount: Number(subject.studentCount ?? 0),
     };
+  }
+
+  private mapAssignmentToSubject(assignment: any): SchoolSubject {
+    return this.mapSavedSubject({
+      id: Number(assignment.subjectId ?? 0),
+      subjectId: Number(assignment.subjectId ?? 0),
+      assignmentId: Number(assignment.id ?? 0),
+      code: assignment.subjectCode ?? '',
+      name: assignment.subjectName ?? '',
+      schoolId: assignment.schoolId ?? this.selectedSchoolId,
+      schoolName: assignment.schoolName ?? this.selectedSchoolName,
+      gradeId: assignment.gradeId ?? null,
+      gradeName: assignment.gradeName ?? null,
+      teacherId: assignment.teacherId ?? null,
+      teacherName: assignment.teacherName ?? null,
+      studentCount: assignment.studentCount ?? 0,
+      status: assignment.status ?? Status.ACTIVE,
+    });
+  }
+
+  private createSubjectAssignment(subject: SchoolSubject): void {
+    this.saveSubjectAssignment(subject, false).subscribe({
+      next: (savedSubject) => {
+        this.subjects = [this.mapSavedSubject(savedSubject), ...this.subjects];
+        this.closeForm();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to create subject assignment.';
+      },
+    });
+  }
+
+  private updateSubjectAssignment(subject: SchoolSubject): void {
+    this.saveSubjectAssignment(subject, true, this.selectedSubject ?? undefined).subscribe({
+      next: (updated) => {
+        this.subjects = this.subjects.map(item =>
+          item.assignmentId === updated.assignmentId ? this.mapSavedSubject(updated) : item
+        );
+        this.closeForm();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to update subject assignment.';
+      },
+    });
+  }
+
+  private saveSubjectAssignment(subject: SchoolSubject, isEdit: boolean, existing?: SchoolSubject) {
+    const catalogSubject = this.findCatalogSubjectByCode(subject.code, existing?.subjectId ?? null);
+    const subjectPayload: SchoolSubject = {
+      code: subject.code,
+      name: subject.name,
+      schoolId: this.selectedSchoolId,
+      schoolName: this.selectedSchoolName || null,
+      gradeId: null,
+      gradeName: null,
+      teacherId: null,
+      teacherName: null,
+      status: subject.status,
+    };
+
+    const subjectRequest$ = existing?.subjectId
+      ? this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${existing.subjectId}`, {
+          ...subjectPayload,
+          id: existing.subjectId,
+        })
+      : catalogSubject?.subjectId
+        ? of(catalogSubject)
+        : this.backendService.post<SchoolSubject, SchoolSubject>('subject', subjectPayload);
+
+    return subjectRequest$.pipe(
+      switchMap((savedCatalog: SchoolSubject) => {
+        const assignmentPayload = {
+          subjectId: savedCatalog.subjectId ?? savedCatalog.id ?? null,
+          schoolId: this.selectedSchoolId,
+          gradeId: subject.gradeId,
+          teacherId: subject.teacherId,
+          status: subject.status,
+        };
+
+        const assignmentRequest$ = isEdit && existing?.assignmentId
+          ? this.backendService.put<any, any>(`subject-assignment/${existing.assignmentId}`, assignmentPayload)
+          : this.backendService.post<any, any>('subject-assignment', assignmentPayload);
+
+        return assignmentRequest$.pipe(
+          map(assignment => this.mapAssignmentToSubject(assignment))
+        );
+      })
+    );
+  }
+
+  private findCatalogSubjectByCode(code: string, excludeSubjectId: number | null): SchoolSubject | null {
+    const normalizedCode = code.trim().toLowerCase();
+    return this.subjectCatalog.find(subject =>
+      (subject.code ?? '').trim().toLowerCase() === normalizedCode
+      && Number(subject.subjectId ?? subject.id ?? 0) !== Number(excludeSubjectId ?? 0)
+    ) ?? null;
+  }
+
+  private ensureValidFilters(): void {
+    const hasSelectedGrade = this.selectedGradeFilter != null
+      && this.availableGrades.some(grade => Number(grade.id) === Number(this.selectedGradeFilter));
+    if (!hasSelectedGrade) {
+      this.selectedGradeFilter = null;
+    }
+
+    const hasSelectedTeacher = this.selectedTeacherFilter != null
+      && this.teacherFilterOptions.some(teacher => teacher.id === Number(this.selectedTeacherFilter));
+    if (!hasSelectedTeacher) {
+      this.selectedTeacherFilter = null;
+    }
+  }
+
+  private resetFilters(): void {
+    this.searchTerm = '';
+    this.selectedStatusFilter = 'ALL';
+    this.selectedGradeFilter = null;
+    this.selectedTeacherFilter = null;
+    this.selectedSort = 'code-asc';
+    this.currentPage = 1;
   }
 }

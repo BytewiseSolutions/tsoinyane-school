@@ -21,6 +21,7 @@ public class LessonDto extends BaseDto {
     private LocalDateTime endTime;
     private LessonStatus status;
     private Boolean submitted;
+    private Long subjectAssignmentId;
     private Long subjectId;
     private String subjectName;
     private Long teacherId;

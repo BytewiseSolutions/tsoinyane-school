@@ -139,6 +139,11 @@
           background-color: #fdecea;
           color: #c62828;
         }
+
+        &.pending {
+          background-color: #fff7e6;
+          color: #b26a00;
+        }
       }
 
       // EVENTS

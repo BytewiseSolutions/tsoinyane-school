@@ -36,6 +36,8 @@ export class SubjectDetail implements OnInit {
     'SUNDAY',
   ];
   subject: SchoolSubject | null = null;
+  subjectAssignments: SchoolSubject[] = [];
+  activeAssignmentId: number | null = null;
   isLoading = true;
   errorMessage = '';
   activeTab: 'students' | 'timetable' = 'students';
@@ -89,9 +91,7 @@ export class SubjectDetail implements OnInit {
     this.backendService.get<SchoolSubject>(`subject/${id}`).subscribe({
       next: (subject) => {
         this.subject = subject;
-        this.loadStudents(subject.schoolId, subject.gradeId);
-        this.loadAssignedStudents(id);
-        this.loadTimetables(id);
+        this.loadAssignments(subject);
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error.error?.message || 'Failed to load subject details.';
@@ -100,6 +100,12 @@ export class SubjectDetail implements OnInit {
         this.isLoading = false;
       },
     });
+  }
+
+  get activeAssignment(): SchoolSubject | null {
+    return this.subjectAssignments.find(assignment => assignment.assignmentId === this.activeAssignmentId)
+      ?? this.subjectAssignments[0]
+      ?? null;
   }
 
   onItemAdded(item: StudentOption) {
@@ -302,24 +308,26 @@ export class SubjectDetail implements OnInit {
     this.studentsError = '';
 
     if (!this.availableSubjects.length && this.subject?.schoolId) {
-      this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.subject.schoolId }).subscribe({
-        next: (subjects) => {
-          this.availableSubjects = (subjects ?? []).filter(s =>
-            s.id !== this.subject!.id
-            && s.gradeId === this.subject!.gradeId
-          );
+      this.backendService.get<any[]>('subject-assignment', { schoolId: this.subject.schoolId }).subscribe({
+        next: (assignments) => {
+          this.availableSubjects = (assignments ?? [])
+            .map(assignment => this.mapAssignmentToSubject(assignment))
+            .filter(s =>
+              s.assignmentId !== this.activeAssignment?.assignmentId
+              && s.gradeId === this.activeAssignment?.gradeId
+            );
           this.studentsError = this.availableSubjects.length
             ? ''
-            : `No other subjects are available for ${this.subject?.gradeName || 'this grade'}.`;
+            : `No other assignments are available for ${this.activeAssignment?.gradeName || 'this grade'}.`;
         },
       });
       return;
     }
 
-    this.availableSubjects = this.availableSubjects.filter(s => s.gradeId === this.subject?.gradeId);
+    this.availableSubjects = this.availableSubjects.filter(s => s.gradeId === this.activeAssignment?.gradeId);
     this.studentsError = this.availableSubjects.length
       ? ''
-      : `No other subjects are available for ${this.subject?.gradeName || 'this grade'}.`;
+      : `No other assignments are available for ${this.activeAssignment?.gradeName || 'this grade'}.`;
   }
 
   cancelTransfer() {
@@ -335,7 +343,14 @@ export class SubjectDetail implements OnInit {
     const studentsToTransfer = [...this.transferringStudents];
     const targetId = this.targetSubjectId;
 
-    this.backendService.get<any[]>(`subject/${targetId}/students`).subscribe({
+    const targetAssignment = this.availableSubjects.find(subject => subject.assignmentId === targetId);
+    if (!targetAssignment?.assignmentId) {
+      this.studentsError = 'Select a valid target assignment.';
+      this.isTransferring = false;
+      return;
+    }
+
+    this.backendService.get<any[]>(`subject-assignment/${targetAssignment.assignmentId}/students`).subscribe({
       next: (existing) => {
         const existingIds = (existing ?? []).map((s: any) => s.id);
         const alreadyAssigned = studentsToTransfer.filter(student => existingIds.includes(student.id));
@@ -348,7 +363,7 @@ export class SubjectDetail implements OnInit {
         }
 
         const newIds = [...existingIds, ...studentsToTransfer.map(student => student.id)];
-        this.backendService.put(`subject/${targetId}/students`, newIds).subscribe({
+        this.backendService.put(`subject-assignment/${targetAssignment.assignmentId}/students`, newIds).subscribe({
           next: () => {
             this.removeAssignedStudents(studentsToTransfer.map(student => student.id));
             this.saveAssignedStudents();
@@ -459,6 +474,7 @@ export class SubjectDetail implements OnInit {
     const payload: TimetableEntry = {
       ...this.timetableForm,
       subjectId: this.subject.id,
+      subjectAssignmentId: this.activeAssignment?.assignmentId ?? null,
     };
 
     const request$ = this.editingTimetable?.id
@@ -575,8 +591,51 @@ export class SubjectDetail implements OnInit {
     this.timetableError = '';
   }
 
-  private loadAssignedStudents(subjectId: number) {
-    this.backendService.get<any[]>(`subject/${subjectId}/students`).subscribe({
+  onAssignmentChanged(): void {
+    if (!this.subject) {
+      return;
+    }
+
+    const assignment = this.activeAssignment;
+    this.loadStudents(this.subject.schoolId, assignment?.gradeId ?? null);
+    this.loadAssignedStudents(assignment?.assignmentId ?? null);
+  }
+
+  private loadAssignments(subject: SchoolSubject): void {
+    if (!subject.schoolId || !subject.id) {
+      this.errorMessage = 'Subject assignments could not be loaded.';
+      this.isLoading = false;
+      return;
+    }
+
+    this.backendService.get<any[]>('subject-assignment', { schoolId: subject.schoolId }).subscribe({
+      next: (assignments) => {
+        this.subjectAssignments = (assignments ?? [])
+          .map(assignment => this.mapAssignmentToSubject(assignment))
+          .filter(assignment => assignment.subjectId === subject.id);
+
+        this.activeAssignmentId = this.subjectAssignments[0]?.assignmentId ?? null;
+        this.onAssignmentChanged();
+        this.loadTimetables(subject.id!);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to load subject assignments.';
+        this.isLoading = false;
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private loadAssignedStudents(assignmentId: number | null) {
+    if (!assignmentId) {
+      this.assignedStudents = [];
+      this.syncSubjectStudentCount();
+      return;
+    }
+
+    this.backendService.get<any[]>(`subject-assignment/${assignmentId}/students`).subscribe({
       next: (students) => {
         this.assignedStudents = (students ?? []).map(s => ({
           id: s.id,
@@ -596,9 +655,9 @@ export class SubjectDetail implements OnInit {
   }
 
   private saveAssignedStudents() {
-    if (!this.subject?.id) return;
+    if (!this.activeAssignment?.assignmentId) return;
     const studentIds = this.assignedStudents.map(s => s.id);
-    this.backendService.put(`subject/${this.subject.id}/students`, studentIds).subscribe({
+    this.backendService.put(`subject-assignment/${this.activeAssignment.assignmentId}/students`, studentIds).subscribe({
       error: () => {
         this.studentsError = 'Failed to save student assignments.';
       },
@@ -702,6 +761,26 @@ export class SubjectDetail implements OnInit {
       startTime: '',
       endTime: '',
       subjectId: this.subject?.id ?? null,
+      subjectAssignmentId: this.activeAssignment?.assignmentId ?? null,
+    };
+  }
+
+  private mapAssignmentToSubject(assignment: any): SchoolSubject {
+    return {
+      id: Number(assignment.subjectId ?? 0),
+      subjectId: Number(assignment.subjectId ?? 0),
+      assignmentId: Number(assignment.id ?? 0),
+      code: assignment.subjectCode ?? '',
+      name: assignment.subjectName ?? '',
+      schoolId: assignment.schoolId ?? this.subject?.schoolId ?? null,
+      schoolName: assignment.schoolName ?? this.subject?.schoolName ?? null,
+      gradeId: assignment.gradeId ?? null,
+      gradeName: assignment.gradeName ?? null,
+      teacherId: assignment.teacherId ?? null,
+      teacherName: assignment.teacherName ?? null,
+      studentCount: assignment.studentCount ?? 0,
+      assignmentCount: null,
+      status: assignment.status ?? this.subject?.status ?? null,
     };
   }
 

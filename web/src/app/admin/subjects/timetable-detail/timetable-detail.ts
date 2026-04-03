@@ -477,8 +477,14 @@ export class TimetableDetail implements OnInit {
     });
   }
 
-  private loadAssignedStudents(subjectId: number): void {
-    this.backendService.get<any[]>(`subject/${subjectId}/students`).subscribe({
+  private loadAssignedStudents(subjectAssignmentId: number | null): void {
+    if (!subjectAssignmentId) {
+      this.assignedStudents = [];
+      this.refreshSelectableStudentsForLesson();
+      return;
+    }
+
+    this.backendService.get<any[]>(`subject-assignment/${subjectAssignmentId}/students`).subscribe({
       next: (students) => {
         this.assignedStudents = (students ?? []).map(student => ({
           id: student.id,
@@ -504,7 +510,7 @@ export class TimetableDetail implements OnInit {
     this.backendService.get<TimetableEntry>(`timetable/${timetableId}`).subscribe({
       next: (timetable) => {
         this.timetable = this.mapTimetable(timetable);
-        this.loadAssignedStudents(subjectId);
+        this.loadAssignedStudents(this.timetable.subjectAssignmentId ?? null);
         this.loadLessons(timetableId);
       },
       error: (error: HttpErrorResponse) => {

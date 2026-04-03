@@ -14,6 +14,7 @@ import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentRepository;
 import com.tsoinyane.api.subject.SubjectRepository;
+import com.tsoinyane.api.subjectassignment.SubjectAssignmentRepository;
 import com.tsoinyane.api.teacher.Teacher;
 import com.tsoinyane.api.teacher.TeacherRepository;
 import com.tsoinyane.api.timetable.TimetableRepository;
@@ -44,6 +45,7 @@ public class UserService {
     private final LessonRepository lessonRepository;
     private final StudentLessonRepository studentLessonRepository;
     private final SubjectRepository subjectRepository;
+    private final SubjectAssignmentRepository subjectAssignmentRepository;
     private final TimetableRepository timetableRepository;
     private final FeePaymentRepository feePaymentRepository;
     private final PasswordEncoder passwordEncoder;
@@ -272,11 +274,11 @@ public class UserService {
             }
             studentLessonRepository.deleteAllByStudentId(student.getId());
             timetableRepository.deleteStudentAssignments(student.getId());
-            subjectRepository.deleteStudentAssignments(student.getId());
+            subjectAssignmentRepository.deleteStudentAssignments(student.getId());
             studentRepository.delete(student);
         });
         teacherRepository.findByUser_Id(id).ifPresent(teacher -> {
-            if (subjectRepository.existsByTeacher_Id(teacher.getId())) {
+            if (subjectAssignmentRepository.existsByTeacher_Id(teacher.getId())) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
                         "Cannot delete this user because the teacher is still assigned to subjects"

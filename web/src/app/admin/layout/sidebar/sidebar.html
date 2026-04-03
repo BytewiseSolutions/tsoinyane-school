@@ -115,6 +115,11 @@
         @if (!collapsed) { <span>Notifications</span> }
         @if (collapsed) { <span class="tooltip">Notifications</span> }
       </a>
+      <a routerLink="/admin/reports" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-chart-bar"></i>
+        @if (!collapsed) { <span>Reports</span> }
+        @if (collapsed) { <span class="tooltip">Reports</span> }
+      </a>
     }
 
   </nav>

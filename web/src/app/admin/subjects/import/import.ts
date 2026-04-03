@@ -49,6 +49,7 @@ export class SubjectsImport implements OnInit, OnDestroy {
   pendingSubjects: SchoolSubject[] = [];
   availableGrades: Grade[] = [];
   availableTeachers: Teacher[] = [];
+  catalogSubjects: SchoolSubject[] = [];
 
   readonly stepItems = [
     'Download the import template.',
@@ -105,24 +106,31 @@ export class SubjectsImport implements OnInit, OnDestroy {
       return;
     }
 
-    const worksheet = XLSX.utils.json_to_sheet([
-      {
-        'Subject Code': 'MATH-01',
-        'Subject Name': 'Mathematics',
-        'Grade Name': 'Grade 8',
-        'Teacher Name': 'Mpho Thabane',
-        Status: 'ACTIVE',
-      },
-      {
-        'Subject Code': 'ENG-01',
-        'Subject Name': 'English',
-        'Grade Name': 'Grade 8',
-        'Teacher Name': 'Lerato Mokoena',
-        Status: 'ACTIVE',
-      },
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ['Subject Code', 'Subject Name', 'Grade Name', 'Teacher Name', 'Status'],
     ]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Subjects');
+
+    if (this.availableGrades.length > 0) {
+      const gradesWorksheet = XLSX.utils.json_to_sheet(
+        this.availableGrades.map(grade => ({
+          'Grade Name': grade.name,
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, gradesWorksheet, 'Grades');
+    }
+
+    if (this.availableTeachers.length > 0) {
+      const teachersWorksheet = XLSX.utils.json_to_sheet(
+        this.availableTeachers.map(teacher => ({
+          'Teacher Name': teacher.userFullName || teacher.userEmail || 'Unknown Teacher',
+          Email: teacher.userEmail || '',
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, teachersWorksheet, 'Teachers');
+    }
+
     XLSX.writeFile(workbook, 'subjects-import-template.xlsx');
 
     this.message = 'Template downloaded successfully.';
@@ -161,16 +169,23 @@ export class SubjectsImport implements OnInit, OnDestroy {
         return;
       }
 
-      const existingSubjects = await firstValueFrom(
-        this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId })
-      );
+      const [catalogSubjects, assignments] = await Promise.all([
+        firstValueFrom(this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId })),
+        firstValueFrom(this.backendService.get<any[]>('subject-assignment', { schoolId: this.selectedSchoolId })),
+      ]);
 
-      const existingCodes = new Set(
-        (existingSubjects ?? [])
-          .map(subject => this.normalizeValue(subject.code))
-          .filter(code => !!code)
+      this.catalogSubjects = (catalogSubjects ?? []).map(subject => ({
+        ...subject,
+        id: Number(subject.id ?? 0),
+        subjectId: Number(subject.id ?? 0),
+      }));
+
+      const existingSubjectKeys = new Set(
+        (assignments ?? [])
+          .map(subject => this.buildSubjectKey(subject.subjectCode, subject.gradeName))
+          .filter(key => !!key)
       );
-      const fileCodes = new Set<string>();
+      const fileSubjectKeys = new Set<string>();
       const gradesByName = new Map(
         this.availableGrades.map(grade => [this.normalizeValue(grade.name), grade])
       );
@@ -180,8 +195,8 @@ export class SubjectsImport implements OnInit, OnDestroy {
         try {
           const payload = this.mapImportRowToSubject(
             row,
-            existingCodes,
-            fileCodes,
+            existingSubjectKeys,
+            fileSubjectKeys,
             gradesByName,
             teachersByName
           );
@@ -229,7 +244,7 @@ export class SubjectsImport implements OnInit, OnDestroy {
     try {
       for (const payload of this.pendingSubjects) {
         try {
-          await firstValueFrom(this.backendService.post<SchoolSubject, SchoolSubject>('subject', payload));
+          await this.saveSubjectAssignment(payload);
           this.importedCount += 1;
         } catch {
           this.failedCount += 1;
@@ -310,8 +325,8 @@ export class SubjectsImport implements OnInit, OnDestroy {
 
   private mapImportRowToSubject(
     row: SubjectImportRow,
-    existingCodes: Set<string>,
-    fileCodes: Set<string>,
+    existingSubjectKeys: Set<string>,
+    fileSubjectKeys: Set<string>,
     gradesByName: Map<string, Grade>,
     teachersByName: Map<string, Teacher>
   ): SchoolSubject {
@@ -319,7 +334,7 @@ export class SubjectsImport implements OnInit, OnDestroy {
     const name = row.name.trim();
     const gradeName = row.gradeName.trim();
     const teacherName = row.teacherName.trim();
-    const normalizedCode = this.normalizeValue(code);
+    const subjectKey = this.buildSubjectKey(code, gradeName);
 
     if (!code) {
       throw new Error('Subject code is required.');
@@ -329,12 +344,12 @@ export class SubjectsImport implements OnInit, OnDestroy {
       throw new Error('Subject name is required.');
     }
 
-    if (existingCodes.has(normalizedCode)) {
-      throw new Error('Subject code already exists for the selected school.');
+    if (existingSubjectKeys.has(subjectKey)) {
+      throw new Error('Subject code already exists for the selected grade.');
     }
 
-    if (fileCodes.has(normalizedCode)) {
-      throw new Error('Duplicate subject code found in the import file.');
+    if (fileSubjectKeys.has(subjectKey)) {
+      throw new Error('Duplicate subject code found for the same grade in the import file.');
     }
 
     const grade = gradesByName.get(this.normalizeValue(gradeName));
@@ -352,11 +367,13 @@ export class SubjectsImport implements OnInit, OnDestroy {
       throw new Error('Status must be ACTIVE or INACTIVE.');
     }
 
-    fileCodes.add(normalizedCode);
+    fileSubjectKeys.add(subjectKey);
 
     return {
       code,
       name,
+      subjectId: null,
+      assignmentId: null,
       schoolId: this.selectedSchoolId,
       schoolName: this.selectedSchoolName,
       gradeId: grade.id,
@@ -383,6 +400,53 @@ export class SubjectsImport implements OnInit, OnDestroy {
     });
 
     return teachersByName;
+  }
+
+  private buildSubjectKey(code: string, gradeName: string | null | undefined): string {
+    return `${this.normalizeValue(code)}::${this.normalizeValue(gradeName)}`;
+  }
+
+  private async saveSubjectAssignment(subject: SchoolSubject): Promise<void> {
+    const existingCatalog = this.catalogSubjects.find(item =>
+      this.normalizeValue(item.code) === this.normalizeValue(subject.code)
+    );
+
+    const catalogSubject = existingCatalog
+      ? existingCatalog
+      : await firstValueFrom(this.backendService.post<SchoolSubject, SchoolSubject>('subject', {
+          code: subject.code,
+          name: subject.name,
+          schoolId: this.selectedSchoolId,
+          schoolName: this.selectedSchoolName,
+          subjectId: null,
+          assignmentId: null,
+          gradeId: null,
+          gradeName: null,
+          teacherId: null,
+          teacherName: null,
+          assignmentCount: null,
+          studentCount: null,
+          status: subject.status,
+        }));
+
+    if (!existingCatalog) {
+      this.catalogSubjects = [
+        ...this.catalogSubjects,
+        {
+          ...catalogSubject,
+          id: Number(catalogSubject.id ?? 0),
+          subjectId: Number(catalogSubject.id ?? 0),
+        },
+      ];
+    }
+
+    await firstValueFrom(this.backendService.post('subject-assignment', {
+      subjectId: catalogSubject.subjectId ?? catalogSubject.id ?? null,
+      schoolId: this.selectedSchoolId,
+      gradeId: subject.gradeId,
+      teacherId: subject.teacherId,
+      status: subject.status,
+    }));
   }
 
   private parseStatus(rawStatus: string): Status | null {
@@ -433,5 +497,6 @@ export class SubjectsImport implements OnInit, OnDestroy {
     this.selectedFileName = '';
     this.validationResults = [];
     this.pendingSubjects = [];
+    this.catalogSubjects = [];
   }
 }

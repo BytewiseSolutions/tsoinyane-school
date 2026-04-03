@@ -48,6 +48,8 @@ export class TimetableImport implements OnInit {
 
   subjectId: number | null = null;
   subject: SchoolSubject | null = null;
+  subjectAssignments: SchoolSubject[] = [];
+  selectedAssignmentId: number | null = null;
   existingTimetables: TimetableEntry[] = [];
   isLoading = true;
   isImporting = false;
@@ -92,6 +94,20 @@ export class TimetableImport implements OnInit {
 
   get canConfirmImport(): boolean {
     return this.pendingTimetables.length > 0 && this.invalidRowCount === 0 && !this.isImporting;
+  }
+
+  get activeAssignment(): SchoolSubject | null {
+    return this.subjectAssignments.find(assignment => assignment.assignmentId === this.selectedAssignmentId)
+      ?? this.subjectAssignments[0]
+      ?? null;
+  }
+
+  get visibleTimetables(): TimetableEntry[] {
+    if (!this.selectedAssignmentId) {
+      return this.existingTimetables;
+    }
+
+    return this.existingTimetables.filter(entry => entry.subjectAssignmentId === this.selectedAssignmentId);
   }
 
   goBack(): void {
@@ -160,7 +176,7 @@ export class TimetableImport implements OnInit {
       }
 
       const existingKeys = new Set(
-        this.existingTimetables.map(entry => this.toSlotKey(entry.dayOfWeek, entry.startTime, entry.endTime))
+        this.visibleTimetables.map(entry => this.toSlotKey(entry.dayOfWeek, entry.startTime, entry.endTime))
       );
       const fileKeys = new Set<string>();
 
@@ -246,8 +262,15 @@ export class TimetableImport implements OnInit {
         firstValueFrom(this.backendService.get<SchoolSubject>(`subject/${subjectId}`)),
         firstValueFrom(this.backendService.get<TimetableEntry[]>('timetable', { subjectId })),
       ]);
+      const assignments = subject.schoolId
+        ? await firstValueFrom(this.backendService.get<any[]>('subject-assignment', { schoolId: subject.schoolId }))
+        : [];
 
       this.subject = subject;
+      this.subjectAssignments = (assignments ?? [])
+        .map(assignment => this.mapAssignmentToSubject(assignment))
+        .filter(assignment => assignment.subjectId === subjectId);
+      this.selectedAssignmentId = this.subjectAssignments[0]?.assignmentId ?? null;
       this.existingTimetables = (timetables ?? []).map(entry => this.normalizeEntry(entry));
     } catch (error) {
       this.errorMessage = this.getBackendError(error) || 'Failed to load timetable import context.';
@@ -331,6 +354,7 @@ export class TimetableImport implements OnInit {
       startTime,
       endTime,
       subjectId: this.subjectId,
+      subjectAssignmentId: this.activeAssignment?.assignmentId ?? null,
     };
   }
 
@@ -363,6 +387,25 @@ export class TimetableImport implements OnInit {
       studentIds: entry.studentIds ?? [],
       studentCount: entry.studentCount ?? entry.studentIds?.length ?? 0,
       lessonCount: entry.lessonCount ?? 0,
+    };
+  }
+
+  private mapAssignmentToSubject(assignment: any): SchoolSubject {
+    return {
+      id: Number(assignment.subjectId ?? 0),
+      subjectId: Number(assignment.subjectId ?? 0),
+      assignmentId: Number(assignment.id ?? 0),
+      code: assignment.subjectCode ?? '',
+      name: assignment.subjectName ?? '',
+      schoolId: assignment.schoolId ?? null,
+      schoolName: assignment.schoolName ?? null,
+      gradeId: assignment.gradeId ?? null,
+      gradeName: assignment.gradeName ?? null,
+      teacherId: assignment.teacherId ?? null,
+      teacherName: assignment.teacherName ?? null,
+      studentCount: assignment.studentCount ?? 0,
+      assignmentCount: null,
+      status: assignment.status ?? null,
     };
   }
 

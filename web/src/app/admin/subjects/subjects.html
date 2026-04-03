@@ -17,11 +17,11 @@
       <p>{{ totalSubjects }}</p>
     </div>
     <div class="summary-card">
-      <h4>Active Subjects</h4>
+      <h4>Active Assignments</h4>
       <p>{{ activeSubjectsCount }}</p>
     </div>
     <div class="summary-card">
-      <h4>Inactive Subjects</h4>
+      <h4>Inactive Assignments</h4>
       <p>{{ inactiveSubjectsCount }}</p>
     </div>
   </div>
@@ -46,7 +46,7 @@
       </select>
       <select [(ngModel)]="selectedTeacherFilter" (ngModelChange)="onFiltersChanged()" name="subjectTeacherFilter">
         <option [ngValue]="null">All Teachers</option>
-        @for (teacher of teacherOptions; track teacher.id) {
+        @for (teacher of teacherFilterOptions; track teacher.id) {
           <option [ngValue]="teacher.id">{{ teacher.name }}</option>
         }
       </select>
@@ -99,7 +99,13 @@
         }
         @if (!isLoading && filteredSubjects.length === 0) {
           <tr>
-            <td colspan="7">No subjects match the current search, filters, or sort.</td>
+            <td colspan="7">
+              @if (selectedTeacherFilter !== null) {
+                No subjects are assigned to the selected teacher for this school.
+              } @else {
+                No subjects match the current search, filters, or sort.
+              }
+            </td>
           </tr>
         }
       </tbody>

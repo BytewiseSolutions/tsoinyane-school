@@ -8,6 +8,7 @@ export interface Lesson {
   endTime?: string | null;
   status?: LessonStatus | null;
   submitted?: boolean | null;
+  subjectAssignmentId?: number | null;
   subjectId?: number | null;
   subjectName?: string | null;
   teacherId?: number | null;
