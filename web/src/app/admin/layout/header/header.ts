@@ -49,7 +49,7 @@ export class AdminHeader implements OnDestroy {
         this.loadNotifications();
       });
 
-    if (this.isSystemAdmin) {
+    if (this.isSystemAdmin || this.isSchoolAdmin()) {
       this.loadSchoolsForContext();
     }
   }
@@ -225,6 +225,26 @@ export class AdminHeader implements OnDestroy {
       .includes('SYSTEM_ADMIN');
   }
 
+  isSchoolAdmin(): boolean {
+    const raw = localStorage.getItem('user') ?? sessionStorage.getItem('user');
+    if (!raw) {
+      return false;
+    }
+
+    try {
+      const user = JSON.parse(raw) as AuthUser;
+      if (this.normalizeRole(user.role) === 'SCHOOL_ADMIN') {
+        return true;
+      }
+
+      return (user.roles ?? [])
+        .map(role => this.normalizeRole(role))
+        .includes('SCHOOL_ADMIN');
+    } catch {
+      return false;
+    }
+  }
+
   private resolvePrimaryRole(user: AuthUser): string {
     if (user.role) {
       return user.role;
@@ -245,15 +265,49 @@ export class AdminHeader implements OnDestroy {
   }
 
   private loadSchoolsForContext() {
-    this.backendService.get<SchoolOption[]>('school').subscribe({
-      next: (schools) => {
-        this.schools = schools ?? [];
-        this.selectDefaultSchool();
-      },
-      error: (_: HttpErrorResponse) => {
+    if (this.isSystemAdmin) {
+      this.backendService.get<SchoolOption[]>('school').subscribe({
+        next: (schools) => {
+          this.schools = schools ?? [];
+          this.selectDefaultSchool();
+        },
+        error: (_: HttpErrorResponse) => {
+          this.schools = [];
+        },
+      });
+    } else {
+      this.loadUserSchools();
+    }
+  }
+
+  private loadUserSchools() {
+    const raw = localStorage.getItem('user') ?? sessionStorage.getItem('user');
+    if (!raw) {
+      this.schools = [];
+      return;
+    }
+
+    try {
+      const user = JSON.parse(raw) as AuthUser;
+      const schoolIds = user.schoolIds ?? [];
+      
+      if (schoolIds.length === 0) {
         this.schools = [];
-      },
-    });
+        return;
+      }
+
+      this.backendService.get<SchoolOption[]>('school').subscribe({
+        next: (allSchools) => {
+          this.schools = (allSchools ?? []).filter(school => schoolIds.includes(school.id));
+          this.selectDefaultSchool();
+        },
+        error: (_: HttpErrorResponse) => {
+          this.schools = [];
+        },
+      });
+    } catch {
+      this.schools = [];
+    }
   }
 
   private loadNotifications() {
@@ -290,9 +344,15 @@ export class AdminHeader implements OnDestroy {
       }
     }
 
-    const defaultSchool = this.schools.find(
-      school => school.name.trim().toLowerCase() === 'tsoinyane primary school'
-    ) ?? this.schools[0];
+    let defaultSchool: SchoolOption;
+    
+    if (this.isSystemAdmin) {
+      defaultSchool = this.schools.find(
+        school => school.name.trim().toLowerCase() === 'tsoinyane primary school'
+      ) ?? this.schools[0];
+    } else {
+      defaultSchool = this.schools[0];
+    }
 
     this.selectedSchoolId = defaultSchool.id;
     this.onSchoolChange();

@@ -1,0 +1,369 @@
+.admin-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  gap: 24px;
+
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+  }
+
+  p {
+    color: #666;
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.add-btn {
+  padding: 12px 20px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #1d4ed8;
+  }
+
+  i {
+    font-size: 12px;
+  }
+}
+
+.table-card {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+
+  &.error-card {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 16px;
+    text-align: center;
+  }
+
+  &.success-card {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #16a34a;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #16a34a;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background: rgba(22, 163, 74, 0.1);
+      }
+    }
+  }
+}
+
+.toolbar {
+  padding: 20px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  input, select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    min-width: 200px;
+
+    &:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+  }
+}
+
+.plans-list {
+  padding: 20px;
+}
+
+.plans-list .installment-summary-card:last-child {
+  margin-bottom: 0;
+}
+
+.student-cell {
+  min-width: 180px;
+}
+
+.student-name {
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.student-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.plan-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.status-active {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  &.status-completed {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  &.status-cancelled {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+}
+
+.term-cell {
+  display: grid;
+  gap: 4px;
+  min-width: 100px;
+}
+
+.term-year {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.amount-cell {
+  white-space: nowrap;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.progress-cell {
+  min-width: 130px;
+
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+
+    .progress-fill {
+      height: 100%;
+      background: #16a34a;
+      transition: width 0.3s ease;
+    }
+  }
+
+  .progress-text {
+    font-size: 12px;
+    color: #64748b;
+  }
+}
+
+.installments-cell {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 360px;
+}
+
+.installment-chip {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+
+  &.status-paid {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  &.status-overdue {
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+}
+
+.installment-chip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  .installment-number {
+    font-weight: 600;
+    color: #0f172a;
+  }
+}
+
+.installment-chip-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.installment-chip-action {
+  display: flex;
+
+  .action-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 34px;
+  }
+
+  .paid-date {
+    font-size: 12px;
+    color: #16a34a;
+    font-weight: 600;
+  }
+}
+
+.plan-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 120px;
+
+  .action-btn {
+    width: 100%;
+  }
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &.view {
+    background: #f8fafc;
+    color: #475569;
+    width: 100%;
+
+    &:hover {
+      background: #e2e8f0;
+    }
+  }
+
+  &.pay {
+    background: #16a34a;
+    color: white;
+    border-color: #16a34a;
+
+    &:hover {
+      background: #15803d;
+    }
+
+    &.urgent {
+      background: #dc2626;
+      border-color: #dc2626;
+
+      &:hover {
+        background: #b91c1c;
+      }
+    }
+
+    &.compact {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+  }
+
+  &.danger {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fecaca;
+
+    &:hover {
+      background: #fecaca;
+    }
+  }
+}
+
+.empty-state {
+  padding: 48px 24px;
+  text-align: center;
+  color: #666;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .admin-page {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+
+    input, select {
+      min-width: auto;
+    }
+  }
+
+  .plan-actions {
+    min-width: 140px;
+  }
+
+  .installments-cell {
+    grid-template-columns: 1fr;
+    min-width: 260px;
+  }
+}

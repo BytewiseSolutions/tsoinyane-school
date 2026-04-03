@@ -34,6 +34,21 @@ export class SubjectForm implements OnInit {
     status: Status.ACTIVE,
   };
 
+  get availableTeachers(): SubjectTeacherOption[] {
+    if (!this.subject.gradeId) {
+      return [];
+    }
+    
+    return this.teacherOptions.filter(teacher => 
+      teacher.gradeIds && teacher.gradeIds.includes(this.subject.gradeId!)
+    );
+  }
+
+  onGradeChange() {
+    // Reset teacher selection when grade changes
+    this.subject.teacherId = null;
+  }
+
   ngOnInit() {
     if (this.existingSubject) {
       this.isEdit = true;
@@ -54,7 +69,7 @@ export class SubjectForm implements OnInit {
     }
 
     const selectedGrade = this.gradeOptions.find(grade => grade.id === this.subject.gradeId);
-    const selectedTeacher = this.teacherOptions.find(teacher => teacher.id === this.subject.teacherId);
+    const selectedTeacher = this.availableTeachers.find(teacher => teacher.id === this.subject.teacherId);
 
     this.saved.emit({
       ...this.subject,

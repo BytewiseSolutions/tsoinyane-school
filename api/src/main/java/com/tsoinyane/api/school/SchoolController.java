@@ -13,18 +13,22 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/school")
 @RequiredArgsConstructor
 public class SchoolController {
 
     private final SchoolService schoolService;
 
-    @GetMapping
+    @GetMapping("/school")
     public List<SchoolDto> getSchools() {
         return schoolService.getAllSchools();
     }
 
-    @PutMapping("/{id}")
+    @GetMapping("/public/schools")
+    public List<SchoolDto> getPublicSchools() {
+        return schoolService.getPublicSchools();
+    }
+
+    @PutMapping("/school/{id}")
     @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN"})
     public SchoolDto updateSchool(@PathVariable Long id, @Valid @RequestBody SchoolRequest request) {
         return schoolService.updateSchool(id, request);

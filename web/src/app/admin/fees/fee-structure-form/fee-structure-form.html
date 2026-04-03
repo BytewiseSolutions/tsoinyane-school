@@ -1,0 +1,85 @@
+<div class="overlay" (click)="close()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div>
+        <h3>{{ existingStructure ? 'Edit Fee Structure' : 'Add Fee Structure' }}</h3>
+        <p>Set the fee amount and select the grades that should pay it.</p>
+      </div>
+      <button class="close-btn" type="button" (click)="close()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <div class="context-card">
+        <span>School</span>
+        <strong>{{ selectedSchoolName || 'No school selected' }}</strong>
+      </div>
+
+      <div class="fee-type-tabs">
+        @for (option of feeTypeOptions; track option.value) {
+          <button
+            type="button"
+            class="fee-type-tab"
+            [class.active]="selectedFeeType === option.value"
+            (click)="selectFeeType(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+
+      <div class="helper-banner">{{ feeTypeHelperText }}</div>
+
+      <div class="form-grid">
+        <label class="form-field">
+          <span>Term</span>
+          <select [(ngModel)]="feeStructure.term" name="feeStructureTerm">
+            @for (term of termOptions; track term) {
+              <option [ngValue]="term">{{ getTermLabel(term) }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Academic Year</span>
+          <input type="text" [(ngModel)]="feeStructure.academicYear" name="feeStructureAcademicYear" placeholder="2026" />
+        </label>
+
+        <label class="form-field">
+          <span>Amount</span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="amount" name="feeAmount" placeholder="Enter amount" />
+        </label>
+
+        <div class="form-field full-width">
+          <span>Grades Paying</span>
+          <div class="grade-checkboxes">
+            @for (grade of visibleGradeOptions; track grade.id) {
+              <label class="grade-checkbox" [class.disabled]="isGradeDisabled(grade)">
+                <input
+                  type="checkbox"
+                  [checked]="isGradeSelected(grade.id)"
+                  [disabled]="isGradeDisabled(grade)"
+                  (change)="onGradeToggle(grade.id, $any($event.target).checked)"
+                />
+                <span>{{ grade.name }}</span>
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="total-card">
+        <span>Selected Amount</span>
+        <strong>M{{ totalAmount | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <div class="dialog-actions">
+      <button type="button" class="secondary-btn" (click)="close()">Cancel</button>
+      <button type="button" class="primary-btn" (click)="onSubmit()">
+        {{ existingStructure ? 'Save Changes' : 'Create Fee Structure' }}
+      </button>
+    </div>
+  </div>
+</div>

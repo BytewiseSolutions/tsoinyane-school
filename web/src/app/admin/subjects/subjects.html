@@ -4,7 +4,26 @@
       <h2>Subjects</h2>
       <p>Manage subjects for the currently selected school.</p>
     </div>
-    <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+    <div class="header-actions">
+      <a class="import-btn" routerLink="/admin/subjects/import"><i class="fa-solid fa-file-import"></i> Import</a>
+      <button class="export-btn" type="button" [disabled]="filteredSubjects.length === 0" (click)="exportSubjects()"><i class="fa-solid fa-file-excel"></i> Export</button>
+      <button class="add-btn" (click)="openForm()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Subjects</h4>
+      <p>{{ totalSubjects }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Active Subjects</h4>
+      <p>{{ activeSubjectsCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Inactive Subjects</h4>
+      <p>{{ inactiveSubjectsCount }}</p>
+    </div>
   </div>
 
   @if (errorMessage) {
@@ -13,7 +32,34 @@
 
   <div class="table-card">
     <div class="table-toolbar">
-      <input type="text" placeholder="Search by code, name, grade or teacher..." [(ngModel)]="searchTerm" name="searchSubjects" />
+      <input type="text" placeholder="Search by code, name, grade or teacher..." [(ngModel)]="searchTerm" (ngModelChange)="onFiltersChanged()" name="searchSubjects" />
+      <select [(ngModel)]="selectedStatusFilter" (ngModelChange)="onFiltersChanged()" name="subjectStatusFilter">
+        <option [ngValue]="'ALL'">All Statuses</option>
+        <option [ngValue]="Status.ACTIVE">Active</option>
+        <option [ngValue]="Status.INACTIVE">Inactive</option>
+      </select>
+      <select [(ngModel)]="selectedGradeFilter" (ngModelChange)="onFiltersChanged()" name="subjectGradeFilter">
+        <option [ngValue]="null">All Grades</option>
+        @for (grade of availableGrades; track grade.id) {
+          <option [ngValue]="grade.id ?? null">{{ grade.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedTeacherFilter" (ngModelChange)="onFiltersChanged()" name="subjectTeacherFilter">
+        <option [ngValue]="null">All Teachers</option>
+        @for (teacher of teacherOptions; track teacher.id) {
+          <option [ngValue]="teacher.id">{{ teacher.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedSort" (ngModelChange)="onFiltersChanged()" name="subjectSort">
+        <option value="code-asc">Code A-Z</option>
+        <option value="code-desc">Code Z-A</option>
+        <option value="name-asc">Subject Name A-Z</option>
+        <option value="name-desc">Subject Name Z-A</option>
+        <option value="grade-asc">Grade A-Z</option>
+        <option value="grade-desc">Grade Z-A</option>
+        <option value="teacher-asc">Teacher A-Z</option>
+        <option value="teacher-desc">Teacher Z-A</option>
+      </select>
     </div>
     <table>
       <thead>
@@ -22,6 +68,7 @@
           <th>Subject</th>
           <th>Grade</th>
           <th>Teacher</th>
+          <th>Students</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -29,30 +76,59 @@
       <tbody>
         @if (isLoading) {
           <tr>
-            <td colspan="6">Loading subject options...</td>
+            <td colspan="7">Loading subject options...</td>
           </tr>
         }
-        @for (subject of filteredSubjects; track subject.id ?? (subject.code + subject.name)) {
+        @for (subject of paginatedSubjects; track subject.id ?? (subject.code + subject.name)) {
           <tr>
             <td>{{ subject.code }}</td>
             <td>{{ subject.name }}</td>
             <td>{{ subject.gradeName || 'N/A' }}</td>
             <td>{{ subject.teacherName || 'N/A' }}</td>
+            <td>{{ subject.studentCount ?? 0 }}</td>
             <td><span class="badge" [class.active]="getStatusLabel(subject.status) === 'Active'" [class.inactive]="getStatusLabel(subject.status) === 'Inactive'">{{ getStatusLabel(subject.status) }}</span></td>
             <td class="actions">
               <button class="view-btn" (click)="viewSubject(subject)"><i class="fa-solid fa-eye"></i></button>
               <button class="edit-btn" (click)="openForm(subject)"><i class="fa-solid fa-pen"></i></button>
+              <button class="status-btn" (click)="toggleStatus(subject)">
+                {{ getStatusLabel(subject.status) === 'Active' ? 'Deactivate' : 'Activate' }}
+              </button>
               <button class="delete-btn" (click)="deleteSubject(subject)"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>
         }
         @if (!isLoading && filteredSubjects.length === 0) {
           <tr>
-            <td colspan="6">No subjects yet for the current school.</td>
+            <td colspan="7">No subjects match the current search, filters, or sort.</td>
           </tr>
         }
       </tbody>
     </table>
+
+    @if (filteredSubjects.length > 0) {
+      <div class="pagination-bar">
+        <div class="pagination-summary">
+          Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredSubjects.length }}
+        </div>
+        <div class="pagination-controls">
+          <label class="page-size">
+            <span>Rows</span>
+            <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()" name="subjectPageSize">
+              @for (size of pageSizeOptions; track size) {
+                <option [ngValue]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
+            Previous
+          </button>
+          <span class="page-indicator">Page {{ safeCurrentPage }} of {{ totalPages }}</span>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === totalPages" (click)="goToNextPage()">
+            Next
+          </button>
+        </div>
+      </div>
+    }
   </div>
 </div>
 
@@ -65,4 +141,38 @@
     [teacherOptions]="teacherOptions"
     (closed)="closeForm()"
     (saved)="onSaved($event)" />
+}
+
+@if (showDeleteDialog && subjectToDelete) {
+  <div class="confirm-overlay" (click)="cancelDeleteSubject()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete Subject</h3>
+      <p>Are you sure you want to delete <strong>{{ subjectToDelete.name }}</strong> ({{ subjectToDelete.code }})?</p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelDeleteSubject()">Cancel</button>
+        <button type="button" class="delete-confirm-btn" [disabled]="isProcessing" (click)="confirmDeleteSubject()">
+          {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showStatusDialog && subjectToToggleStatus) {
+  <div class="confirm-overlay" (click)="cancelToggleStatus()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>{{ pendingStatus === Status.INACTIVE ? 'Deactivate Subject' : 'Activate Subject' }}</h3>
+      <p>
+        Are you sure you want to
+        <strong>{{ pendingStatus === Status.INACTIVE ? 'deactivate' : 'activate' }}</strong>
+        <strong>{{ subjectToToggleStatus.name }}</strong> ({{ subjectToToggleStatus.code }})?
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelToggleStatus()">Cancel</button>
+        <button type="button" class="status-confirm-btn" [disabled]="isProcessing" (click)="confirmToggleStatus()">
+          {{ isProcessing ? 'Saving...' : (pendingStatus === Status.INACTIVE ? 'Deactivate' : 'Activate') }}
+        </button>
+      </div>
+    </div>
+  </div>
 }

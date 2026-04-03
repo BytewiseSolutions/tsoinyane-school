@@ -1,0 +1,107 @@
+<div class="overlay" (click)="close()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div>
+        <h3>{{ isEditMode ? 'Edit Fee Payment' : 'Add Fee Payment' }}</h3>
+        <p>Record a payment against a learner's term fee record.</p>
+      </div>
+      <button class="close-btn" type="button" (click)="close()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <div class="context-card">
+        <span>School</span>
+        <strong>{{ selectedSchoolName || 'No school selected' }}</strong>
+      </div>
+
+      @if (errorMessage) {
+        <div class="error-banner">{{ errorMessage }}</div>
+      }
+
+      @if (duplicatePaymentWarning && !isEditMode) {
+        <div class="warning-banner">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {{ duplicatePaymentWarning }}
+        </div>
+      }
+
+      <div class="form-grid">
+        <label class="form-field">
+          <span>Student</span>
+          <select [(ngModel)]="payment.studentId" name="paymentStudent" (ngModelChange)="onStudentChange()">
+            <option [ngValue]="null">Select student</option>
+            @for (student of students; track student.id) {
+              <option [ngValue]="student.id">
+                {{ student.userFullName || 'Unnamed Student' }}{{ student.studentNumber ? ' • ' + student.studentNumber : '' }}
+              </option>
+            }
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Fee Record</span>
+          <select [(ngModel)]="payment.feeStructureId" name="paymentFeeStructure" (ngModelChange)="onFeeStructureChange()">
+            <option [ngValue]="null">Select fee record</option>
+            @for (structure of availableFeeStructures; track structure.id) {
+              <option [ngValue]="structure.id">{{ getStructureLabel(structure) }}</option>
+            }
+          </select>
+          <small>{{ selectedFeeHelperText }}</small>
+        </label>
+
+        <label class="form-field">
+          <span>Amount</span>
+          <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" name="paymentAmount" placeholder="Enter amount" />
+        </label>
+
+        <label class="form-field">
+          <span>Payment Date</span>
+          <input type="date" [(ngModel)]="payment.paymentDate" name="paymentDate" [max]="today()" />
+        </label>
+
+        <label class="form-field">
+          <span>Payment Method</span>
+          <select [(ngModel)]="payment.paymentMethod" name="paymentMethod">
+            @for (option of paymentMethodOptions; track option.value) {
+              <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Reference Number</span>
+          <input type="text" [(ngModel)]="payment.referenceNumber" name="referenceNumber" placeholder="Optional reference" />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Notes</span>
+          <textarea [(ngModel)]="payment.notes" name="paymentNotes" rows="4" placeholder="Optional payment notes"></textarea>
+        </label>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Fee</span>
+          <strong>{{ formatCurrency(selectedTotalFee) }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Outstanding Balance</span>
+          <strong>{{ formatCurrency(outstandingBalance) }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Balance After Payment</span>
+          <strong>{{ formatCurrency(balanceAfterPayment) }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="dialog-actions">
+      <button type="button" class="secondary-btn" (click)="close()">Cancel</button>
+      <button type="button" class="primary-btn" (click)="onSubmit()">
+        {{ isEditMode ? 'Save Payment' : 'Record Payment' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -3,6 +3,7 @@ package com.tsoinyane.api.timetable;
 import com.tsoinyane.api.lesson.Lesson;
 import com.tsoinyane.api.lesson.LessonRepository;
 import com.tsoinyane.api.lesson.LessonStatus;
+import com.tsoinyane.api.lesson.StudentLessonRepository;
 import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.student.Student;
@@ -19,17 +20,21 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TimetableService {
+    private static final int RECURRING_LESSON_WEEKS = 12;
 
     private final TimetableRepository timetableRepository;
     private final SubjectRepository subjectRepository;
     private final LessonRepository lessonRepository;
+    private final StudentLessonRepository studentLessonRepository;
     private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
@@ -49,12 +54,14 @@ public class TimetableService {
     @Transactional
     public TimetableDto createTimetable(TimetableDto request) {
         Subject subject = resolveSubject(request.getSubjectId());
+        DayOfWeek dayOfWeek = requireDayOfWeek(request);
         validateTimes(request.getStartTime(), request.getEndTime());
         Set<Student> students = resolveStudents(subject);
+        validateNoConflicts(subject, dayOfWeek, request.getStartTime(), request.getEndTime(), null, students);
         User actor = currentUserService.getCurrentUser();
 
         Timetable timetable = Timetable.builder()
-                .dayOfWeek(requireDayOfWeek(request))
+                .dayOfWeek(dayOfWeek)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .subject(subject)
@@ -64,7 +71,7 @@ public class TimetableService {
                 .build();
 
         Timetable saved = timetableRepository.save(timetable);
-        lessonRepository.save(generateLesson(saved, actor));
+        lessonRepository.saveAll(generateRecurringLessons(saved, actor));
 
         return toDto(saved);
     }
@@ -75,11 +82,13 @@ public class TimetableService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Timetable not found: " + id));
 
         Subject subject = resolveSubject(request.getSubjectId());
+        DayOfWeek dayOfWeek = requireDayOfWeek(request);
         validateTimes(request.getStartTime(), request.getEndTime());
         Set<Student> students = resolveStudents(subject);
+        validateNoConflicts(subject, dayOfWeek, request.getStartTime(), request.getEndTime(), timetable.getId(), students);
         User actor = currentUserService.getCurrentUser();
 
-        timetable.setDayOfWeek(requireDayOfWeek(request));
+        timetable.setDayOfWeek(dayOfWeek);
         timetable.setStartTime(request.getStartTime());
         timetable.setEndTime(request.getEndTime());
         timetable.setSubject(subject);
@@ -96,6 +105,42 @@ public class TimetableService {
         }
 
         timetableRepository.deleteById(id);
+    }
+
+    @Transactional
+    public TimetableRegenerationResultDto regenerateUpcomingLessons(Long id) {
+        Timetable timetable = timetableRepository.findWithAssociationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Timetable not found: " + id));
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Lesson> allLessons = lessonRepository.findAllByTimetableId(id);
+        List<Lesson> upcomingLessons = allLessons.stream()
+                .filter(lesson -> isUpcoming(lesson, now))
+                .toList();
+        List<Long> upcomingLessonIds = upcomingLessons.stream()
+                .map(Lesson::getId)
+                .filter(lessonId -> lessonId != null && lessonId > 0)
+                .toList();
+
+        int deletedStudentLessonsCount = 0;
+        if (!upcomingLessonIds.isEmpty()) {
+            deletedStudentLessonsCount = studentLessonRepository.findAllByLessonIdIn(upcomingLessonIds).size();
+            if (deletedStudentLessonsCount > 0) {
+                studentLessonRepository.deleteAllByLessonIdIn(upcomingLessonIds);
+            }
+            lessonRepository.deleteAllById(upcomingLessonIds);
+        }
+
+        User actor = currentUserService.getCurrentUser();
+        List<Lesson> createdLessons = generateRecurringLessons(timetable, actor);
+        lessonRepository.saveAll(createdLessons);
+
+        return new TimetableRegenerationResultDto(
+                upcomingLessonIds.size(),
+                deletedStudentLessonsCount,
+                createdLessons.size(),
+                allLessons.size() - upcomingLessonIds.size()
+        );
     }
 
     private Subject resolveSubject(Long subjectId) {
@@ -128,6 +173,64 @@ public class TimetableService {
         return students;
     }
 
+    private void validateNoConflicts(
+            Subject subject,
+            DayOfWeek dayOfWeek,
+            LocalTime startTime,
+            LocalTime endTime,
+            Long excludeTimetableId,
+            Set<Student> students
+    ) {
+        School school = subject.getSchool();
+        if (school == null || school.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Subject school is required");
+        }
+
+        Set<Long> studentIds = students.stream()
+                .map(Student::getId)
+                .filter(id -> id != null && id > 0)
+                .collect(Collectors.toSet());
+
+        for (Timetable existing : timetableRepository.findPotentialConflicts(school.getId(), dayOfWeek, excludeTimetableId)) {
+            if (!timesOverlap(startTime, endTime, existing.getStartTime(), existing.getEndTime())) {
+                continue;
+            }
+
+            Subject existingSubject = existing.getSubject();
+            if (existingSubject != null && existingSubject.getId() != null && existingSubject.getId().equals(subject.getId())) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "This subject already has an overlapping timetable on " + dayOfWeek + " at " + formatTimeRange(existing.getStartTime(), existing.getEndTime())
+                );
+            }
+
+            Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
+            Long existingTeacherId = existingSubject != null && existingSubject.getTeacher() != null
+                    ? existingSubject.getTeacher().getId()
+                    : null;
+            if (teacherId != null && teacherId.equals(existingTeacherId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "The assigned teacher already has an overlapping timetable for "
+                                + (existingSubject != null ? existingSubject.getName() : "another subject")
+                                + " on " + dayOfWeek + " at " + formatTimeRange(existing.getStartTime(), existing.getEndTime())
+                );
+            }
+
+            List<Long> sharedStudentIds = existing.getStudents().stream()
+                    .map(Student::getId)
+                    .filter(studentIds::contains)
+                    .toList();
+            if (!sharedStudentIds.isEmpty()) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "This timetable overlaps with another lesson slot that already includes some of the same students on "
+                                + dayOfWeek + " at " + formatTimeRange(existing.getStartTime(), existing.getEndTime())
+                );
+            }
+        }
+    }
+
     private void validateTimes(LocalTime startTime, LocalTime endTime) {
         if (startTime == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start time is required");
@@ -148,26 +251,45 @@ public class TimetableService {
         return request.getDayOfWeek();
     }
 
-    private Lesson generateLesson(Timetable timetable, User actor) {
+    private List<Lesson> generateRecurringLessons(Timetable timetable, User actor) {
         DayOfWeek targetDay = timetable.getDayOfWeek();
         LocalDate nextOccurrence = LocalDate.now()
                 .with(java.time.temporal.TemporalAdjusters.nextOrSame(targetDay));
+        List<Lesson> lessons = new ArrayList<>(RECURRING_LESSON_WEEKS);
 
-        LocalDateTime startTime = LocalDateTime.of(nextOccurrence, timetable.getStartTime());
-        LocalDateTime endTime = LocalDateTime.of(nextOccurrence, timetable.getEndTime());
+        for (int weekOffset = 0; weekOffset < RECURRING_LESSON_WEEKS; weekOffset++) {
+            LocalDate occurrence = nextOccurrence.plusWeeks(weekOffset);
+            LocalDateTime startTime = LocalDateTime.of(occurrence, timetable.getStartTime());
+            LocalDateTime endTime = LocalDateTime.of(occurrence, timetable.getEndTime());
 
-        return Lesson.builder()
-                .date(startTime)
-                .startTime(startTime)
-                .endTime(endTime)
-                .status(LessonStatus.PENDING)
-                .submitted(Boolean.FALSE)
-                .subject(timetable.getSubject())
-                .teacher(timetable.getSubject() != null ? timetable.getSubject().getTeacher() : null)
-                .timetable(timetable)
-                .createdBy(actor)
-                .updatedBy(actor)
-                .build();
+            lessons.add(Lesson.builder()
+                    .date(startTime)
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .status(LessonStatus.PENDING)
+                    .submitted(Boolean.FALSE)
+                    .subject(timetable.getSubject())
+                    .teacher(timetable.getSubject() != null ? timetable.getSubject().getTeacher() : null)
+                    .timetable(timetable)
+                    .createdBy(actor)
+                    .updatedBy(actor)
+                    .build());
+        }
+
+        return lessons;
+    }
+
+    private boolean isUpcoming(Lesson lesson, LocalDateTime now) {
+        LocalDateTime startTime = lesson.getStartTime() != null ? lesson.getStartTime() : lesson.getDate();
+        return startTime != null && !startTime.isBefore(now);
+    }
+
+    private boolean timesOverlap(LocalTime startTime, LocalTime endTime, LocalTime existingStart, LocalTime existingEnd) {
+        return startTime.isBefore(existingEnd) && endTime.isAfter(existingStart);
+    }
+
+    private String formatTimeRange(LocalTime startTime, LocalTime endTime) {
+        return startTime + " - " + endTime;
     }
 
     private TimetableDto toDto(Timetable timetable) {
@@ -190,6 +312,8 @@ public class TimetableService {
                 .subjectId(subject != null ? subject.getId() : null)
                 .subjectName(subject != null ? subject.getName() : null)
                 .studentIds(timetable.getStudents().stream().map(Student::getId).toList())
+                .studentCount(timetable.getStudents().size())
+                .lessonCount((int) lessonRepository.countByTimetable_Id(timetable.getId()))
                 .build();
     }
 }

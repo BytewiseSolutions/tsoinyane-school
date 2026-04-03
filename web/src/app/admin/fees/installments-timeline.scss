@@ -1,0 +1,159 @@
+/* Timeline/Progress Style for Installments */
+.installments-timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 20px 0;
+}
+
+.installments-timeline::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #10b981, #f59e0b, #ef4444);
+  border-radius: 1px;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 80px;
+  margin-bottom: 30px;
+  background: white;
+  border-radius: 12px;
+  padding: 20px 20px 20px 80px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.timeline-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -50px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-marker.pending {
+  background: #f59e0b;
+}
+
+.timeline-marker.paid {
+  background: #10b981;
+}
+
+.timeline-marker.overdue {
+  background: #ef4444;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.timeline-content {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+}
+
+.timeline-info h4 {
+  margin: 0 0 8px 0;
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.timeline-info p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.timeline-amount {
+  text-align: right;
+}
+
+.amount-display {
+  font-size: 24px;
+  font-weight: 700;
+  color: #059669;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 4px;
+}
+
+.due-date-display {
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timeline-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  gap: 8px;
+}
+
+/* Progress bar at the top */
+.installments-progress {
+  background: #f1f5f9;
+  height: 6px;
+  border-radius: 3px;
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .installments-timeline::before {
+    left: 20px;
+  }
+  
+  .timeline-item {
+    padding-left: 60px;
+  }
+  
+  .timeline-marker {
+    left: -40px;
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+  
+  .timeline-content {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .timeline-amount {
+    text-align: left;
+  }
+}

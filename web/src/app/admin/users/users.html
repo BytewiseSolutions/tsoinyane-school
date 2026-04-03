@@ -39,11 +39,9 @@
         placeholder="Search by name, email or role..."
       />
       <select [(ngModel)]="roleFilter" (ngModelChange)="onFiltersChanged()" name="roleFilter">
-        <option value="All">All Roles</option>
-        <option value="SYSTEM_ADMIN">System Admin</option>
-        <option value="SCHOOL_ADMIN">School Admin</option>
-        <option value="TEACHER">Teacher</option>
-        <option value="STUDENT">Student</option>
+        @for (filter of availableRoleFilters; track filter.value) {
+          <option [value]="filter.value">{{ filter.label }}</option>
+        }
       </select>
     </div>
 
@@ -86,15 +84,19 @@
             </td>
             <td class="actions">
               <a class="action-btn" [routerLink]="['/admin/users', user.id]">View</a>
-              <button class="action-btn edit" type="button" (click)="editUser(user)">
-                Edit
-              </button>
-              <button class="action-btn" type="button" (click)="toggleStatus(user)">
-                {{ getStatusLabel(user.status) === 'Active' ? 'Deactivate' : 'Activate' }}
-              </button>
-              <button class="action-btn danger" type="button" (click)="removeUser(user)">
-                Remove
-              </button>
+              @if (canEditUser(user)) {
+                <button class="action-btn edit" type="button" (click)="editUser(user)">
+                  Edit
+                </button>
+                <button class="action-btn" type="button" (click)="toggleStatus(user)">
+                  {{ getStatusLabel(user.status) === 'Active' ? 'Deactivate' : 'Activate' }}
+                </button>
+              }
+              @if (canDeleteUser(user)) {
+                <button class="action-btn danger" type="button" (click)="removeUser(user)">
+                  Remove
+                </button>
+              }
             </td>
           </tr>
         }

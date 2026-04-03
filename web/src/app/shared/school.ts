@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { getAuthorizationHeader } from '../auth/auth-session';
 
 export interface PublicSchool {
   id: number;
@@ -22,7 +23,7 @@ export class SchoolService {
   selectedSchool$ = this.selectedSchoolSubject.asObservable();
 
   constructor(private http: HttpClient) {
-    this.loadSchools();
+    // Don't load schools automatically to avoid errors
   }
 
   get schools(): PublicSchool[] {
@@ -37,7 +38,7 @@ export class SchoolService {
     this.selectedSchoolSubject.next(school);
   }
 
-  private loadSchools(): void {
+  loadPublicSchools(): void {
     this.http.get<PublicSchool[]>(`${this.apiUrl}/school`).subscribe({
       next: (schools) => {
         this.schoolsSubject.next(schools ?? []);
@@ -45,6 +46,28 @@ export class SchoolService {
           this.selectedSchoolSubject.next(schools[0]);
         }
       },
+      error: (error) => {
+        console.error('Error loading public schools:', error);
+      }
+    });
+  }
+
+  loadSchools(): void {
+    if (!getAuthorizationHeader()) {
+      return;
+    }
+
+    this.http.get<PublicSchool[]>(`${this.apiUrl}/school`).subscribe({
+      next: (schools) => {
+        this.schoolsSubject.next(schools ?? []);
+        if (schools?.length && !this.selectedSchoolSubject.value) {
+          this.selectedSchoolSubject.next(schools[0]);
+        }
+      },
+      error: (error) => {
+        console.error('Failed to load schools:', error);
+        this.schoolsSubject.next([]);
+      }
     });
   }
 }

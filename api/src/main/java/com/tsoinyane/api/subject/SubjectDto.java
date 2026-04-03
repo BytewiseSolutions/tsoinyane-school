@@ -20,5 +20,6 @@ public class SubjectDto extends BaseDto {
     private String gradeName;
     private Long teacherId;
     private String teacherName;
+    private Integer studentCount;
     private Status status;
 }

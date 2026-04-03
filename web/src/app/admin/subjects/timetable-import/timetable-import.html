@@ -1,0 +1,193 @@
+<div class="admin-page import-page">
+  <div class="page-header">
+    <div>
+      <h2>Import Timetable</h2>
+      <p>Follow the steps below to complete the import safely.</p>
+    </div>
+    <button class="back-btn" type="button" (click)="goBack()">
+      <i class="fa-solid fa-arrow-left"></i> Back
+    </button>
+  </div>
+
+  @if (isLoading) {
+    <div class="import-card">
+      <div class="feedback">Loading timetable import details...</div>
+    </div>
+  } @else if (errorMessage && !subject) {
+    <div class="import-card">
+      <div class="feedback error">{{ errorMessage }}</div>
+    </div>
+  } @else if (subject) {
+    <div class="context-grid">
+      <div class="context-card">
+        <span class="context-label">Current School</span>
+        <strong>{{ subject.schoolName || 'N/A' }}</strong>
+      </div>
+      <div class="context-card">
+        <span class="context-label">Subject</span>
+        <strong>{{ subject.name }}</strong>
+        <small>{{ subject.code }}</small>
+      </div>
+      <div class="context-card">
+        <span class="context-label">Grade</span>
+        <strong>{{ subject.gradeName || 'N/A' }}</strong>
+      </div>
+      <div class="context-card">
+        <span class="context-label">Teacher</span>
+        <strong>{{ subject.teacherName || 'N/A' }}</strong>
+      </div>
+    </div>
+
+    <div class="steps-grid">
+      @for (step of stepItems; track step; let index = $index) {
+        <div class="step-card" [class.step-card-full]="index === 2 || index === 3">
+          <span class="step-number">Step {{ index + 1 }}</span>
+          <p>{{ step }}</p>
+          @if (index === 0) {
+            <button class="template-btn" type="button" (click)="downloadTemplate()">
+              <i class="fa-solid fa-download"></i> Download Template
+            </button>
+          }
+          @if (index === 1) {
+            <div class="step-upload">
+              <p>Select your completed Excel file to upload and validate.</p>
+              <input
+                #importInput
+                type="file"
+                accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                hidden
+                (change)="importFile($event)"
+              />
+              <div class="import-actions">
+                <button class="import-btn" type="button" [disabled]="isImporting" (click)="openFilePicker(importInput)">
+                  <i class="fa-solid fa-file-import"></i> {{ isImporting ? 'Importing...' : 'Choose File' }}
+                </button>
+                <button class="secondary-btn" type="button" (click)="goBack()">Cancel</button>
+              </div>
+            </div>
+          }
+          @if (index === 2) {
+            <div class="step-upload">
+              <p>Review the validation results below before importing any timetable data.</p>
+
+              @if (selectedFileName || validationResults.length) {
+                <div class="file-summary">
+                  @if (selectedFileName) {
+                    <div><strong>File:</strong> {{ selectedFileName }}</div>
+                  }
+                  <div class="validation-summary">
+                    <span>Total: {{ totalRowCount }}</span>
+                    <span class="valid-count">Valid: {{ validRowCount }}</span>
+                    <span class="invalid-count">Invalid: {{ invalidRowCount }}</span>
+                  </div>
+                  @if (validationResults.length && invalidRowCount === 0) {
+                    <div class="summary-message success">All rows are valid. You can confirm and import.</div>
+                  }
+                  @if (invalidRowCount > 0) {
+                    <div class="summary-message error">Some rows are invalid. Fix them before confirming import.</div>
+                  }
+                </div>
+              }
+
+              @if (validationResults.length) {
+                <div class="validation-table-wrap">
+                  <table class="validation-table">
+                    <thead>
+                      <tr>
+                        <th>Row</th>
+                        <th>Status</th>
+                        <th>Day</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Messages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (result of validationResults; track result.rowNumber) {
+                        <tr>
+                          <td>{{ result.rowNumber }}</td>
+                          <td>
+                            <span class="status-chip" [class.invalid]="result.status === 'invalid'">
+                              {{ result.status === 'valid' ? 'VALID' : 'INVALID' }}
+                            </span>
+                          </td>
+                          <td>{{ result.dayOfWeek || '-' }}</td>
+                          <td>{{ result.startTime || '-' }}</td>
+                          <td>{{ result.endTime || '-' }}</td>
+                          <td>{{ result.status === 'valid' ? 'OK' : result.message }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <p>No validation results yet.</p>
+              }
+
+              <div class="reference-data">
+                <h4>Expected Columns</h4>
+                <div class="reference-list">
+                  <span class="reference-item">Day of Week</span>
+                  <span class="reference-item">Start Time</span>
+                  <span class="reference-item">End Time</span>
+                </div>
+              </div>
+
+              <div class="reference-data">
+                <h4>Day of Week Values</h4>
+                <div class="reference-list">
+                  @for (day of dayOfWeekOptions; track day) {
+                    <span class="reference-item">{{ day }}</span>
+                  }
+                </div>
+              </div>
+
+              <div class="reference-data">
+                <h4>Existing Timetable Entries</h4>
+                @if (existingTimetables.length > 0) {
+                  <div class="reference-list">
+                    @for (entry of existingTimetables; track entry.id ?? (entry.dayOfWeek + entry.startTime + entry.endTime)) {
+                      <span class="reference-item">{{ getDayLabel(entry.dayOfWeek) }} {{ formatTimeRange(entry) }}</span>
+                    }
+                  </div>
+                } @else {
+                  <p class="reference-empty">No timetable entries exist for this subject yet.</p>
+                }
+              </div>
+            </div>
+          }
+          @if (index === 3) {
+            <div class="step-upload">
+              <h4>Step 4: Confirm Import</h4>
+              <p>Once all rows are valid, confirm to save the timetable entries for this subject.</p>
+              <button class="confirm-btn" type="button" [disabled]="!canConfirmImport" (click)="confirmImport()">
+                {{ isImporting ? 'Importing...' : 'Confirm Import' }}
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    @if (message || errorMessage || saveErrors.length) {
+      <div class="import-card">
+        @if (message) {
+          <div class="feedback success">{{ message }}</div>
+        }
+        @if (errorMessage) {
+          <div class="feedback error">{{ errorMessage }}</div>
+        }
+        @if (saveErrors.length) {
+          <div class="import-errors">
+            <h4>Save Errors</h4>
+            <ul>
+              @for (saveError of saveErrors; track saveError) {
+                <li>{{ saveError }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

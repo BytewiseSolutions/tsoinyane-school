@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import * as XLSX from 'xlsx';
 import { BackendService } from '../../../util/backend.service';
 import { SchoolSubject } from '../subject';
 import { TimetableEntry } from '../timetable-entry';
@@ -12,6 +13,7 @@ interface StudentOption {
   email: string | null;
   phone: string | null;
   studentId: string | null;
+  gradeId?: number | null;
 }
 
 const SELECT_ALL_ID = -1;
@@ -63,6 +65,11 @@ export class SubjectDetail implements OnInit {
   timetableToDelete: TimetableEntry | null = null;
   editingTimetable: TimetableEntry | null = null;
   timetableForm: TimetableEntry = this.createEmptyTimetableForm();
+  timetableSearchTerm = '';
+  selectedTimetableDayFilter: string | 'ALL' = 'ALL';
+  selectedTimetableSort = 'day-asc';
+  timetablePageSize = 10;
+  timetableCurrentPage = 1;
 
   constructor(
     private route: ActivatedRoute,
@@ -82,7 +89,7 @@ export class SubjectDetail implements OnInit {
     this.backendService.get<SchoolSubject>(`subject/${id}`).subscribe({
       next: (subject) => {
         this.subject = subject;
-        this.loadStudents(subject.schoolId);
+        this.loadStudents(subject.schoolId, subject.gradeId);
         this.loadAssignedStudents(id);
         this.loadTimetables(id);
       },
@@ -118,6 +125,7 @@ export class SubjectDetail implements OnInit {
       s => s.id !== SELECT_ALL_ID && !this.assignedStudents.some(a => a.id === s.id)
     );
     this.assignedStudents = [...this.assignedStudents, ...toAdd];
+    this.syncSubjectStudentCount();
     this.selectedStudents = [];
     this.saveAssignedStudents();
   }
@@ -163,6 +171,69 @@ export class SubjectDetail implements OnInit {
 
   get pageEnd(): number {
     return Math.min(this.safeCurrentPage * this.pageSize, this.assignedStudents.length);
+  }
+
+  get filteredTimetables(): TimetableEntry[] {
+    const query = this.timetableSearchTerm.trim().toLowerCase();
+
+    return [...this.timetables]
+      .filter(entry => this.matchesTimetableSearch(entry, query))
+      .filter(entry => this.selectedTimetableDayFilter === 'ALL' || entry.dayOfWeek === this.selectedTimetableDayFilter)
+      .sort((left, right) => this.compareTimetables(left, right));
+  }
+
+  get paginatedTimetables(): TimetableEntry[] {
+    const start = (this.safeTimetableCurrentPage - 1) * this.timetablePageSize;
+    return this.filteredTimetables.slice(start, start + this.timetablePageSize);
+  }
+
+  get totalTimetables(): number {
+    return this.timetables.length;
+  }
+
+  get totalTimetableLessons(): number {
+    return this.timetables.reduce((total, entry) => total + (entry.lessonCount ?? 0), 0);
+  }
+
+  get totalTimetableWeeklyHours(): string {
+    const totalMinutes = this.timetables.reduce((sum, entry) => sum + this.getTimetableDurationMinutes(entry), 0);
+    if (!totalMinutes) {
+      return '0 hrs';
+    }
+
+    const hours = totalMinutes / 60;
+    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hrs`;
+  }
+
+  get earliestTimetableStart(): string {
+    if (!this.timetables.length) {
+      return 'N/A';
+    }
+
+    return [...this.timetables]
+      .map(entry => this.normalizeTime(entry.startTime))
+      .filter(Boolean)
+      .sort((left, right) => left.localeCompare(right))[0] || 'N/A';
+  }
+
+  get timetableTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredTimetables.length / this.timetablePageSize));
+  }
+
+  get safeTimetableCurrentPage(): number {
+    return Math.min(this.timetableCurrentPage, this.timetableTotalPages);
+  }
+
+  get timetablePageStart(): number {
+    if (!this.filteredTimetables.length) {
+      return 0;
+    }
+
+    return (this.safeTimetableCurrentPage - 1) * this.timetablePageSize + 1;
+  }
+
+  get timetablePageEnd(): number {
+    return Math.min(this.safeTimetableCurrentPage * this.timetablePageSize, this.filteredTimetables.length);
   }
 
   get allAssignedStudentsSelected(): boolean {
@@ -233,10 +304,22 @@ export class SubjectDetail implements OnInit {
     if (!this.availableSubjects.length && this.subject?.schoolId) {
       this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.subject.schoolId }).subscribe({
         next: (subjects) => {
-          this.availableSubjects = (subjects ?? []).filter(s => s.id !== this.subject!.id);
+          this.availableSubjects = (subjects ?? []).filter(s =>
+            s.id !== this.subject!.id
+            && s.gradeId === this.subject!.gradeId
+          );
+          this.studentsError = this.availableSubjects.length
+            ? ''
+            : `No other subjects are available for ${this.subject?.gradeName || 'this grade'}.`;
         },
       });
+      return;
     }
+
+    this.availableSubjects = this.availableSubjects.filter(s => s.gradeId === this.subject?.gradeId);
+    this.studentsError = this.availableSubjects.length
+      ? ''
+      : `No other subjects are available for ${this.subject?.gradeName || 'this grade'}.`;
   }
 
   cancelTransfer() {
@@ -303,6 +386,14 @@ export class SubjectDetail implements OnInit {
     this.currentPage = 1;
   }
 
+  onTimetableFiltersChanged(): void {
+    this.timetableCurrentPage = 1;
+  }
+
+  onTimetablePageSizeChanged(): void {
+    this.timetableCurrentPage = 1;
+  }
+
   goToPreviousPage(): void {
     if (this.safeCurrentPage > 1) {
       this.currentPage = this.safeCurrentPage - 1;
@@ -312,6 +403,18 @@ export class SubjectDetail implements OnInit {
   goToNextPage(): void {
     if (this.safeCurrentPage < this.totalPages) {
       this.currentPage = this.safeCurrentPage + 1;
+    }
+  }
+
+  goToPreviousTimetablePage(): void {
+    if (this.safeTimetableCurrentPage > 1) {
+      this.timetableCurrentPage = this.safeTimetableCurrentPage - 1;
+    }
+  }
+
+  goToNextTimetablePage(): void {
+    if (this.safeTimetableCurrentPage < this.timetableTotalPages) {
+      this.timetableCurrentPage = this.safeTimetableCurrentPage + 1;
     }
   }
 
@@ -394,6 +497,14 @@ export class SubjectDetail implements OnInit {
     this.router.navigate(['/admin/subjects', this.subject.id, 'timetable', entry.id]);
   }
 
+  viewTimetableImport(): void {
+    if (!this.subject?.id) {
+      return;
+    }
+
+    this.router.navigate(['/admin/subjects', this.subject.id, 'timetable', 'import']);
+  }
+
   cancelDeleteTimetable(): void {
     this.timetableToDelete = null;
     this.showDeleteTimetableDialog = false;
@@ -439,6 +550,31 @@ export class SubjectDetail implements OnInit {
     return `${this.normalizeTime(entry.startTime)} - ${this.normalizeTime(entry.endTime)}`;
   }
 
+  exportTimetables(): void {
+    if (!this.filteredTimetables.length) {
+      this.timetableError = 'No timetable entries available to export for the current filters.';
+      return;
+    }
+
+    const rows = this.filteredTimetables.map(entry => ({
+      Day: this.getDayLabel(entry.dayOfWeek),
+      'Start Time': this.normalizeTime(entry.startTime),
+      'End Time': this.normalizeTime(entry.endTime),
+      'Weekly Duration (Minutes)': this.getTimetableDurationMinutes(entry),
+      Students: entry.studentCount ?? entry.studentIds?.length ?? 0,
+      Lessons: entry.lessonCount ?? 0,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Timetables');
+    XLSX.writeFile(
+      workbook,
+      `timetables_${(this.subject?.code || this.subject?.name || 'subject').replace(/\s+/g, '_')}.xlsx`
+    );
+    this.timetableError = '';
+  }
+
   private loadAssignedStudents(subjectId: number) {
     this.backendService.get<any[]>(`subject/${subjectId}/students`).subscribe({
       next: (students) => {
@@ -449,6 +585,7 @@ export class SubjectDetail implements OnInit {
           phone: s.userPhone,
           studentId: s.studentNumber ?? null,
         }));
+        this.syncSubjectStudentCount();
         this.selectedAssignedStudentIds = [];
         this.currentPage = 1;
       },
@@ -476,6 +613,7 @@ export class SubjectDetail implements OnInit {
       next: (timetables) => {
         this.timetables = (timetables ?? []).map(entry => this.mapTimetable(entry));
         this.sortTimetables();
+        this.timetableCurrentPage = 1;
       },
       error: (error: HttpErrorResponse) => {
         this.timetableError = error.error?.message || 'Failed to load timetable entries.';
@@ -503,7 +641,51 @@ export class SubjectDetail implements OnInit {
       startTime: this.normalizeTime(entry.startTime),
       endTime: this.normalizeTime(entry.endTime),
       studentIds: entry.studentIds ?? [],
+      studentCount: entry.studentCount ?? entry.studentIds?.length ?? 0,
+      lessonCount: entry.lessonCount ?? 0,
     };
+  }
+
+  private matchesTimetableSearch(entry: TimetableEntry, query: string): boolean {
+    if (!query) {
+      return true;
+    }
+
+    return this.getDayLabel(entry.dayOfWeek).toLowerCase().includes(query)
+      || this.normalizeTime(entry.startTime).toLowerCase().includes(query)
+      || this.normalizeTime(entry.endTime).toLowerCase().includes(query)
+      || String(entry.studentCount ?? entry.studentIds?.length ?? 0).includes(query)
+      || String(entry.lessonCount ?? 0).includes(query);
+  }
+
+  private compareTimetables(left: TimetableEntry, right: TimetableEntry): number {
+    switch (this.selectedTimetableSort) {
+      case 'day-desc':
+        return this.compareDay(right.dayOfWeek, left.dayOfWeek) || this.compareText(right.startTime, left.startTime);
+      case 'time-desc':
+        return this.compareText(right.startTime, left.startTime);
+      case 'students-desc':
+        return (right.studentCount ?? right.studentIds?.length ?? 0) - (left.studentCount ?? left.studentIds?.length ?? 0);
+      case 'lessons-desc':
+        return (right.lessonCount ?? 0) - (left.lessonCount ?? 0);
+      case 'lessons-asc':
+        return (left.lessonCount ?? 0) - (right.lessonCount ?? 0);
+      case 'students-asc':
+        return (left.studentCount ?? left.studentIds?.length ?? 0) - (right.studentCount ?? right.studentIds?.length ?? 0);
+      case 'time-asc':
+        return this.compareText(left.startTime, right.startTime);
+      case 'day-asc':
+      default:
+        return this.compareDay(left.dayOfWeek, right.dayOfWeek) || this.compareText(left.startTime, right.startTime);
+    }
+  }
+
+  private compareDay(left: string | null | undefined, right: string | null | undefined): number {
+    return this.dayOfWeekOptions.indexOf(left ?? '') - this.dayOfWeekOptions.indexOf(right ?? '');
+  }
+
+  private compareText(left: string | null | undefined, right: string | null | undefined): number {
+    return (left ?? '').localeCompare(right ?? '', undefined, { sensitivity: 'base' });
   }
 
   private normalizeTime(value: string | null | undefined): string {
@@ -538,18 +720,32 @@ export class SubjectDetail implements OnInit {
       : parts[0];
   }
 
-  private loadStudents(schoolId: number | null) {
+  private getTimetableDurationMinutes(entry: TimetableEntry): number {
+    const [startHour, startMinute] = this.normalizeTime(entry.startTime).split(':').map(value => Number(value));
+    const [endHour, endMinute] = this.normalizeTime(entry.endTime).split(':').map(value => Number(value));
+
+    if ([startHour, startMinute, endHour, endMinute].some(value => Number.isNaN(value))) {
+      return 0;
+    }
+
+    return ((endHour * 60) + endMinute) - ((startHour * 60) + startMinute);
+  }
+
+  private loadStudents(schoolId: number | null, gradeId: number | null) {
     if (!schoolId) return;
 
     this.backendService.get<any[]>('student', { schoolId }).subscribe({
       next: (students) => {
-        this.availableStudents = (students ?? []).map(s => ({
-          id: s.id,
-          displayName: s.userFullName || s.userEmail || 'Unknown',
-          email: s.userEmail ?? null,
-          phone: s.userPhone ?? null,
-          studentId: s.studentNumber ?? null,
-        }));
+        this.availableStudents = (students ?? [])
+          .filter(student => gradeId == null || student.gradeId === gradeId)
+          .map(s => ({
+            id: s.id,
+            displayName: s.userFullName || s.userEmail || 'Unknown',
+            email: s.userEmail ?? null,
+            phone: s.userPhone ?? null,
+            studentId: s.studentNumber ?? null,
+            gradeId: s.gradeId ?? null,
+          }));
         this.selectableStudents = [
           { id: SELECT_ALL_ID, displayName: 'Select All', email: null, phone: null, studentId: null },
           ...this.availableStudents,
@@ -570,5 +766,15 @@ export class SubjectDetail implements OnInit {
     const idsToRemove = new Set(studentIds);
     this.assignedStudents = this.assignedStudents.filter(student => !idsToRemove.has(student.id));
     this.selectedAssignedStudentIds = this.selectedAssignedStudentIds.filter(id => !idsToRemove.has(id));
+    this.syncSubjectStudentCount();
+  }
+
+  private syncSubjectStudentCount() {
+    if (this.subject) {
+      this.subject = {
+        ...this.subject,
+        studentCount: this.assignedStudents.length,
+      };
+    }
   }
 }

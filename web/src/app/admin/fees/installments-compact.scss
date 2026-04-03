@@ -1,0 +1,212 @@
+/* Compact List Style for Installments */
+.installments-list {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+}
+
+.installments-header {
+  background: #1e293b;
+  color: white;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 60px 1fr 120px 100px 120px auto;
+  gap: 16px;
+  align-items: center;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.installment-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 120px 100px 120px auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.installment-row:hover {
+  background: #f8fafc;
+}
+
+.installment-row:last-child {
+  border-bottom: none;
+}
+
+/* Status indicator bar */
+.installment-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #e2e8f0;
+}
+
+.installment-row.pending::before {
+  background: #f59e0b;
+}
+
+.installment-row.paid::before {
+  background: #10b981;
+}
+
+.installment-row.overdue::before {
+  background: #ef4444;
+}
+
+.installment-number {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.installment-description {
+  color: #475569;
+  font-size: 14px;
+}
+
+.installment-amount {
+  font-weight: 600;
+  color: #059669;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+.installment-due-date {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.installment-status-compact {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.status-compact-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-compact-paid {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-compact-overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.installment-actions-compact {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.action-btn-small {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-pay-small {
+  background: #10b981;
+  color: white;
+}
+
+.btn-pay-small:hover {
+  background: #059669;
+}
+
+.btn-edit-small {
+  background: #64748b;
+  color: white;
+}
+
+.btn-edit-small:hover {
+  background: #475569;
+}
+
+/* Summary row */
+.installments-summary {
+  background: #f8fafc;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 20px;
+  align-items: center;
+  border-top: 2px solid #e2e8f0;
+}
+
+.summary-item {
+  text-align: center;
+}
+
+.summary-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.summary-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.summary-total {
+  color: #059669;
+  font-family: 'Courier New', monospace;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .installments-header,
+  .installment-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    text-align: left;
+  }
+  
+  .installments-header {
+    display: none; /* Hide header on mobile, use card-like layout */
+  }
+  
+  .installment-row {
+    padding: 16px;
+    display: block;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .installment-row::before {
+    border-radius: 0 4px 4px 0;
+  }
+  
+  .installments-summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}

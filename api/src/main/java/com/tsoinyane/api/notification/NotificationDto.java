@@ -24,6 +24,6 @@ public class NotificationDto {
     String senderEmail;
     List<Role> audienceRoles;
     Instant readAt;
-    boolean read;
-    boolean editable;
+    Boolean read;
+    Boolean editable;
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
 
 @Component({
@@ -7,11 +7,11 @@ import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationErr
   standalone: false,
   styleUrl: './app.scss'
 })
-export class App implements OnInit {
+export class App implements OnInit, AfterViewInit {
   loading = false;
   isAdminRoute = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.router.events.subscribe(event => {
@@ -23,8 +23,16 @@ export class App implements OnInit {
         event instanceof NavigationCancel ||
         event instanceof NavigationError
       ) {
+        if (event instanceof NavigationEnd) {
+          this.isAdminRoute = event.urlAfterRedirects.startsWith('/admin');
+        }
         this.loading = false;
       }
     });
+  }
+
+  ngAfterViewInit() {
+    this.isAdminRoute = this.router.url.startsWith('/admin');
+    this.cdr.detectChanges();
   }
 }

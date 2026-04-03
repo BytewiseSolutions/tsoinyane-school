@@ -1,0 +1,42 @@
+import { Term } from '../settings/term';
+import { FeeType } from './fee-type';
+
+export interface FeeStructure {
+  id?: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  academicYear?: string | null;
+  academic_year?: string | null;
+  amount?: number | null;
+  description?: string | null;
+  term: Term | null;
+  createdById?: number | null;
+  updatedById?: number | null;
+  created_by_id?: number | null;
+  updated_by_id?: number | null;
+  gradeId?: number | null;
+  grade_id?: number | null;
+  schoolId?: number | null;
+  school_id?: number | null;
+  examFee?: number | null;
+  exam_fee?: number | null;
+  registrationFee?: number | null;
+  registration_fee?: number | null;
+  schoolFee?: number | null;
+  school_fee?: number | null;
+  booksFee?: number | null;
+  books_fee?: number | null;
+  foodFee?: number | null;
+  food_fee?: number | null;
+  generalFee?: number | null;
+  general_fee?: number | null;
+  schoolName?: string | null;
+  gradeName?: string | null;
+  termOpeningDate?: string | null;
+  termClosingDate?: string | null;
+  updateTermDates?: boolean | null;
+  totalAmount?: number | null;
+  feeType?: FeeType | null;
+}

@@ -51,7 +51,7 @@ public class AuthService {
                 .toList();
 
         long now = System.currentTimeMillis();
-        long expirationMs = request.rememberMe() ? rememberMeExpirationMs : defaultExpirationMs;
+        long expirationMs = Boolean.TRUE.equals(request.rememberMe()) ? rememberMeExpirationMs : defaultExpirationMs;
         long expiresAt = now + expirationMs;
 
         String accessToken = tokenService.generateAccessToken(user, expiresAt);

@@ -1,0 +1,168 @@
+<div class="admin-page import-page">
+  <div class="page-header">
+    <div>
+      <h2>Import Subjects</h2>
+      <p>Follow the steps below to complete the import safely.</p>
+    </div>
+    <button class="back-btn" type="button" (click)="goBack()">
+      <i class="fa-solid fa-arrow-left"></i> Back
+    </button>
+  </div>
+
+  <div class="context-card">
+    <span class="context-label">Current School</span>
+    <strong>{{ selectedSchoolName }}</strong>
+  </div>
+
+  @if (!selectedSchoolId) {
+    <div class="import-card">
+      <div class="feedback error">Select the current school from the top header before importing.</div>
+    </div>
+  } @else {
+    <div class="steps-grid">
+      @for (step of stepItems; track step; let index = $index) {
+        <div class="step-card" [class.step-card-full]="index === 2 || index === 3">
+          <span class="step-number">Step {{ index + 1 }}</span>
+          <p>{{ step }}</p>
+          @if (index === 0) {
+            <button class="template-btn" type="button" (click)="downloadTemplate()">
+              <i class="fa-solid fa-download"></i> Download Template
+            </button>
+          }
+          @if (index === 1) {
+            <div class="step-upload">
+              <p>Select your completed Excel file to upload and validate.</p>
+              <input
+                #importInput
+                type="file"
+                accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                hidden
+                (change)="importFile($event)"
+              />
+              <div class="import-actions">
+                <button class="import-btn" type="button" [disabled]="isImporting" (click)="openFilePicker(importInput)">
+                  <i class="fa-solid fa-file-import"></i> {{ isImporting ? 'Importing...' : 'Choose File' }}
+                </button>
+                <button class="secondary-btn" type="button" (click)="goBack()">Cancel</button>
+              </div>
+            </div>
+          }
+          @if (index === 2) {
+            <div class="step-upload">
+              <p>Review the validation results below before importing any data.</p>
+
+              @if (selectedFileName || validationResults.length) {
+                <div class="file-summary">
+                  @if (selectedFileName) {
+                    <div><strong>File:</strong> {{ selectedFileName }}</div>
+                  }
+                  <div class="validation-summary">
+                    <span>Total: {{ totalRowCount }}</span>
+                    <span class="valid-count">Valid: {{ validRowCount }}</span>
+                    <span class="invalid-count">Invalid: {{ invalidRowCount }}</span>
+                  </div>
+                  @if (validationResults.length && invalidRowCount === 0) {
+                    <div class="summary-message success">All rows are valid. You can confirm and import.</div>
+                  }
+                  @if (invalidRowCount > 0) {
+                    <div class="summary-message error">Some rows are invalid. Fix them before confirming import.</div>
+                  }
+                </div>
+              }
+
+              @if (validationResults.length) {
+                <div class="validation-table-wrap">
+                  <table class="validation-table">
+                    <thead>
+                      <tr>
+                        <th>Row</th>
+                        <th>Status</th>
+                        <th>Subject Code</th>
+                        <th>Subject Name</th>
+                        <th>Grade Name</th>
+                        <th>Teacher Name</th>
+                        <th>Messages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (result of validationResults; track result.rowNumber) {
+                        <tr>
+                          <td>{{ result.rowNumber }}</td>
+                          <td>
+                            <span class="status-chip" [class.invalid]="result.status === 'invalid'">
+                              {{ result.status === 'valid' ? 'VALID' : 'INVALID' }}
+                            </span>
+                          </td>
+                          <td>{{ result.code || '-' }}</td>
+                          <td>{{ result.name || '-' }}</td>
+                          <td>{{ result.gradeName || '-' }}</td>
+                          <td>{{ result.teacherName || '-' }}</td>
+                          <td>{{ result.status === 'valid' ? 'OK' : result.message }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <p>No validation results yet.</p>
+              }
+
+              <div class="reference-data">
+                <h4>Expected Columns</h4>
+                <div class="reference-list">
+                  <span class="reference-item">Subject Code</span>
+                  <span class="reference-item">Subject Name</span>
+                  <span class="reference-item">Grade Name</span>
+                  <span class="reference-item">Teacher Name</span>
+                  <span class="reference-item">Status</span>
+                </div>
+              </div>
+
+              @if (availableGrades.length > 0) {
+                <div class="reference-data">
+                  <h4>Available Grades in {{ selectedSchoolName }}</h4>
+                  <div class="reference-list">
+                    @for (grade of availableGrades; track grade.id) {
+                      <span class="reference-item">{{ grade.name }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (availableTeachers.length > 0) {
+                <div class="reference-data">
+                  <h4>Available Teachers in {{ selectedSchoolName }}</h4>
+                  <div class="reference-list">
+                    @for (teacher of availableTeachers; track teacher.id) {
+                      <span class="reference-item">{{ teacher.userFullName || teacher.userEmail }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          @if (index === 3) {
+            <div class="step-upload">
+              <h4>Step 4: Confirm Import</h4>
+              <p>Once all rows are valid, confirm to save the subjects then click Confirm Import button.</p>
+              <button class="confirm-btn" type="button" [disabled]="!canConfirmImport" (click)="confirmImport()">
+                {{ isImporting ? 'Importing...' : 'Confirm Import' }}
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    @if (message || errorMessage) {
+      <div class="import-card">
+        @if (message) {
+          <div class="feedback success">{{ message }}</div>
+        }
+        @if (errorMessage) {
+          <div class="feedback error">{{ errorMessage }}</div>
+        }
+      </div>
+    }
+  }
+</div>

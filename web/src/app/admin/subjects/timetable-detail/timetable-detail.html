@@ -5,6 +5,9 @@
       <h2>Timetable Details</h2>
       <p>View the selected timetable entry and manage its lesson sessions.</p>
     </div>
+    <button class="secondary-btn" type="button" [disabled]="isRegeneratingLessons" (click)="confirmRegenerateLessons()">
+      {{ isRegeneratingLessons ? 'Regenerating...' : 'Regenerate Upcoming Lessons' }}
+    </button>
   </div>
 
   @if (isLoading) {
@@ -12,6 +15,10 @@
   } @else if (errorMessage || !timetable) {
     <div class="state-card error">{{ errorMessage || 'Timetable not found.' }}</div>
   } @else {
+    @if (actionMessage) {
+      <div class="state-card success">{{ actionMessage }}</div>
+    }
+
     <div class="summary-card">
       <div class="summary-item">
         <span>Subject</span>
@@ -31,6 +38,33 @@
       </div>
     </div>
 
+    <div class="summary-grid">
+      <div class="summary-card compact-card">
+        <div class="summary-item">
+          <span>Total Lessons</span>
+          <strong>{{ totalLessons }}</strong>
+        </div>
+      </div>
+      <div class="summary-card compact-card">
+        <div class="summary-item">
+          <span>Pending Lessons</span>
+          <strong>{{ pendingLessonsCount }}</strong>
+        </div>
+      </div>
+      <div class="summary-card compact-card">
+        <div class="summary-item">
+          <span>Submitted Lessons</span>
+          <strong>{{ submittedLessonsCount }}</strong>
+        </div>
+      </div>
+      <div class="summary-card compact-card">
+        <div class="summary-item">
+          <span>Cancelled Lessons</span>
+          <strong>{{ cancelledLessonsCount }}</strong>
+        </div>
+      </div>
+    </div>
+
     <div class="details-card tabs-card">
       <div class="tab-bar">
         <button class="tab-btn" [class.active]="activeTab === 'lessons'" (click)="activeTab = 'lessons'">Lessons</button>
@@ -42,8 +76,9 @@
           <div class="tab-header">
             <div>
               <h3>Lessons</h3>
-              <p>These lesson sessions are generated from this timetable.</p>
+              <p>These lesson sessions are generated from this timetable and reflect live attendance and homework progress.</p>
             </div>
+            <button class="secondary-btn" type="button" [disabled]="filteredLessons.length === 0" (click)="exportLessons()">Export</button>
           </div>
 
           @if (lessonsError) {
@@ -53,11 +88,38 @@
           @if (isLoadingLessons) {
             <p class="empty-state">Loading lessons...</p>
           } @else if (lessons.length > 0) {
+            <div class="table-toolbar">
+              <input
+                type="text"
+                placeholder="Search by session, status or student count..."
+                [(ngModel)]="lessonSearchTerm"
+                (ngModelChange)="onLessonFiltersChanged()"
+                name="lessonSearch"
+              />
+              <select [(ngModel)]="selectedLessonStatusFilter" (ngModelChange)="onLessonFiltersChanged()" name="lessonStatusFilter">
+                <option [ngValue]="'ALL'">All Statuses</option>
+                <option [ngValue]="LessonStatus.PENDING">Pending</option>
+                <option [ngValue]="LessonStatus.SUBMITTED">Submitted</option>
+                <option [ngValue]="LessonStatus.CANCELLED">Cancelled</option>
+              </select>
+              <select [(ngModel)]="selectedLessonSort" (ngModelChange)="onLessonFiltersChanged()" name="lessonSort">
+                <option value="date-asc">Date Oldest-Newest</option>
+                <option value="date-desc">Date Newest-Oldest</option>
+                <option value="status-asc">Status A-Z</option>
+                <option value="status-desc">Status Z-A</option>
+                <option value="students-desc">Students High-Low</option>
+                <option value="students-asc">Students Low-High</option>
+                <option value="homework-desc">Homework High-Low</option>
+                <option value="homework-asc">Homework Low-High</option>
+              </select>
+            </div>
+
             <table class="students-table">
               <thead>
                 <tr>
                   <th>#</th>
                   <th>Date</th>
+                  <th>Students</th>
                   <th>Attendance</th>
                   <th>Homework % Complete</th>
                   <th>Status</th>
@@ -65,10 +127,11 @@
                 </tr>
               </thead>
               <tbody>
-                @for (lesson of lessons; track lesson.id) {
+                @for (lesson of paginatedLessons; track lesson.id) {
                   <tr [class.selected-row]="lesson.id === selectedLessonId" (click)="selectLesson(lesson.id ?? null)">
-                    <td>{{ $index + 1 }}</td>
+                    <td>{{ lessonPageStart + $index }}</td>
                     <td>{{ formatLessonSession(lesson) }}</td>
+                    <td>{{ lesson.studentCount ?? 0 }}</td>
                     <td>{{ getAttendanceCompletion(lesson) }}</td>
                     <td>{{ getHomeworkCompletion(lesson) }}</td>
                     <td>{{ lesson.status || 'PENDING' }}</td>
@@ -79,8 +142,38 @@
                     </td>
                   </tr>
                 }
+                @if (filteredLessons.length === 0) {
+                  <tr>
+                    <td colspan="7">No lessons match the current search, filters, or sort.</td>
+                  </tr>
+                }
               </tbody>
             </table>
+
+            @if (filteredLessons.length > 0) {
+              <div class="pagination-bar">
+                <div class="pagination-summary">
+                  Showing {{ lessonPageStart }}-{{ lessonPageEnd }} of {{ filteredLessons.length }}
+                </div>
+                <div class="pagination-controls">
+                  <label class="page-size">
+                    <span>Rows</span>
+                    <select [(ngModel)]="lessonPageSize" (ngModelChange)="onLessonPageSizeChanged()" name="lessonPageSize">
+                      @for (size of pageSizeOptions; track size) {
+                        <option [ngValue]="size">{{ size }}</option>
+                      }
+                    </select>
+                  </label>
+                  <button type="button" class="page-btn" [disabled]="safeLessonCurrentPage === 1" (click)="goToPreviousLessonPage()">
+                    Previous
+                  </button>
+                  <span class="page-indicator">Page {{ safeLessonCurrentPage }} of {{ lessonTotalPages }}</span>
+                  <button type="button" class="page-btn" [disabled]="safeLessonCurrentPage === lessonTotalPages" (click)="goToNextLessonPage()">
+                    Next
+                  </button>
+                </div>
+              </div>
+            }
           } @else {
             <p class="empty-state">No lessons generated yet.</p>
           }
@@ -192,6 +285,31 @@
     </div>
   }
 </div>
+
+@if (showRegenerateDialog) {
+  <div class="dialog-overlay" (click)="cancelRegenerateLessons()">
+    <div class="dialog-card confirm-card" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <h3>Regenerate Upcoming Lessons</h3>
+        <button class="close-btn" type="button" [disabled]="isRegeneratingLessons" (click)="cancelRegenerateLessons()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <p>This will keep past lessons and replace all upcoming lessons for this timetable using the current schedule.</p>
+        <p>Any student links on those upcoming lessons will also be removed before the new lesson set is created.</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-btn" type="button" [disabled]="isRegeneratingLessons" (click)="cancelRegenerateLessons()">
+          Cancel
+        </button>
+        <button class="primary-btn" type="button" [disabled]="isRegeneratingLessons" (click)="regenerateUpcomingLessons()">
+          {{ isRegeneratingLessons ? 'Regenerating...' : 'Regenerate' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
 @if (pendingRemovalStudent) {
   <div class="dialog-overlay" (click)="cancelRemoveStudentLesson()">

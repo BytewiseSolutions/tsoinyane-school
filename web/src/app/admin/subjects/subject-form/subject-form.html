@@ -29,7 +29,7 @@
           @if (gradeOptions.length === 0) {
             <p class="form-hint error">No grades found. Please <a routerLink="/admin/grades" (click)="close()">create grades</a> first.</p>
           } @else {
-            <select [(ngModel)]="subject.gradeId" name="gradeId" required>
+            <select [(ngModel)]="subject.gradeId" name="gradeId" (ngModelChange)="onGradeChange()" required>
               <option [ngValue]="null">Select grade</option>
               @for (grade of gradeOptions; track grade.id) {
                 <option [ngValue]="grade.id">{{ grade.name }}</option>
@@ -49,12 +49,24 @@
 
       <div class="form-group">
         <label>Teacher</label>
-        <select [(ngModel)]="subject.teacherId" name="teacherId" required>
-          <option [ngValue]="null">Select teacher</option>
-          @for (teacher of teacherOptions; track teacher.id) {
-            <option [ngValue]="teacher.id">{{ teacher.name }}</option>
-          }
-        </select>
+        @if (!subject.gradeId) {
+          <p class="form-hint">Please select a grade first to see available teachers.</p>
+          <select disabled>
+            <option>Select grade first</option>
+          </select>
+        } @else if (availableTeachers.length === 0) {
+          <p class="form-hint error">No teachers found for the selected grade. Please assign teachers to this grade first.</p>
+          <select disabled>
+            <option>No teachers available</option>
+          </select>
+        } @else {
+          <select [(ngModel)]="subject.teacherId" name="teacherId" required>
+            <option [ngValue]="null">Select teacher</option>
+            @for (teacher of availableTeachers; track teacher.id) {
+              <option [ngValue]="teacher.id">{{ teacher.name }}</option>
+            }
+          </select>
+        }
       </div>
 
       <div class="form-actions">

@@ -13,4 +13,13 @@ export interface Lesson {
   teacherId?: number | null;
   teacherName?: string | null;
   timetableId?: number | null;
+  studentCount?: number | null;
+  attendancePresentCount?: number | null;
+  attendanceLateCount?: number | null;
+  attendanceAbsentCount?: number | null;
+  attendancePendingCount?: number | null;
+  homeworkDoneCount?: number | null;
+  homeworkNotDoneCount?: number | null;
+  homeworkNoneCount?: number | null;
+  homeworkPendingCount?: number | null;
 }

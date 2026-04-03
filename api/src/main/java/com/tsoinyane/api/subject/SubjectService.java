@@ -56,6 +56,28 @@ public class SubjectService {
                 ? List.of()
                 : studentRepository.findAllById(studentIds);
 
+        if (studentIds != null && students.size() != studentIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more selected students were not found");
+        }
+
+        Long subjectSchoolId = subject.getSchool() != null ? subject.getSchool().getId() : null;
+        Long subjectGradeId = subject.getGrade() != null ? subject.getGrade().getId() : null;
+
+        boolean hasInvalidStudent = students.stream().anyMatch(student -> {
+            Long studentSchoolId = student.getSchool() != null ? student.getSchool().getId() : null;
+            Long studentGradeId = student.getGrade() != null ? student.getGrade().getId() : null;
+
+            return !java.util.Objects.equals(studentSchoolId, subjectSchoolId)
+                    || !java.util.Objects.equals(studentGradeId, subjectGradeId);
+        });
+
+        if (hasInvalidStudent) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Students assigned to a subject must belong to the same school and grade as that subject"
+            );
+        }
+
         subject.setStudents(new java.util.LinkedHashSet<>(students));
         subjectRepository.save(subject);
 
@@ -236,6 +258,7 @@ public class SubjectService {
                 .gradeName(grade != null ? grade.getName() : null)
                 .teacherId(teacher != null ? teacher.getId() : null)
                 .teacherName(teacher != null && teacher.getUser() != null ? teacher.getUser().getDisplayName() : null)
+                .studentCount(subject.getStudents() != null ? subject.getStudents().size() : 0)
                 .status(subject.getStatus())
                 .createdById(subject.getCreatedBy() != null ? subject.getCreatedBy().getId() : null)
                 .createdByName(subject.getCreatedBy() != null ? subject.getCreatedBy().getDisplayName() : null)

@@ -1,0 +1,69 @@
+<div class="installment-summary-card" [class]="statusClass">
+  <div class="summary-header">
+    <div class="student-info">
+      <h4 class="student-name">{{ plan.studentName }}</h4>
+      <div class="student-meta">
+        <span class="student-number">{{ plan.studentNumber }}</span>
+        <span class="student-grade">{{ plan.gradeName }}</span>
+      </div>
+    </div>
+    <div class="plan-status">
+      <span class="status-badge" [class]="'status-' + statusClass">{{ plan.status }}</span>
+    </div>
+  </div>
+
+  <div class="summary-body">
+    <div class="plan-overview">
+      <div class="overview-item">
+        <span class="label">Term</span>
+        <span class="value">{{ plan.term.replace('_', ' ') }} {{ plan.academicYear }}</span>
+      </div>
+      <div class="overview-item">
+        <span class="label">Total</span>
+        <span class="value amount">{{ formatCurrency(plan.totalAmount) }}</span>
+      </div>
+      <div class="overview-item">
+        <span class="label">Progress</span>
+        <span class="value">{{ paidInstallmentsCount }}/{{ totalInstallmentsCount }}</span>
+      </div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="progressPercentage"></div>
+      </div>
+      <span class="progress-text">{{ progressPercentage.toFixed(0) }}% Complete</span>
+    </div>
+
+    @if (nextDueInstallment) {
+      <div class="next-payment">
+        <div class="next-payment-info">
+          <span class="next-label">Next Payment:</span>
+          <span class="next-amount">{{ formatCurrency(nextDueInstallment.amount) }}</span>
+          <span class="next-due" [class]="nextDueInstallment.status === 'OVERDUE' ? 'overdue' : ''">
+            Due {{ nextDueInstallment.dueDate | date:'dd MMM' }}
+          </span>
+        </div>
+        <button class="quick-pay-btn" 
+                [class]="nextDueInstallment.status === 'OVERDUE' ? 'urgent' : ''" 
+                (click)="onQuickPay()">
+          {{ nextDueInstallment.status === 'OVERDUE' ? 'Pay Overdue' : 'Pay Now' }}
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="summary-actions">
+    <button class="action-btn secondary" (click)="onViewDetails()">
+      <i class="fa-solid fa-eye"></i> View Details
+    </button>
+    <button class="action-btn secondary" (click)="editPlan.emit(plan)">
+      <i class="fa-solid fa-edit"></i> Edit
+    </button>
+    @if (plan.status === 'ACTIVE') {
+      <button class="action-btn danger" (click)="cancelPlan.emit(plan)">
+        <i class="fa-solid fa-times"></i> Cancel
+      </button>
+    }
+  </div>
+</div>

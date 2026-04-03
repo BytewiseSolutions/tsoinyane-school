@@ -1,0 +1,141 @@
+<div class="details-page">
+    <div class="page-header">
+      <div>
+        <button class="back-link" type="button" (click)="goBack()">Back To Fees</button>
+        <h2>Fee Structure Details</h2>
+      <p>View fee amounts, shared term dates, and paying grades for the selected term and academic year.</p>
+      </div>
+    </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading fee structure details...</div>
+  } @else if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  } @else if (feeStructure) {
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Term</span>
+        <strong>{{ getTermLabel(feeStructure.term) }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Academic Year</span>
+        <strong>{{ feeStructure.academicYear || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Registration Fee</span>
+        <strong>M{{ feeStructure.registrationFee | number:'1.2-2' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>School Fees</span>
+        <strong>M{{ feeStructure.schoolFee | number:'1.2-2' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Exam Fee</span>
+        <strong>M{{ feeStructure.examFee | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <div class="details-card">
+      <div class="fee-tabs">
+        @for (tab of feeTabs; track tab.id) {
+          <button
+            type="button"
+            class="fee-tab"
+            [class.active]="activeTab === tab.id"
+            (click)="selectTab(tab.id)"
+          >
+            {{ tab.label }}
+          </button>
+        }
+      </div>
+
+      <div class="tab-panel">
+        <div class="tab-panel-header">
+          <div>
+            <h3>{{ activeTabLabel }}</h3>
+            <p>View the shared term dates and paying grades for this fee type.</p>
+          </div>
+          @if (!isEditingDates) {
+            <button type="button" class="edit-dates-btn" [disabled]="!canEditDates" (click)="startEditingDates()">Edit Term Dates</button>
+          }
+        </div>
+
+        <div class="tab-summary">
+          <div class="summary-item">
+            <span>Opening Date</span>
+            <strong>{{ activeTabStartDate }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>Closing Date</span>
+            <strong>{{ activeTabClosingDate }}</strong>
+          </div>
+        </div>
+
+        <div class="fee-breakdown-list">
+          @if (hasActiveTabGroups) {
+            @for (group of activeTabGroups; track group.amount) {
+              <div class="fee-breakdown-card">
+                <div class="summary-item">
+                  <span>Amount</span>
+                  <strong>M{{ group.amount | number:'1.2-2' }}</strong>
+                </div>
+                <div class="summary-item tab-grades">
+                  <span>Grades Paying</span>
+                  <strong>{{ group.grades }}</strong>
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="empty-fee-state">{{ noGradesPayingMessage }}</div>
+          }
+        </div>
+
+      </div>
+    </div>
+
+    @if (isEditingDates) {
+      <div class="date-modal-overlay" (click)="cancelEditingDates()">
+        <div class="date-modal-card" (click)="$event.stopPropagation()">
+          <div class="date-modal-header">
+            <div>
+              <h3>Edit Term Dates</h3>
+              <p>Set the opening and closing dates shared by every fee in this term.</p>
+            </div>
+          </div>
+
+          <div class="date-editor">
+            <label class="date-field">
+              <span>Opening Date</span>
+              <input type="date" [(ngModel)]="dateForm.startDate" name="feeStartDate" />
+            </label>
+            <label class="date-field">
+              <span>Closing Date</span>
+              <input type="date" [(ngModel)]="dateForm.closingDate" name="feeClosingDate" />
+            </label>
+          </div>
+
+          <div class="date-editor-actions">
+            <button type="button" class="secondary-btn" (click)="cancelEditingDates()">Cancel</button>
+            <button type="button" class="primary-btn" [disabled]="isSavingDates" (click)="saveDates()">
+              {{ isSavingDates ? 'Saving...' : 'Save Dates' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (actionMessage) {
+      <div class="success-modal-overlay" (click)="closeActionMessage()">
+        <div class="success-modal-card" (click)="$event.stopPropagation()">
+          <div class="success-modal-header">
+            <h3>Success</h3>
+            <p>{{ actionMessage }}</p>
+          </div>
+          <div class="success-modal-actions">
+            <button type="button" class="primary-btn" (click)="closeActionMessage()">OK</button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

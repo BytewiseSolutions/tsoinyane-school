@@ -101,6 +101,11 @@ export class NotificationForm implements OnInit {
   submit(): void {
     this.formError = '';
 
+    if (!this.isSystemAdmin && this.form.targetSchoolId == null) {
+      this.formError = 'Select your assigned school in the header before sending a notification.';
+      return;
+    }
+
     if (!this.form.audienceRoles.length) {
       this.formError = 'Select at least one recipient group.';
       return;

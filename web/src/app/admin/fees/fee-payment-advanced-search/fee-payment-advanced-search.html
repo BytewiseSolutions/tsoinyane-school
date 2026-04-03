@@ -1,0 +1,120 @@
+<div class="overlay" (click)="onClose()">
+  <div class="search-card" (click)="$event.stopPropagation()">
+    <div class="search-header">
+      <div>
+        <h3>Advanced Search</h3>
+        <p>Search payments using multiple criteria for precise results.</p>
+      </div>
+      <button class="close-btn" type="button" (click)="onClose()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="search-body">
+      <div class="search-section">
+        <h4>Student Information</h4>
+        <div class="search-row">
+          <label class="search-field">
+            <span>Student Name</span>
+            <input type="text" [(ngModel)]="criteria.studentName" placeholder="Enter student name">
+          </label>
+          <label class="search-field">
+            <span>Student Number</span>
+            <input type="text" [(ngModel)]="criteria.studentNumber" placeholder="Enter student number">
+          </label>
+          <label class="search-field">
+            <span>Grade</span>
+            <select [(ngModel)]="criteria.gradeId">
+              <option [ngValue]="null">Any Grade</option>
+              @for (grade of gradeOptions; track grade.id) {
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="search-section">
+        <h4>Academic Information</h4>
+        <div class="search-row">
+          <label class="search-field">
+            <span>Term</span>
+            <select [(ngModel)]="criteria.term">
+              <option [ngValue]="null">Any Term</option>
+              @for (term of termOptions; track term.value) {
+                <option [ngValue]="term.value">{{ term.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="search-field">
+            <span>Academic Year</span>
+            <input type="text" [(ngModel)]="criteria.academicYear" placeholder="e.g. 2026">
+          </label>
+        </div>
+      </div>
+
+      <div class="search-section">
+        <h4>Payment Details</h4>
+        <div class="search-row">
+          <label class="search-field">
+            <span>Payment Method</span>
+            <select [(ngModel)]="criteria.paymentMethod">
+              <option [ngValue]="null">Any Method</option>
+              @for (method of paymentMethodOptions; track method.value) {
+                <option [ngValue]="method.value">{{ method.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="search-field">
+            <span>Reference Number</span>
+            <input type="text" [(ngModel)]="criteria.referenceNumber" placeholder="Enter reference">
+          </label>
+        </div>
+      </div>
+
+      <div class="search-section">
+        <h4>Date Range</h4>
+        <div class="search-row">
+          <label class="search-field">
+            <span>From Date</span>
+            <input type="date" [(ngModel)]="criteria.dateFrom" [max]="today()">
+          </label>
+          <label class="search-field">
+            <span>To Date</span>
+            <input type="date" [(ngModel)]="criteria.dateTo" [max]="today()">
+          </label>
+        </div>
+      </div>
+
+      <div class="search-section">
+        <h4>Amount Range</h4>
+        <div class="search-row">
+          <label class="search-field">
+            <span>Minimum Amount</span>
+            <input type="number" [(ngModel)]="criteria.amountFrom" min="0" step="0.01" placeholder="0.00">
+          </label>
+          <label class="search-field">
+            <span>Maximum Amount</span>
+            <input type="number" [(ngModel)]="criteria.amountTo" min="0" step="0.01" placeholder="0.00">
+          </label>
+        </div>
+      </div>
+
+      <div class="search-section">
+        <h4>Options</h4>
+        <div class="search-row">
+          <label class="search-checkbox">
+            <input type="checkbox" [(ngModel)]="criteria.includeReversed">
+            <span>Include reversed payments</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-actions">
+      <button type="button" class="clear-btn" (click)="onClear()">Clear All</button>
+      <button type="button" class="cancel-btn" (click)="onClose()">Cancel</button>
+      <button type="button" class="search-btn" (click)="onSearch()">Search</button>
+    </div>
+  </div>
+</div>

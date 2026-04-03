@@ -1,0 +1,95 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>Installment Plans</h2>
+      <p>Manage partial payment schedules for students with outstanding balances.</p>
+    </div>
+    <div class="header-actions">
+      <button class="add-btn" type="button" (click)="openForm()">
+        <i class="fa-solid fa-plus"></i> Create Plan
+      </button>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="table-card error-card">{{ errorMessage }}</div>
+  }
+
+  @if (actionMessage) {
+    <div class="table-card success-card">
+      {{ actionMessage }}
+      <button class="close-btn" type="button" (click)="closeActionMessage()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  }
+
+  <div class="table-card">
+    <div class="toolbar">
+      <input
+        type="text"
+        placeholder="Search by student name, number, or grade..."
+        [(ngModel)]="searchTerm"
+        name="installmentSearch"
+      />
+      <select [(ngModel)]="selectedGradeFilter" name="installmentGradeFilter">
+        <option [ngValue]="null">All Grades</option>
+        @for (grade of gradeOptions; track grade.id) {
+          <option [ngValue]="grade.id">{{ grade.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedStatusFilter" name="installmentStatusFilter">
+        <option value="ALL">All Status</option>
+        <option value="ACTIVE">Active</option>
+        <option value="COMPLETED">Completed</option>
+        <option value="CANCELLED">Cancelled</option>
+      </select>
+    </div>
+
+    @if (isLoading) {
+      <div class="empty-state">Loading installment plans...</div>
+    } @else if (filteredPlans.length > 0) {
+      <div class="plans-list">
+        @for (plan of filteredPlans; track plan.id) {
+          <app-installment-summary
+            [plan]="plan"
+            (recordPayment)="openPaymentForm($event.plan, $event.installment)"
+            (editPlan)="openForm($event)"
+            (cancelPlan)="cancelPlan($event)"
+          ></app-installment-summary>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">No installment plans found for the selected filters.</div>
+    }
+  </div>
+</div>
+
+@if (showForm) {
+  <app-installment-plan-form
+    [plan]="editingPlan"
+    [students]="students"
+    [feeStructures]="feeStructures"
+    [payments]="payments"
+    [selectedSchoolName]="selectedSchoolName"
+    [parentComponent]="this"
+    (save)="savePlan($event)"
+    (cancel)="closeForm()"
+  ></app-installment-plan-form>
+}
+
+@if (showPaymentForm && selectedPlanForPayment && selectedInstallmentForPayment) {
+  <app-fee-payment-form
+    [preferredStudentId]="selectedPlanForPayment.studentId"
+    [preferredFeeStructureId]="selectedPlanForPayment.feeStructureId"
+    [preferredAmount]="selectedInstallmentForPayment.amount"
+    [isInstallmentPayment]="true"
+    [selectedSchoolId]="selectedSchoolId"
+    [selectedSchoolName]="selectedSchoolName"
+    [students]="students"
+    [feeStructures]="feeStructures"
+    [payments]="payments"
+    (saved)="saveInstallmentPayment($event)"
+    (closed)="closePaymentForm()"
+  ></app-fee-payment-form>
+}

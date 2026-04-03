@@ -37,9 +37,26 @@ import { Notifications } from './admin/notifications/notifications';
 import { NotificationForm } from './admin/notifications/notification-form/notification-form';
 import { Profile } from './admin/profile/profile';
 import { Reports } from './admin/reports/reports';
+import { Fees } from './admin/fees/fees';
+import { FeePaymentAdvancedSearch } from './admin/fees/fee-payment-advanced-search/fee-payment-advanced-search';
+import { InstallmentPlans } from './admin/fees/installment-plans/installment-plans';
+import { InstallmentPlanForm } from './admin/fees/installment-plans/installment-plan-form';
+import { InstallmentSummary } from './admin/fees/installment-plans/installment-summary';
+import { InstallmentDetails } from './admin/fees/installment-plans/installment-details';
+import { FeeReports } from './admin/fees/fee-reports';
+import { FeePayments } from './admin/fees/fee-payments';
+import { FeePaymentForm } from './admin/fees/fee-payment-form/fee-payment-form';
+import { FeePaymentDetail } from './admin/fees/fee-payment-detail/fee-payment-detail';
+import { FeeStructureForm } from './admin/fees/fee-structure-form/fee-structure-form';
+import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
+import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
+import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
+import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
+import { SubjectsImport } from './admin/subjects/import/import';
+import { TimetableImport } from './admin/subjects/timetable-import/timetable-import';
 import { TimetableDetail } from './admin/subjects/timetable-detail/timetable-detail';
 import { LessonDetail } from './admin/subjects/lesson-detail/lesson-detail';
 import { EventForm } from './admin/events/event-form/event-form';
@@ -79,9 +96,26 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     NotificationForm,
     Profile,
     Reports,
+    Fees,
+    FeeReports,
+    FeePayments,
+    FeePaymentForm,
+    FeePaymentDetail,
+    FeePaymentAdvancedSearch,
+    InstallmentPlans,
+    InstallmentPlanForm,
+    InstallmentSummary,
+    InstallmentDetails,
+    FeeStructureForm,
+    FeeStructureDetail,
+    MySubjects,
+    MyTimetable,
+    MyLessons,
     Settings,
     SubjectForm,
     SubjectDetail,
+    SubjectsImport,
+    TimetableImport,
     TimetableDetail,
     LessonDetail,
     EventForm
