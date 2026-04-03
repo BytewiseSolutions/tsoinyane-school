@@ -1,4 +1,5 @@
 import { Term } from '../settings/term';
+import { FeeType } from './fee-type';
 
 export interface FeeStructure {
   id?: number;
@@ -9,12 +10,13 @@ export interface FeeStructure {
   gradeName?: string | null;
   term: Term | null;
   academicYear: string;
+  feeType?: FeeType | null;
+  amount?: number | null;
   registrationFee: number | null;
   schoolFee: number | null;
-  foodFee: number | null;
-  booksFee: number | null;
-  generalFee: number | null;
   examFee: number | null;
-  description?: string | null;
+  termOpeningDate?: string | null;
+  termClosingDate?: string | null;
+  updateTermDates?: boolean | null;
   totalAmount?: number | null;
 }

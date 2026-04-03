@@ -2,20 +2,25 @@
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
   background: rgba(0, 0, 0, 0.45);
   z-index: 2000;
+  overflow-y: auto;
 }
 
 .dialog-card {
   width: 100%;
   max-width: 760px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 14px 36px rgba(15, 34, 68, 0.18);
-  overflow: visible;
+  overflow: hidden;
+  margin: auto 0;
 }
 
 .dialog-header,
@@ -25,6 +30,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 18px 22px;
+  flex-shrink: 0;
 }
 
 .dialog-header {
@@ -55,6 +61,9 @@
   padding: 22px;
   display: grid;
   gap: 18px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .context-card,
@@ -78,12 +87,48 @@
   strong {
     color: var(--navy-blue);
     font-size: 16px;
+    word-break: break-word;
   }
+}
+
+.fee-type-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fee-type-tab {
+  border: 1px solid #d4def4;
+  background: #f7faff;
+  color: #5b6f98;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  min-height: 48px;
+}
+
+.fee-type-tab.active {
+  border-color: var(--navy-blue);
+  background: rgba(25, 56, 118, 0.08);
+  color: var(--navy-blue);
+}
+
+.helper-banner {
+  border: 1px solid #dbe5f5;
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #5f6e8f;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -213,6 +258,7 @@
 .dialog-actions {
   border-top: 1px solid #e4ebf8;
   justify-content: flex-end;
+  background: #fff;
 }
 
 .primary-btn,
@@ -237,7 +283,84 @@
 }
 
 @media (max-width: 820px) {
+  .overlay {
+    padding: 12px;
+  }
+
+  .dialog-card {
+    max-height: calc(100vh - 24px);
+  }
+
+  .dialog-header,
+  .dialog-actions,
+  .dialog-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .fee-type-tabs {
+    grid-template-columns: 1fr;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dialog-header {
+    align-items: flex-start;
+  }
+
+  .dialog-header h3 {
+    font-size: 18px;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    width: 100%;
+  }
+
+  .total-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 520px) {
+  .overlay {
+    padding: 8px;
+  }
+
+  .dialog-card {
+    border-radius: 12px;
+    max-height: calc(100vh - 16px);
+  }
+
+  .dialog-header,
+  .dialog-actions,
+  .dialog-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .dialog-header {
+    gap: 8px;
+  }
+
+  .close-btn {
+    align-self: flex-start;
+  }
+
+  .grade-checkboxes {
+    gap: 8px 12px;
+  }
+
+  .grade-checkbox {
+    width: 100%;
   }
 }

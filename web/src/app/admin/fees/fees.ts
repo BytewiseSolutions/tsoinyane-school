@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom, Subject, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { Grade } from '../grades/grade';
@@ -9,16 +10,13 @@ import { FeeStructure } from './fee-structure';
 import { FeeStructureFormSubmission } from './fee-structure-form-submission';
 
 interface FeeStructureRow {
-  structureIds: number[];
   primaryStructureId: number | null;
+  structureCount: number;
   term: Term | null;
   academicYear: string;
-  gradeLabel: string;
-  registrationFee: number;
-  schoolFee: number;
-  examFee: number;
-  canEdit: boolean;
-  canDelete: boolean;
+  registrationFee: string;
+  schoolFee: string;
+  examFee: string;
 }
 
 @Component({
@@ -47,10 +45,13 @@ export class Fees implements OnInit, OnDestroy {
   editingStructure: FeeStructure | null = null;
   showDeleteDialog = false;
   structureToDelete: FeeStructure | null = null;
+  showManageDialog = false;
+  managedRow: FeeStructureRow | null = null;
 
   constructor(
     private backendService: BackendService,
-    private schoolContext: SchoolContextService
+    private schoolContext: SchoolContextService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -76,64 +77,48 @@ export class Fees implements OnInit, OnDestroy {
       .filter(structure => this.selectedTermFilter === 'ALL' || structure.term === this.selectedTermFilter)
       .filter(structure => {
         if (!query) {
-          return true;
-        }
+        return true;
+      }
 
-        return (structure.gradeName ?? '').toLowerCase().includes(query)
-          || structure.academicYear.toLowerCase().includes(query)
-          || (structure.description ?? '').toLowerCase().includes(query);
+      return (structure.gradeName ?? '').toLowerCase().includes(query)
+          || structure.academicYear.toLowerCase().includes(query);
       });
   }
 
   get filteredRows(): FeeStructureRow[] {
-    const groupedRows = new Map<string, FeeStructure[]>();
+    const academicYear = this.tableAcademicYear;
+    const rows = this.termOptions.map(term => {
+      const termStructures = this.filteredStructures
+        .filter(structure => structure.academicYear === academicYear)
+        .filter(structure => structure.term === term);
+      const representative = this.getRepresentativeStructure(termStructures);
 
-    for (const structure of this.filteredStructures) {
-      const key = [
-        structure.term ?? '',
-        structure.academicYear,
-        Number(structure.registrationFee ?? 0).toFixed(2),
-        Number(structure.schoolFee ?? 0).toFixed(2),
-        Number(structure.examFee ?? 0).toFixed(2),
-      ].join('|');
-
-      const existing = groupedRows.get(key) ?? [];
-      existing.push(structure);
-      groupedRows.set(key, existing);
-    }
-
-    return Array.from(groupedRows.values())
-      .map(group => {
-        const sortedGroup = [...group].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0));
-        const structureIds = sortedGroup
-          .map(item => item.id ?? null)
-          .filter((id): id is number => id != null);
-
+      if (!termStructures.length) {
         return {
-          structureIds,
-          primaryStructureId: structureIds[0] ?? null,
-          term: sortedGroup[0]?.term ?? null,
-          academicYear: sortedGroup[0]?.academicYear ?? '',
-          gradeLabel: this.getGradeLabel(sortedGroup),
-          registrationFee: Number(sortedGroup[0]?.registrationFee ?? 0),
-          schoolFee: Number(sortedGroup[0]?.schoolFee ?? 0),
-          examFee: Number(sortedGroup[0]?.examFee ?? 0),
-          canEdit: sortedGroup.length === 1,
-          canDelete: sortedGroup.length === 1,
+          primaryStructureId: null,
+          structureCount: 0,
+          term,
+          academicYear,
+          registrationFee: '0.00',
+          schoolFee: '0.00',
+          examFee: '0.00',
         };
-      })
-      .sort((a, b) => {
-        if (a.academicYear !== b.academicYear) {
-          return b.academicYear.localeCompare(a.academicYear);
-        }
+      }
 
-        const termDiff = this.getTermOrder(a.term) - this.getTermOrder(b.term);
-        if (termDiff !== 0) {
-          return termDiff;
-        }
+      return {
+        primaryStructureId: representative?.id ?? null,
+        structureCount: termStructures.length,
+        term,
+        academicYear,
+        registrationFee: this.formatDistinctFeeValues(termStructures.map(structure => Number(structure.registrationFee ?? 0))),
+        schoolFee: this.formatDistinctFeeValues(termStructures.map(structure => Number(structure.schoolFee ?? 0))),
+        examFee: this.formatDistinctFeeValues(termStructures.map(structure => Number(structure.examFee ?? 0))),
+      };
+    });
 
-        return a.gradeLabel.localeCompare(b.gradeLabel);
-      });
+    return this.selectedTermFilter !== 'ALL'
+      ? rows.filter(row => row.term === this.selectedTermFilter)
+      : rows;
   }
 
   get summaryRegistrationFee(): string {
@@ -188,6 +173,10 @@ export class Fees implements OnInit, OnDestroy {
     this.editingStructure = null;
   }
 
+  closeActionMessage(): void {
+    this.actionMessage = '';
+  }
+
   async saveStructure(submission: FeeStructureFormSubmission): Promise<void> {
     const { feeStructure, selectedGradeIds } = submission;
 
@@ -215,22 +204,18 @@ export class Fees implements OnInit, OnDestroy {
       for (const gradeId of selectedGradeIds) {
         const grade = this.gradeOptions.find(item => item.id === gradeId);
         const registrationFee = feeStructure.term === Term.TERM_1 ? Number(feeStructure.registrationFee ?? 0) : 0;
-        const examFee = feeStructure.term === Term.TERM_2 && this.isGrade11(grade?.name)
+        const examFee = this.isGrade11(grade?.name)
           ? Number(feeStructure.examFee ?? 0)
           : 0;
-        const foodFee = Number(feeStructure.foodFee ?? 0);
-        const booksFee = Number(feeStructure.booksFee ?? 0);
-        const generalFee = Number(feeStructure.generalFee ?? 0);
-        const schoolFee = foodFee + booksFee + generalFee;
+        const schoolFee = Number(feeStructure.schoolFee ?? 0);
         const payload: FeeStructure = {
           ...feeStructure,
           gradeId,
           gradeName: grade?.name ?? null,
+          feeType: feeStructure.feeType ?? null,
+          amount: Number(feeStructure.amount ?? feeStructure.totalAmount ?? 0),
           registrationFee,
           schoolFee,
-          foodFee,
-          booksFee,
-          generalFee,
           examFee,
           totalAmount: registrationFee + schoolFee + examFee,
         };
@@ -261,6 +246,7 @@ export class Fees implements OnInit, OnDestroy {
   }
 
   confirmDelete(structure: FeeStructure): void {
+    this.showManageDialog = false;
     this.structureToDelete = structure;
     this.showDeleteDialog = true;
   }
@@ -298,7 +284,11 @@ export class Fees implements OnInit, OnDestroy {
   }
 
   canManageRow(row: FeeStructureRow): boolean {
-    return row.canEdit && row.primaryStructureId != null;
+    return row.primaryStructureId != null && row.structureCount === 1;
+  }
+
+  canManageRecords(row: FeeStructureRow): boolean {
+    return row.structureCount > 1;
   }
 
   getPrimaryStructure(row: FeeStructureRow): FeeStructure | null {
@@ -307,6 +297,70 @@ export class Fees implements OnInit, OnDestroy {
     }
 
     return this.filteredStructures.find(item => item.id === row.primaryStructureId) ?? null;
+  }
+
+  getRowStructures(row: FeeStructureRow): FeeStructure[] {
+    return this.filteredStructures
+      .filter(item => item.term === row.term && item.academicYear === row.academicYear)
+      .sort((left, right) => {
+        const gradeOrderDiff = this.getGradeOrder(left.gradeName) - this.getGradeOrder(right.gradeName);
+        if (gradeOrderDiff !== 0) {
+          return gradeOrderDiff;
+        }
+
+        const examDiff = Number(right.examFee ?? 0) - Number(left.examFee ?? 0);
+        if (examDiff !== 0) {
+          return examDiff;
+        }
+
+        const schoolDiff = Number(right.schoolFee ?? 0) - Number(left.schoolFee ?? 0);
+        if (schoolDiff !== 0) {
+          return schoolDiff;
+        }
+
+        return Number(left.id ?? 0) - Number(right.id ?? 0);
+      });
+  }
+
+  openManageRecords(row: FeeStructureRow): void {
+    this.managedRow = row;
+    this.showManageDialog = true;
+  }
+
+  closeManageRecords(): void {
+    this.showManageDialog = false;
+    this.managedRow = null;
+  }
+
+  editManagedStructure(structure: FeeStructure): void {
+    this.closeManageRecords();
+    this.openForm(structure);
+  }
+
+  deleteManagedStructure(structure: FeeStructure): void {
+    this.closeManageRecords();
+    this.confirmDelete(structure);
+  }
+
+  viewManagedStructure(structure: FeeStructure): void {
+    this.closeManageRecords();
+    this.router.navigate(['/admin/fees', structure.id]);
+  }
+
+  getStructureFeeTypeLabel(structure: FeeStructure): string {
+    if (Number(structure.examFee ?? 0) > 0) {
+      return 'Exam Fee';
+    }
+
+    if (Number(structure.registrationFee ?? 0) > 0) {
+      return 'Registration Fee';
+    }
+
+    return 'School Fees';
+  }
+
+  formatCurrencyDisplay(value: number | null | undefined): string {
+    return `M${Number(value ?? 0).toFixed(2)}`;
   }
 
   private loadData(): void {
@@ -335,9 +389,8 @@ export class Fees implements OnInit, OnDestroy {
           ...structure,
           registrationFee: Number(structure.registrationFee ?? 0),
           schoolFee: Number(structure.schoolFee ?? 0),
-          foodFee: Number(structure.foodFee ?? 0),
-          booksFee: Number(structure.booksFee ?? 0),
-          generalFee: Number(structure.generalFee ?? 0),
+          feeType: structure.feeType ?? null,
+          amount: Number(structure.amount ?? 0),
           examFee: Number(structure.examFee ?? 0),
           totalAmount: Number(structure.totalAmount ?? 0),
         }));
@@ -401,57 +454,75 @@ export class Fees implements OnInit, OnDestroy {
       .filter(structure => !this.selectedGradeFilter || structure.gradeId === this.selectedGradeFilter);
   }
 
+  private get tableAcademicYear(): string {
+    const filteredYears = [...new Set(this.filteredStructures.map(structure => structure.academicYear).filter(Boolean))]
+      .sort((a, b) => b.localeCompare(a));
+
+    if (filteredYears.length > 0) {
+      return filteredYears[0];
+    }
+
+    return this.summaryAcademicYear ?? `${new Date().getFullYear()}`;
+  }
+
   private formatAmountSummary(values: number[]): string {
     const uniqueValues = [...new Set(values.map(value => Number(value.toFixed(2))))].sort((a, b) => a - b);
 
     if (!uniqueValues.length) {
-      return '0.00';
+      return this.formatCurrencyDisplay(0);
     }
 
     if (uniqueValues.length === 1) {
-      return uniqueValues[0].toFixed(2);
+      return this.formatCurrencyDisplay(uniqueValues[0]);
     }
 
-    return `${uniqueValues[0].toFixed(2)} - ${uniqueValues[uniqueValues.length - 1].toFixed(2)}`;
+    return `${this.formatCurrencyDisplay(uniqueValues[0])} - ${this.formatCurrencyDisplay(uniqueValues[uniqueValues.length - 1])}`;
   }
 
-  private getGradeLabel(group: FeeStructure[]): string {
-    const groupGradeIds = [...new Set(group.map(item => item.gradeId).filter((id): id is number => id != null))].sort((a, b) => a - b);
-    const allGradeIds = this.gradeOptions
-      .map(grade => grade.id ?? 0)
-      .filter(id => id > 0)
-      .sort((a, b) => a - b);
+  private formatDistinctFeeValues(values: number[]): string {
+    const normalizedValues = values
+      .map(value => Number(value.toFixed(2)));
+    const nonZeroValues = normalizedValues.filter(value => value > 0);
+    const uniqueValues = [...new Set(nonZeroValues.length > 0 ? nonZeroValues : normalizedValues)];
 
-    const otherGradeIds = this.gradeOptions
-      .filter(grade => !this.isGrade11(grade.name))
-      .map(grade => grade.id ?? 0)
-      .filter(id => id > 0)
-      .sort((a, b) => a - b);
-
-    if (this.sameIds(groupGradeIds, allGradeIds) && allGradeIds.length > 0) {
-      return 'All Grades';
+    if (!uniqueValues.length) {
+      return this.formatCurrencyDisplay(0);
     }
 
-    if (this.sameIds(groupGradeIds, otherGradeIds) && otherGradeIds.length > 0) {
-      return 'Other Grades';
-    }
-
-    if (group.length === 1) {
-      return group[0].gradeName || 'N/A';
-    }
-
-    return group
-      .map(item => item.gradeName || 'N/A')
-      .filter((value, index, array) => array.indexOf(value) === index)
+    return uniqueValues
+      .sort((a, b) => a - b)
+      .map(value => this.formatCurrencyDisplay(value))
       .join(', ');
   }
 
-  private sameIds(left: number[], right: number[]): boolean {
-    if (left.length !== right.length) {
-      return false;
+  private getRepresentativeStructure(structures: FeeStructure[]): FeeStructure | null {
+    if (!structures.length) {
+      return null;
     }
 
-    return left.every((value, index) => value === right[index]);
+    return [...structures].sort((left, right) => {
+      const examDiff = Number(right.examFee ?? 0) - Number(left.examFee ?? 0);
+      if (examDiff !== 0) {
+        return examDiff;
+      }
+
+      const schoolDiff = Number(right.schoolFee ?? 0) - Number(left.schoolFee ?? 0);
+      if (schoolDiff !== 0) {
+        return schoolDiff;
+      }
+
+      const registrationDiff = Number(right.registrationFee ?? 0) - Number(left.registrationFee ?? 0);
+      if (registrationDiff !== 0) {
+        return registrationDiff;
+      }
+
+      const grade11Priority = Number(this.isGrade11(right.gradeName)) - Number(this.isGrade11(left.gradeName));
+      if (grade11Priority !== 0) {
+        return grade11Priority;
+      }
+
+      return Number(left.id ?? 0) - Number(right.id ?? 0);
+    })[0] ?? null;
   }
 
   private getTermOrder(term: Term | null): number {
@@ -467,5 +538,14 @@ export class Fees implements OnInit, OnDestroy {
       default:
         return 99;
     }
+  }
+
+  private getGradeOrder(gradeName: string | null | undefined): number {
+    if (!gradeName) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+
+    const digitsOnly = gradeName.replace(/[^0-9]/g, '');
+    return Number(digitsOnly || Number.MAX_SAFE_INTEGER);
   }
 }

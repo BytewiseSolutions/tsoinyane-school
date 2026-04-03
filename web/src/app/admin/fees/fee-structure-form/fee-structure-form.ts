@@ -33,11 +33,7 @@ export class FeeStructureForm implements OnInit {
     academicYear: '',
     registrationFee: 0,
     schoolFee: 0,
-    foodFee: 0,
-    booksFee: 0,
-    generalFee: 0,
     examFee: 0,
-    description: null,
   };
   selectedGradeIds: number[] = [];
   selectedFeeType: FeeType = FeeType.REGISTRATION_FEE;
@@ -53,9 +49,6 @@ export class FeeStructureForm implements OnInit {
         ...this.existingStructure,
         registrationFee: this.existingStructure.registrationFee ?? 0,
         schoolFee: this.existingStructure.schoolFee ?? 0,
-        foodFee: this.existingStructure.foodFee ?? 0,
-        booksFee: this.existingStructure.booksFee ?? 0,
-        generalFee: this.existingStructure.generalFee ?? 0,
         examFee: this.existingStructure.examFee ?? 0,
       };
       this.selectedGradeIds = this.existingStructure.gradeId ? [this.existingStructure.gradeId] : [];
@@ -82,14 +75,19 @@ export class FeeStructureForm implements OnInit {
   get feeTypeHelperText(): string {
     switch (this.selectedFeeType) {
       case FeeType.REGISTRATION_FEE:
-        return 'This will apply to all choosen grades below.';
+        return 'This amount will apply to the grades you select below.';
       case FeeType.SCHOOL_FEES:
-        return 'This will apply to all choosen grades below.';
+        return 'This amount will apply to the grades you select below.';
       case FeeType.EXAM_FEE:
-        return 'This will apply to Grade 11 only.';
+        return 'This amount applies to Grade 11 only. Grade 11 is selected automatically.';
       default:
         return '';
     }
+  }
+
+  selectFeeType(feeType: FeeType): void {
+    this.selectedFeeType = feeType;
+    this.onFeeTypeChange();
   }
 
   onFeeTypeChange(): void {
@@ -149,15 +147,10 @@ export class FeeStructureForm implements OnInit {
     let registrationFee = 0;
     let schoolFee = 0;
     let examFee = 0;
-    let foodFee = 0;
-    let booksFee = 0;
-    let generalFee = 0;
-
     if (this.selectedFeeType === FeeType.REGISTRATION_FEE) {
       registrationFee = normalizedAmount;
     } else if (this.selectedFeeType === FeeType.SCHOOL_FEES) {
       schoolFee = normalizedAmount;
-      generalFee = normalizedAmount;
     } else if (this.selectedFeeType === FeeType.EXAM_FEE) {
       examFee = normalizedAmount;
     }
@@ -170,14 +163,12 @@ export class FeeStructureForm implements OnInit {
         gradeId: primaryGradeId,
         gradeName: selectedGrade?.name ?? null,
         academicYear,
+        feeType: this.selectedFeeType,
+        amount: normalizedAmount,
         registrationFee,
         schoolFee,
-        foodFee,
-        booksFee,
-        generalFee,
         examFee,
         totalAmount: this.totalAmount,
-        description: null,
       },
       selectedGradeIds: [...this.selectedGradeIds],
     });

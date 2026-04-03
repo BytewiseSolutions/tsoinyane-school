@@ -11,7 +11,9 @@ export class App implements OnInit {
   loading = false;
   isAdminRoute = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) {
+    this.isAdminRoute = this.router.url.startsWith('/admin');
+  }
 
   ngOnInit() {
     this.router.events.subscribe(event => {
@@ -23,6 +25,9 @@ export class App implements OnInit {
         event instanceof NavigationCancel ||
         event instanceof NavigationError
       ) {
+        if (event instanceof NavigationEnd) {
+          this.isAdminRoute = event.urlAfterRedirects.startsWith('/admin');
+        }
         this.loading = false;
       }
     });
