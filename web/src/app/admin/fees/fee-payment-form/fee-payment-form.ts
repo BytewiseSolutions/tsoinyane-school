@@ -13,6 +13,8 @@ import { Term } from '../../settings/term';
 })
 export class FeePaymentForm implements OnInit {
   @Input() existingPayment: FeePayment | null = null;
+  @Input() preferredStudentId: number | null = null;
+  @Input() preferredFeeStructureId: number | null = null;
   @Input() selectedSchoolId: number | null = null;
   @Input() selectedSchoolName = '';
   @Input() students: FeeStudent[] = [];
@@ -50,6 +52,17 @@ export class FeePaymentForm implements OnInit {
         paymentMethod: this.existingPayment.paymentMethod ?? PaymentMethod.CASH,
       };
       return;
+    }
+
+    if (this.preferredStudentId) {
+      this.payment.studentId = this.preferredStudentId;
+      const student = this.students.find(s => s.id === this.preferredStudentId);
+      this.payment.referenceNumber = student?.studentNumber ?? null;
+    }
+
+    if (this.preferredFeeStructureId) {
+      this.payment.feeStructureId = this.preferredFeeStructureId;
+      this.onFeeStructureChange();
     }
 
     this.payment.paymentDate = this.today();
@@ -174,6 +187,11 @@ export class FeePaymentForm implements OnInit {
       return;
     }
 
+    if (this.payment.paymentDate > this.today()) {
+      this.errorMessage = 'Payment date cannot be in the future.';
+      return;
+    }
+
     if (!this.payment.paymentMethod) {
       this.errorMessage = 'Payment method is required.';
       return;
@@ -240,7 +258,7 @@ export class FeePaymentForm implements OnInit {
     return trimmed ? trimmed : null;
   }
 
-  private today(): string {
+  today(): string {
     return new Date().toISOString().slice(0, 10);
   }
 }

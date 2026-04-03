@@ -16,6 +16,7 @@ import { Term } from './term';
 })
 export class Settings implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
+  private readonly currentCalendarYear = String(new Date().getFullYear());
 
   schoolInfo: SchoolInfo = { id: null, name: '', code: '', location: '', phone: '', email: '', type: '' };
   academicSettings: AcademicSettings = { academicYear: '', currentTerm: Term.TERM_1, passingMark: null, attendanceThreshold: null, language: 'English' };
@@ -49,6 +50,22 @@ export class Settings implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  get isCurrentTermAutomatic(): boolean {
+    return this.academicSettings.academicYear === this.currentCalendarYear;
+  }
+
+  get currentTermHelpText(): string {
+    if (this.isCurrentTermAutomatic) {
+      return `Current term follows the calendar automatically for ${this.academicSettings.academicYear || this.currentCalendarYear}.`;
+    }
+
+    return 'For non-current academic years, you can keep the saved term here.';
+  }
+
+  getTermLabel(term: Term | null): string {
+    return String(term ?? '').replace('_', ' ');
   }
 
   saveSchoolInfo(): void {

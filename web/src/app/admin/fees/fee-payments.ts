@@ -5,9 +5,29 @@ import { Subject, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { Grade } from '../grades/grade';
 import { SchoolContextService } from '../layout/school-context';
+import { Term } from '../settings/term';
 import { FeePayment } from './fee-payment';
+import { FeeReceiptService } from './fee-receipt.service';
 import { FeeStudent } from './fee-student';
 import { FeeStructure } from './fee-structure';
+
+interface SchoolFeeContext {
+  id: number;
+  academicYear?: string | null;
+  currentTerm?: Term | null;
+}
+
+interface OutstandingFeeRecord {
+  studentId: number;
+  studentName: string;
+  studentNumber: string;
+  gradeName: string;
+  term: string;
+  totalFee: number;
+  totalPaid: number;
+  balance: number;
+  paymentCount: number;
+}
 
 interface OutstandingLearnerRow {
   studentId: number;
@@ -43,18 +63,23 @@ export class FeePayments implements OnInit, OnDestroy {
   readonly pageSizeOptions = [10, 20, 50];
   selectedGradeFilter: number | null = null;
   selectedTermFilter = 'ALL';
+  selectedAcademicYear = '';
+  currentSchoolTerm: Term | null = null;
   payments: FeePayment[] = [];
   students: FeeStudent[] = [];
   feeStructures: FeeStructure[] = [];
   gradeOptions: Grade[] = [];
   showForm = false;
   editingPayment: FeePayment | null = null;
+  preferredStudentId: number | null = null;
+  preferredFeeStructureId: number | null = null;
   showDeleteDialog = false;
   paymentToDelete: FeePayment | null = null;
 
   constructor(
     private backendService: BackendService,
     private schoolContext: SchoolContextService,
+    private feeReceiptService: FeeReceiptService,
     private router: Router
   ) {}
 
@@ -106,25 +131,75 @@ export class FeePayments implements OnInit, OnDestroy {
   }
 
   get outstandingBalance(): string {
-    const total = this.recordStates.reduce((sum, payment) => sum + Number(payment.balance ?? 0), 0);
+    const total = this.outstandingRecords.reduce((sum, record) => sum + Number(record.balance ?? 0), 0);
     return this.formatCurrency(total);
+  }
+
+  get outstandingRecords(): OutstandingFeeRecord[] {
+    const paymentsByRecord = new Map<string, FeePayment[]>();
+
+    this.payments.forEach(payment => {
+      const key = this.getPaymentRecordKey(payment.studentId, payment.feeStructureId);
+      if (!key) {
+        return;
+      }
+
+      const existing = paymentsByRecord.get(key) ?? [];
+      existing.push(payment);
+      paymentsByRecord.set(key, existing);
+    });
+
+    const records: OutstandingFeeRecord[] = [];
+
+    this.filteredStudents.forEach(student => {
+      const matchingStructures = this.feeStructures
+        .filter(structure => structure.schoolId === this.selectedSchoolId)
+        .filter(structure => structure.gradeId === student.gradeId)
+        .filter(structure => this.isStructureInCurrentAcademicYear(structure))
+        .filter(structure => this.isOverdueTerm(structure.term))
+        .filter(structure => this.selectedTermFilter === 'ALL' || structure.term === this.selectedTermFilter);
+
+      matchingStructures.forEach(structure => {
+        const totalFee = Number(structure.totalAmount ?? structure.amount ?? 0);
+        if (totalFee <= 0) {
+          return;
+        }
+
+        const key = this.getPaymentRecordKey(student.id, structure.id);
+        const payments = key ? (paymentsByRecord.get(key) ?? []) : [];
+        const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+        const balance = Number((totalFee - totalPaid).toFixed(2));
+
+        if (balance <= 0.009) {
+          return;
+        }
+
+        records.push({
+          studentId: student.id,
+          studentName: student.userFullName || 'Unknown Student',
+          studentNumber: student.studentNumber || 'N/A',
+          gradeName: student.gradeName || 'N/A',
+          term: this.getTermLabel(structure.term),
+          totalFee: Number(totalFee.toFixed(2)),
+          totalPaid: Number(totalPaid.toFixed(2)),
+          balance,
+          paymentCount: payments.length,
+        });
+      });
+    });
+
+    return records.sort((left, right) => right.balance - left.balance);
   }
 
   get outstandingLearners(): OutstandingLearnerRow[] {
     const grouped = new Map<number, OutstandingLearnerRow & { termSet: Set<string> }>();
 
-    this.recordStates
-      .filter(payment => Number(payment.balance ?? 0) > 0)
-      .forEach(payment => {
-        if (!payment.studentId) {
-          return;
-        }
-
-        const current = grouped.get(payment.studentId) ?? {
-          studentId: payment.studentId,
-          studentName: payment.studentName || 'Unknown Student',
-          studentNumber: payment.studentNumber || 'N/A',
-          gradeName: payment.gradeName || 'N/A',
+    this.outstandingRecords.forEach(record => {
+        const current = grouped.get(record.studentId) ?? {
+          studentId: record.studentId,
+          studentName: record.studentName,
+          studentNumber: record.studentNumber,
+          gradeName: record.gradeName,
           terms: '',
           totalFee: 0,
           totalPaid: 0,
@@ -133,15 +208,13 @@ export class FeePayments implements OnInit, OnDestroy {
           termSet: new Set<string>(),
         };
 
-        current.totalFee += Number(payment.totalFee ?? 0);
-        current.totalPaid += Number(payment.totalPaid ?? 0);
-        current.balance += Number(payment.balance ?? 0);
-        current.paymentCount += this.filteredPayments.filter(item => item.studentId === payment.studentId && item.feeStructureId === payment.feeStructureId).length;
-        if (payment.term) {
-          current.termSet.add(this.getTermLabel(payment.term));
-        }
+        current.totalFee += record.totalFee;
+        current.totalPaid += record.totalPaid;
+        current.balance += record.balance;
+        current.paymentCount += record.paymentCount;
+        current.termSet.add(record.term);
 
-        grouped.set(payment.studentId, current);
+        grouped.set(record.studentId, current);
       });
 
     return [...grouped.values()]
@@ -207,6 +280,33 @@ export class FeePayments implements OnInit, OnDestroy {
 
     this.errorMessage = '';
     this.editingPayment = payment ? { ...payment } : null;
+    this.preferredStudentId = payment?.studentId ?? null;
+    this.preferredFeeStructureId = null;
+    this.showForm = true;
+  }
+
+  openFormForOutstandingLearner(learner: OutstandingLearnerRow): void {
+    if (!this.selectedSchoolId) {
+      this.errorMessage = 'Select a school before managing fee payments.';
+      return;
+    }
+
+    const student = this.students.find(s => s.id === learner.studentId);
+    const outstandingRecordsForLearner = this.outstandingRecords.filter(r => r.studentId === learner.studentId);
+    const firstRecord = outstandingRecordsForLearner[0];
+
+    const matchingStructure = firstRecord
+      ? this.feeStructures.find(structure =>
+          structure.gradeId === student?.gradeId &&
+          structure.schoolId === this.selectedSchoolId &&
+          this.getTermLabel(structure.term) === firstRecord.term
+        ) ?? null
+      : null;
+
+    this.errorMessage = '';
+    this.editingPayment = null;
+    this.preferredStudentId = learner.studentId;
+    this.preferredFeeStructureId = matchingStructure?.id ?? null;
     this.showForm = true;
   }
 
@@ -218,6 +318,8 @@ export class FeePayments implements OnInit, OnDestroy {
   closeForm(): void {
     this.showForm = false;
     this.editingPayment = null;
+    this.preferredStudentId = null;
+    this.preferredFeeStructureId = null;
   }
 
   closeActionMessage(): void {
@@ -225,8 +327,9 @@ export class FeePayments implements OnInit, OnDestroy {
   }
 
   savePayment(payment: FeePayment): void {
-    const request$ = this.editingPayment?.id
-      ? this.backendService.put<FeePayment, FeePayment>(`fee-payment/${this.editingPayment.id}`, payment)
+    const isEdit = !!this.editingPayment?.id;
+    const request$ = isEdit
+      ? this.backendService.put<FeePayment, FeePayment>(`fee-payment/${this.editingPayment!.id}`, payment)
       : this.backendService.post<FeePayment, FeePayment>('fee-payment', payment);
 
     this.isProcessing = true;
@@ -235,14 +338,18 @@ export class FeePayments implements OnInit, OnDestroy {
     request$.subscribe({
       next: savedPayment => {
         const normalizedPayment = this.normalizePayment(savedPayment);
-        if (this.editingPayment?.id) {
+        if (isEdit) {
           this.payments = this.payments.map(item => item.id === normalizedPayment.id ? normalizedPayment : item);
+          this.closeForm();
           this.actionMessage = 'Fee payment updated successfully.';
         } else {
           this.payments = [normalizedPayment, ...this.payments.filter(item => item.id !== normalizedPayment.id)];
-          this.actionMessage = 'Fee payment recorded successfully.';
+          this.closeForm();
+          this.feeReceiptService.printReceipt(normalizedPayment);
+          if (normalizedPayment.id) {
+            this.router.navigate(['/admin/fees/payments', normalizedPayment.id]);
+          }
         }
-        this.closeForm();
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error.error?.message || 'Failed to save fee payment.';
@@ -330,8 +437,7 @@ export class FeePayments implements OnInit, OnDestroy {
   }
 
   viewLearnerHistory(studentId: number): void {
-    const latestPayment = this.filteredPayments.find(payment => payment.studentId === studentId)
-      ?? this.payments.find(payment => payment.studentId === studentId);
+    const latestPayment = this.payments.find(payment => payment.studentId === studentId);
 
     if (latestPayment?.id) {
       this.viewPayment(latestPayment);
@@ -421,6 +527,18 @@ export class FeePayments implements OnInit, OnDestroy {
         this.isLoading = false;
       },
     });
+
+    this.backendService.get<SchoolFeeContext[]>('school').subscribe({
+      next: schools => {
+        const selectedSchool = (schools ?? []).find(school => school.id === this.selectedSchoolId);
+        this.selectedAcademicYear = selectedSchool?.academicYear ?? '';
+        this.currentSchoolTerm = selectedSchool?.currentTerm ?? null;
+      },
+      error: () => {
+        this.selectedAcademicYear = '';
+        this.currentSchoolTerm = null;
+      },
+    });
   }
 
   private normalizePayment(payment: FeePayment): FeePayment {
@@ -433,26 +551,63 @@ export class FeePayments implements OnInit, OnDestroy {
     };
   }
 
-  private get recordStates(): FeePayment[] {
-    const byRecord = new Map<string, FeePayment>();
+  private get filteredStudents(): FeeStudent[] {
+    const query = this.searchTerm.trim().toLowerCase();
 
-    this.filteredPayments.forEach(payment => {
-      const key = `${payment.studentId}-${payment.feeStructureId}`;
-      if (!byRecord.has(key)) {
-        byRecord.set(key, payment);
-      }
-    });
+    return this.students
+      .filter(student => !this.selectedGradeFilter || student.gradeId === this.selectedGradeFilter)
+      .filter(student => {
+        if (!query) {
+          return true;
+        }
 
-    return [...byRecord.values()];
+        return (student.userFullName ?? '').toLowerCase().includes(query)
+          || (student.studentNumber ?? '').toLowerCase().includes(query)
+          || (student.gradeName ?? '').toLowerCase().includes(query);
+      });
   }
 
-  private getGradeOrder(gradeName: string | null | undefined): number {
-    if (!gradeName) {
-      return Number.MAX_SAFE_INTEGER;
+  private isStructureInCurrentAcademicYear(structure: FeeStructure): boolean {
+    if (!this.selectedAcademicYear) {
+      return true;
     }
 
-    const digitsOnly = gradeName.replace(/[^0-9]/g, '');
-    return Number(digitsOnly || Number.MAX_SAFE_INTEGER);
+    return structure.academicYear === this.selectedAcademicYear;
+  }
+
+  private isOverdueTerm(term: Term | null): boolean {
+    if (!term || !this.currentSchoolTerm) {
+      return false;
+    }
+
+    return this.getTermOrder(term) <= this.getTermOrder(this.currentSchoolTerm);
+  }
+
+  private getPaymentRecordKey(studentId: number | null | undefined, feeStructureId: number | null | undefined): string | null {
+    if (!studentId || !feeStructureId) {
+      return null;
+    }
+
+    return `${studentId}-${feeStructureId}`;
+  }
+
+  private getTermOrder(term: Term | string | null | undefined): number {
+    switch (term) {
+      case Term.TERM_1:
+      case 'TERM_1':
+        return 1;
+      case Term.TERM_2:
+      case 'TERM_2':
+        return 2;
+      case Term.TERM_3:
+      case 'TERM_3':
+        return 3;
+      case Term.TERM_4:
+      case 'TERM_4':
+        return 4;
+      default:
+        return 99;
+    }
   }
 
   private downloadCsv(filename: string, headers: string[], rows: Array<Array<string | number>>): void {

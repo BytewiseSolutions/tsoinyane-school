@@ -10,12 +10,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.annotation.PostConstruct;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class SchoolService {
+    private static final ZoneId SCHOOL_ZONE = ZoneId.of("Africa/Maseru");
 
     private final SchoolRepository schoolRepository;
     private final UserRepository userRepository;
@@ -83,6 +86,7 @@ public class SchoolService {
     }
 
     private SchoolDto toDto(School school) {
+        Term effectiveCurrentTerm = resolveEffectiveCurrentTerm(school);
         return SchoolDto.builder()
                 .id(school.getId())
                 .createdAt(school.getCreatedAt())
@@ -93,11 +97,37 @@ public class SchoolService {
                 .phone(school.getPhone())
                 .location(school.getLocation())
                 .academicYear(school.getAcademicYear())
-                .currentTerm(school.getCurrentTerm())
+                .currentTerm(effectiveCurrentTerm)
                 .passingMark(school.getPassingMark())
                 .attendanceThreshold(school.getAttendanceThreshold())
                 .language(school.getLanguage())
                 .type(school.getType())
                 .build();
+    }
+
+    private Term resolveEffectiveCurrentTerm(School school) {
+        String academicYear = school.getAcademicYear() != null ? school.getAcademicYear().trim() : "";
+        String currentYear = String.valueOf(LocalDate.now(SCHOOL_ZONE).getYear());
+
+        if (academicYear.equals(currentYear)) {
+            return resolveCalendarTerm(LocalDate.now(SCHOOL_ZONE).getMonthValue());
+        }
+
+        return school.getCurrentTerm() != null
+                ? school.getCurrentTerm()
+                : resolveCalendarTerm(LocalDate.now(SCHOOL_ZONE).getMonthValue());
+    }
+
+    private Term resolveCalendarTerm(int month) {
+        if (month <= 3) {
+            return Term.TERM_1;
+        }
+        if (month <= 6) {
+            return Term.TERM_2;
+        }
+        if (month <= 9) {
+            return Term.TERM_3;
+        }
+        return Term.TERM_4;
     }
 }

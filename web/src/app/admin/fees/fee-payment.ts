@@ -20,4 +20,7 @@ export interface FeePayment {
   totalFee?: number | null;
   totalPaid?: number | null;
   balance?: number | null;
+  reversed?: boolean;
+  reversedAt?: string | null;
+  reversalReason?: string | null;
 }

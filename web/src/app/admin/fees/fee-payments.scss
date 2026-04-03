@@ -221,6 +221,27 @@
   color: #1f4db6;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pill.partial {
+  background: #fff4e0;
+  color: #a05c00;
+  border: 1px solid #f5d08a;
+}
+
+.status-pill.not-paid {
+  background: #fdecea;
+  color: #b32f2f;
+  border: 1px solid #f1c5c5;
+}
+
 .error-card {
   margin-bottom: 16px;
   padding: 14px 16px;

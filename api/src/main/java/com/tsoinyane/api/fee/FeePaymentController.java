@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/fee-payment")
@@ -39,6 +40,11 @@ public class FeePaymentController {
     @PutMapping("/{id}")
     public FeePaymentDto updateFeePayment(@PathVariable Long id, @Valid @RequestBody FeePaymentDto request) {
         return feePaymentService.updateFeePayment(id, request);
+    }
+
+    @PostMapping("/{id}/reverse")
+    public FeePaymentDto reverseFeePayment(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return feePaymentService.reversePayment(id, body.get("reason"));
     }
 
     @DeleteMapping("/{id}")

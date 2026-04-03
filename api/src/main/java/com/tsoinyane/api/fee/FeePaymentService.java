@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -83,6 +84,30 @@ public class FeePaymentService {
         existing.setPaymentMethod(normalizePaymentMethod(request.getPaymentMethod()));
         existing.setReferenceNumber(normalizeOptionalText(request.getReferenceNumber()));
         existing.setNotes(normalizeOptionalText(request.getNotes()));
+        existing.setUpdatedBy(actor);
+
+        FeePayment saved = feePaymentRepository.save(existing);
+        return toDto(feePaymentRepository.findWithAssociationsById(saved.getId()).orElse(saved));
+    }
+
+    @Transactional
+    public FeePaymentDto reversePayment(Long id, String reason) {
+        FeePayment existing = feePaymentRepository.findWithAssociationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fee payment not found"));
+
+        if (existing.isReversed()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This payment has already been reversed");
+        }
+
+        if (reason == null || reason.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reversal reason is required");
+        }
+
+        User actor = currentUserService.getCurrentUser();
+        existing.setReversed(true);
+        existing.setReversedAt(Instant.now());
+        existing.setReversalReason(reason.trim());
+        existing.setReversedBy(actor);
         existing.setUpdatedBy(actor);
 
         FeePayment saved = feePaymentRepository.save(existing);
@@ -178,6 +203,9 @@ public class FeePaymentService {
                 .totalFee(totalFee)
                 .totalPaid(totalPaid)
                 .balance(roundAmount(totalFee - totalPaid))
+                .reversed(feePayment.isReversed())
+                .reversedAt(feePayment.getReversedAt())
+                .reversalReason(feePayment.getReversalReason())
                 .build();
     }
 

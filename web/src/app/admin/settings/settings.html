@@ -71,12 +71,17 @@
           </div>
           <div class="form-group">
             <label>Current Term</label>
-            <select [(ngModel)]="academicSettings.currentTerm" name="currentTerm">
-              <option value="TERM_1">Term 1</option>
-              <option value="TERM_2">Term 2</option>
-              <option value="TERM_3">Term 3</option>
-              <option value="TERM_4">Term 4</option>
-            </select>
+            @if (isCurrentTermAutomatic) {
+              <input type="text" [value]="getTermLabel(academicSettings.currentTerm)" name="currentTermDisplay" readonly />
+            } @else {
+              <select [(ngModel)]="academicSettings.currentTerm" name="currentTerm">
+                <option value="TERM_1">Term 1</option>
+                <option value="TERM_2">Term 2</option>
+                <option value="TERM_3">Term 3</option>
+                <option value="TERM_4">Term 4</option>
+              </select>
+            }
+            <small>{{ currentTermHelpText }}</small>
           </div>
         </div>
         <div class="form-row">

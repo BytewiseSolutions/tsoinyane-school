@@ -51,7 +51,7 @@
 
         <label class="form-field">
           <span>Payment Date</span>
-          <input type="date" [(ngModel)]="payment.paymentDate" name="paymentDate" />
+          <input type="date" [(ngModel)]="payment.paymentDate" name="paymentDate" [max]="today()" />
         </label>
 
         <label class="form-field">

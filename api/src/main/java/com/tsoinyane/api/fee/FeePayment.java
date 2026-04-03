@@ -52,4 +52,16 @@ public class FeePayment extends BaseEntity {
 
     @Column(length = 500)
     private String notes;
-}
+
+    @Column(nullable = false)
+    private boolean reversed = false;
+
+    @Column(name = "reversed_at")
+    private Instant reversedAt;
+
+    @Column(name = "reversal_reason", length = 500)
+    private String reversalReason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reversed_by_id")
+    private com.tsoinyane.api.user.User reversedBy;

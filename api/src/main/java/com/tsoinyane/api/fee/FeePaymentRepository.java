@@ -36,6 +36,7 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
             select coalesce(sum(payment.amount), 0) from FeePayment payment
             where payment.student.id = :studentId
               and payment.feeStructure.id = :feeStructureId
+              and payment.reversed = false
             """)
     Double sumPaidAmount(@Param("studentId") Long studentId, @Param("feeStructureId") Long feeStructureId);
 
@@ -43,6 +44,7 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
             select coalesce(sum(payment.amount), 0) from FeePayment payment
             where payment.student.id = :studentId
               and payment.feeStructure.id = :feeStructureId
+              and payment.reversed = false
               and payment.id <> :paymentId
             """)
     Double sumPaidAmountExcludingPayment(

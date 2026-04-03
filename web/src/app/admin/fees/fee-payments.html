@@ -42,7 +42,7 @@
     <div class="toolbar">
       <input
         type="text"
-        placeholder="Search by student, grade or year..."
+        placeholder="Search by student number, name or grade..."
         [(ngModel)]="searchTerm"
         (ngModelChange)="onFiltersChanged()"
         name="feePaymentSearch"
@@ -77,7 +77,6 @@
       <table>
         <thead>
           <tr>
-            <th>Student No.</th>
             <th>Student</th>
             <th>Grade</th>
             <th>Term</th>
@@ -87,8 +86,7 @@
         <tbody>
           @for (payment of paginatedPayments; track payment.id) {
             <tr>
-              <td>{{ payment.studentNumber || 'N/A' }}</td>
-              <td>{{ payment.studentName || 'Unknown Student' }}</td>
+              <td>{{ payment.studentName || 'Unknown Student' }}{{ payment.studentNumber ? ' (' + payment.studentNumber + ')' : '' }}</td>
               <td>{{ payment.gradeName || 'N/A' }}</td>
               <td>{{ getTermLabel(payment.term) }}</td>
               <td class="actions">
@@ -104,30 +102,35 @@
       <table>
         <thead>
           <tr>
-            <th>Student No.</th>
             <th>Student</th>
             <th>Grade</th>
-            <th>Terms</th>
             <th>Total Fee</th>
-            <th>Total Paid</th>
             <th>Balance</th>
-            <th>Payments</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (learner of paginatedOutstandingLearners; track learner.studentId) {
             <tr>
-              <td>{{ learner.studentNumber }}</td>
-              <td>{{ learner.studentName }}</td>
+              <td>{{ learner.studentName }}{{ learner.studentNumber ? ' (' + learner.studentNumber + ')' : '' }}</td>
               <td>{{ learner.gradeName }}</td>
-              <td>{{ learner.terms }}</td>
               <td>{{ formatCurrency(learner.totalFee) }}</td>
-              <td>{{ formatCurrency(learner.totalPaid) }}</td>
               <td>{{ formatCurrency(learner.balance) }}</td>
-              <td>{{ learner.paymentCount }}</td>
+              <td>
+                <span class="status-pill" [class.partial]="learner.totalPaid > 0" [class.not-paid]="learner.totalPaid === 0">
+                  {{ learner.totalPaid > 0 ? 'Partial' : 'Not Paid' }}
+                </span>
+              </td>
               <td class="actions">
-                <button class="action-btn view" type="button" (click)="viewLearnerHistory(learner.studentId)">View History</button>
+                @if (learner.paymentCount > 0) {
+                  <button class="action-btn view" type="button" (click)="viewLearnerHistory(learner.studentId)">
+                    View History
+                  </button>
+                }
+                <button class="action-btn edit" type="button" (click)="openFormForOutstandingLearner(learner)">
+                  Record Payment
+                </button>
               </td>
             </tr>
           }
@@ -171,6 +174,8 @@
 @if (showForm) {
   <app-fee-payment-form
     [existingPayment]="editingPayment"
+    [preferredStudentId]="preferredStudentId"
+    [preferredFeeStructureId]="preferredFeeStructureId"
     [selectedSchoolId]="selectedSchoolId"
     [selectedSchoolName]="selectedSchoolName"
     [students]="students"
