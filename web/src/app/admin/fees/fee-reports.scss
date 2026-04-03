@@ -273,6 +273,64 @@
   line-height: 1.45;
 }
 
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+
+  .progress-bar {
+    flex: 1;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+
+    .progress-fill {
+      height: 100%;
+      background: #059669;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+  }
+
+  span {
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+}
+
+.view-btn {
+  padding: 4px 12px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+}
+
+@media print {
+  .reports-tabs,
+  .filters-section,
+  .export-btn,
+  .view-btn {
+    display: none !important;
+  }
+
+  .reports-page {
+    padding: 0;
+  }
+}
+
 .state-card {
   background: white;
   border: 1px solid #e5e5e5;

@@ -11,6 +11,8 @@ import { ReversedPaymentReport } from './reversed-payment-report';
 import { FeeStudent } from './fee-student';
 import { StudentPaymentSummary } from './student-payment-summary';
 import { FeePayment } from './fee-payment';
+import { InstallmentPlan } from './installment-plan';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-fee-reports',
@@ -25,7 +27,7 @@ export class FeeReports implements OnInit, OnDestroy {
   selectedSchoolName = 'No school selected';
   isLoading = false;
   errorMessage = '';
-  activeTab: 'summary' | 'collections' | 'outstanding' | 'methods' | 'reversed' | 'statement' = 'summary';
+  activeTab: 'summary' | 'collections' | 'outstanding' | 'methods' | 'reversed' | 'statement' | 'installments' = 'summary';
 
   fromDate = '';
   toDate = '';
@@ -39,12 +41,15 @@ export class FeeReports implements OnInit, OnDestroy {
   reversedReports: ReversedPaymentReport[] = [];
   studentStatement: StudentPaymentSummary | null = null;
   studentStatementHistory: FeePayment[] = [];
+  installmentPlans: InstallmentPlan[] = [];
   gradeOptions: Grade[] = [];
   students: FeeStudent[] = [];
+  selectedInstallmentStatusFilter = 'ALL';
 
   constructor(
     private backendService: BackendService,
-    private schoolContext: SchoolContextService
+    private schoolContext: SchoolContextService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -64,7 +69,7 @@ export class FeeReports implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  selectTab(tab: 'summary' | 'collections' | 'outstanding' | 'methods' | 'reversed' | 'statement'): void {
+  selectTab(tab: 'summary' | 'collections' | 'outstanding' | 'methods' | 'reversed' | 'statement' | 'installments'): void {
     this.activeTab = tab;
     this.errorMessage = '';
     this.loadData();
@@ -147,6 +152,51 @@ export class FeeReports implements OnInit, OnDestroy {
     this.downloadCsv(`learner-statement-${this.studentStatement.studentNumber}.csv`, headers, rows);
   }
 
+  viewInstallmentPlan(plan: InstallmentPlan): void {
+    this.router.navigate(['/admin/fees/installments', plan.id]);
+  }
+
+  get filteredInstallmentPlans(): InstallmentPlan[] {
+    return this.installmentPlans
+      .filter(p => !this.selectedGradeFilter || p.gradeId === this.selectedGradeFilter)
+      .filter(p => this.selectedInstallmentStatusFilter === 'ALL' || p.status === this.selectedInstallmentStatusFilter);
+  }
+
+  get installmentTotalAmount(): number {
+    return this.filteredInstallmentPlans.reduce((sum, p) => sum + p.totalAmount, 0);
+  }
+
+  get installmentTotalPaid(): number {
+    return this.filteredInstallmentPlans.reduce((sum, p) =>
+      sum + p.installments.filter(i => i.status === 'PAID').reduce((s, i) => s + i.amount, 0), 0);
+  }
+
+  get installmentTotalOutstanding(): number {
+    return this.installmentTotalAmount - this.installmentTotalPaid;
+  }
+
+  getInstallmentPaidAmount(plan: InstallmentPlan): number {
+    return (plan.installments ?? [])
+      .filter(installment => installment.status === 'PAID')
+      .reduce((sum, installment) => sum + Number(installment.amount ?? 0), 0);
+  }
+
+  getInstallmentRemainingAmount(plan: InstallmentPlan): number {
+    return Number(plan.totalAmount ?? 0) - this.getInstallmentPaidAmount(plan);
+  }
+
+  getInstallmentPlanProgress(plan: InstallmentPlan): { paidCount: number; totalCount: number; percentage: number } {
+    const installments = plan.installments ?? [];
+    const paidCount = installments.filter(installment => installment.status === 'PAID').length;
+    const totalCount = installments.length;
+    const percentage = totalCount > 0 ? (paidCount / totalCount) * 100 : 0;
+    return { paidCount, totalCount, percentage };
+  }
+
+  printStudentStatement(): void {
+    window.print();
+  }
+
   formatCurrency(value: number | null | undefined): string {
     return `M${Number(value ?? 0).toFixed(2)}`;
   }
@@ -226,6 +276,9 @@ export class FeeReports implements OnInit, OnDestroy {
         break;
       case 'statement':
         this.loadStudentStatement();
+        break;
+      case 'installments':
+        this.loadInstallmentPlans();
         break;
     }
   }
@@ -351,6 +404,29 @@ export class FeeReports implements OnInit, OnDestroy {
     });
   }
 
+  private loadInstallmentPlans(): void {
+    this.backendService.get<InstallmentPlan[]>('installment-plan', { schoolId: this.selectedSchoolId! }).subscribe({
+      next: plans => {
+        this.installmentPlans = (plans ?? []).map(plan => ({
+          ...plan,
+          totalAmount: Number(plan.totalAmount ?? 0),
+          installments: (plan.installments ?? []).map(i => ({
+            ...i,
+            amount: Number(i.amount ?? 0),
+            paidAmount: Number(i.paidAmount ?? 0),
+          })),
+        }));
+      },
+      error: () => {
+        this.installmentPlans = [];
+        this.errorMessage = 'Failed to load installment plans.';
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
   private buildDateRangeParams(): Record<string, string | number> {
     const params: Record<string, string | number> = {
       schoolId: this.selectedSchoolId!,
@@ -373,6 +449,7 @@ export class FeeReports implements OnInit, OnDestroy {
     this.reversedReports = [];
     this.studentStatement = null;
     this.studentStatementHistory = [];
+    this.installmentPlans = [];
     this.gradeOptions = [];
     this.students = [];
     this.isLoading = false;

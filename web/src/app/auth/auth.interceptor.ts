@@ -32,7 +32,7 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(authReq).pipe(
       catchError((error: HttpErrorResponse) => {
-        if ((error.status === 401 || error.status === 403) && !isAuthRequest && !isPublicSchoolRequest) {
+        if (error.status === 401 && !isAuthRequest && !isPublicSchoolRequest) {
           clearStoredAuth();
           void this.router.navigate(['/login']);
         }

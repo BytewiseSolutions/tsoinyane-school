@@ -49,6 +49,13 @@
       (click)="selectTab('statement')">
       Learner Statement
     </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab === 'installments'"
+      (click)="selectTab('installments')">
+      Installment Plans
+    </button>
   </div>
 
   @if (isLoading) {
@@ -75,6 +82,10 @@
           <div class="summary-meta">Across all grades</div>
         </div>
       </div>
+    }
+
+    @if (activeTab === 'summary' && !paymentSummary) {
+      <div class="state-card">No summary data available for the selected school.</div>
     }
 
     @if (activeTab === 'collections') {
@@ -336,6 +347,9 @@
           <button type="button" class="export-btn" [disabled]="!studentStatement" (click)="exportStudentStatementCsv()">
             Export CSV
           </button>
+          <button type="button" class="export-btn" [disabled]="!studentStatement" (click)="printStudentStatement()">
+            <i class="fa-solid fa-print"></i> Print
+          </button>
         </div>
       </div>
 
@@ -441,6 +455,110 @@
         }
       } @else {
         <div class="state-card">No learner statement found.</div>
+      }
+    }
+    @if (activeTab === 'installments') {
+      <div class="filters-section">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>Grade</label>
+            <select [(ngModel)]="selectedGradeFilter" (change)="onFiltersChanged()">
+              <option [ngValue]="null">All Grades</option>
+              @for (grade of gradeOptions; track grade.id) {
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Status</label>
+            <select [(ngModel)]="selectedInstallmentStatusFilter" (change)="onFiltersChanged()">
+              <option value="ALL">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-grid compact">
+        <div class="summary-card">
+          <h3>Total Plans</h3>
+          <div class="summary-value">{{ filteredInstallmentPlans.length }}</div>
+          <div class="summary-meta">Installment plans</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total Amount</h3>
+          <div class="summary-value">{{ formatCurrency(installmentTotalAmount) }}</div>
+          <div class="summary-meta">Across all plans</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total Collected</h3>
+          <div class="summary-value">{{ formatCurrency(installmentTotalPaid) }}</div>
+          <div class="summary-meta">Payments recorded</div>
+        </div>
+        <div class="summary-card">
+          <h3>Outstanding</h3>
+          <div class="summary-value outstanding">{{ formatCurrency(installmentTotalOutstanding) }}</div>
+          <div class="summary-meta">Remaining balance</div>
+        </div>
+      </div>
+
+      @if (filteredInstallmentPlans.length > 0) {
+        <div class="reports-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Grade</th>
+                <th>Term</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Remaining</th>
+                <th>Progress</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (plan of filteredInstallmentPlans; track plan.id) {
+                <tr>
+                  <td>
+                    <div class="cell-title">{{ plan.studentName }}</div>
+                    <div class="cell-meta">{{ plan.studentNumber }}</div>
+                  </td>
+                  <td>{{ plan.gradeName }}</td>
+                  <td>{{ getTermLabel(plan.term) }} {{ plan.academicYear }}</td>
+                  <td class="amount">{{ formatCurrency(plan.totalAmount) }}</td>
+                  <td class="amount">{{ formatCurrency(getInstallmentPaidAmount(plan)) }}</td>
+                  <td class="amount outstanding">{{ formatCurrency(getInstallmentRemainingAmount(plan)) }}</td>
+                  <td>
+                    @if (getInstallmentPlanProgress(plan); as progress) {
+                      <div class="progress-cell">
+                        <div class="progress-bar">
+                          <div class="progress-fill" [style.width.%]="progress.percentage"></div>
+                        </div>
+                        <span>{{ progress.paidCount }}/{{ progress.totalCount }}</span>
+                      </div>
+                    }
+                  </td>
+                  <td>
+                    <span class="status-chip" [class.outstanding]="plan.status === 'ACTIVE'">
+                      {{ plan.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" class="view-btn" (click)="viewInstallmentPlan(plan)">
+                      View
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="state-card">No installment plans found for the selected filters.</div>
       }
     }
   }
