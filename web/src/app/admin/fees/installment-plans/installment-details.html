@@ -1,0 +1,143 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back To Installment Plans</button>
+      <h2>Installment Plan Details</h2>
+      <p>View the payment schedule and installment status for this student's plan.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading installment plan details...</div>
+  } @else if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  } @else if (plan) {
+
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Student</span>
+        <strong>{{ plan.studentName }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Student Number</span>
+        <strong>{{ plan.studentNumber }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Grade</span>
+        <strong>{{ plan.gradeName }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Term</span>
+        <strong>{{ plan.term.replace('_', ' ') }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Academic Year</span>
+        <strong>{{ plan.academicYear }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Total Amount</span>
+        <strong>M{{ plan.totalAmount | number:'1.2-2' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Amount Paid</span>
+        <strong>M{{ totalPaid | number:'1.2-2' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Remaining</span>
+        <strong>M{{ remainingBalance | number:'1.2-2' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Status</span>
+        <strong class="status-badge" [class]="'status-' + plan.status.toLowerCase()">{{ plan.status }}</strong>
+      </div>
+    </div>
+
+    <div class="details-card">
+      <div class="tab-panel">
+        <div class="tab-panel-header">
+          <div>
+            <h3>Installment Schedule</h3>
+            <p>{{ paidInstallmentsCount }} of {{ totalInstallmentsCount }} installments paid &mdash; {{ progressPercentage.toFixed(0) }}% complete</p>
+          </div>
+          @if (overDueCount > 0) {
+            <div class="overdue-badge">
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              {{ overDueCount }} overdue payment{{ overDueCount > 1 ? 's' : '' }}
+            </div>
+          }
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="progressPercentage"></div>
+          </div>
+        </div>
+
+        <div class="installments-list">
+          @for (installment of plan.installments; track installment.id) {
+            <div class="installment-card" [class]="getStatusClass(installment.status)">
+              <div class="summary-item">
+                <span>Installment</span>
+                <strong>#{{ installment.installmentNumber }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Amount</span>
+                <strong>M{{ installment.amount | number:'1.2-2' }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Due Date</span>
+                <strong [class.overdue-text]="isOverdue(installment)">{{ formatDate(installment.dueDate) }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Paid Date</span>
+                <strong>{{ installment.paidDate ? formatDate(installment.paidDate) : 'Not paid' }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Status</span>
+                <strong class="status-badge" [class]="'status-' + installment.status.toLowerCase()">{{ installment.status }}</strong>
+              </div>
+              @if (installment.status === 'PENDING' || installment.status === 'OVERDUE') {
+                <div class="installment-action">
+                  <button type="button" class="pay-btn" [class.urgent]="installment.status === 'OVERDUE'"
+                          (click)="openPaymentForm(installment)">
+                    {{ installment.status === 'OVERDUE' ? 'Pay Overdue' : 'Record Payment' }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (actionMessage) {
+      <div class="success-modal-overlay" (click)="actionMessage = ''">
+        <div class="success-modal-card" (click)="$event.stopPropagation()">
+          <div class="success-modal-header">
+            <h3>Success</h3>
+            <p>{{ actionMessage }}</p>
+          </div>
+          <div class="success-modal-actions">
+            <button type="button" class="primary-btn" (click)="actionMessage = ''">OK</button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+@if (showPaymentForm && plan && selectedInstallment) {
+  <app-fee-payment-form
+    [preferredStudentId]="plan.studentId"
+    [preferredFeeStructureId]="plan.feeStructureId"
+    [preferredAmount]="selectedInstallment.amount"
+    [isInstallmentPayment]="true"
+    [selectedSchoolId]="selectedSchoolId"
+    [selectedSchoolName]="selectedSchoolName"
+    [students]="students"
+    [feeStructures]="feeStructures"
+    [payments]="payments"
+    (saved)="savePayment($event)"
+    (closed)="closePaymentForm()"
+  ></app-fee-payment-form>
+}

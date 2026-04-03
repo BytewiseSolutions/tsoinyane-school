@@ -103,7 +103,11 @@
               <td>{{ getTermLabel(payment.term) }}</td>
               <td class="actions">
                 <button class="action-btn view" type="button" (click)="viewPayment(payment)">View</button>
+                <button class="action-btn print" type="button" (click)="printReceipt(payment)">Print</button>
                 <button class="action-btn edit" type="button" (click)="openForm(payment)">Edit</button>
+                @if (!payment.reversed) {
+                  <button class="action-btn reverse" type="button" (click)="openReversalDialog(payment)">Reverse</button>
+                }
                 <button class="action-btn danger" type="button" (click)="confirmDelete(payment)">Delete</button>
               </td>
             </tr>
@@ -234,6 +238,32 @@
         <button type="button" class="cancel-btn" (click)="cancelDelete()">Cancel</button>
         <button type="button" class="delete-btn" [disabled]="isProcessing" (click)="deletePayment()">
           {{ isProcessing ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showReversalDialog && paymentToReverse) {
+  <div class="confirm-overlay" (click)="closeReversalDialog()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Reverse Payment</h3>
+      <p>
+        Reverse the payment for
+        <strong>{{ paymentToReverse.studentName || 'the selected learner' }}</strong>
+        made on <strong>{{ paymentToReverse.paymentDate | date:'dd MMM yyyy' }}</strong>.
+      </p>
+      @if (reversalError) {
+        <div class="reversal-error">{{ reversalError }}</div>
+      }
+      <label class="reversal-label">
+        <span>Reason for reversal</span>
+        <textarea [(ngModel)]="reversalReason" name="feePaymentReversalReason" rows="3" placeholder="e.g. Payment recorded in error"></textarea>
+      </label>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="closeReversalDialog()">Cancel</button>
+        <button type="button" class="reverse-confirm-btn" [disabled]="isProcessing" (click)="confirmReversal()">
+          {{ isProcessing ? 'Reversing...' : 'Confirm Reversal' }}
         </button>
       </div>
     </div>

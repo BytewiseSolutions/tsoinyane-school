@@ -49,80 +49,14 @@
     @if (isLoading) {
       <div class="empty-state">Loading installment plans...</div>
     } @else if (filteredPlans.length > 0) {
-      <div class="plans-grid">
+      <div class="plans-list">
         @for (plan of filteredPlans; track plan.id) {
-          <div class="plan-card">
-            <div class="plan-header">
-              <div class="plan-student">
-                <h4>{{ plan.studentName }}</h4>
-                <div class="student-meta">
-                  <span class="student-number">{{ plan.studentNumber }}</span>
-                  <span class="student-grade">{{ plan.gradeName }}</span>
-                </div>
-              </div>
-              <span class="plan-status" [class]="getStatusClass(plan.status)">
-                {{ plan.status }}
-              </span>
-            </div>
-
-            <div class="plan-details">
-              <div class="plan-info-grid">
-                <div class="plan-info-card">
-                  <span class="plan-label">Term</span>
-                  <span class="plan-term">{{ getTermLabel(plan.term) }} • {{ plan.academicYear }}</span>
-                </div>
-                <div class="plan-info-card">
-                  <span class="plan-label">Total</span>
-                  <span class="plan-amount">{{ formatCurrency(plan.totalAmount) }}</span>
-                </div>
-              </div>
-
-              <div class="plan-progress-card">
-                @if (getInstallmentProgress(plan); as progress) {
-                  <div class="progress-bar">
-                    <div class="progress-fill" [style.width.%]="progress.percentage"></div>
-                  </div>
-                  <span class="progress-text">{{ progress.paid }}/{{ progress.total }} installments paid</span>
-                }
-              </div>
-            </div>
-
-            <div class="installments-list">
-              @for (installment of plan.installments; track installment.id) {
-                <div class="installment-row" [class]="getStatusClass(installment.status)">
-                  <div class="installment-info">
-                    <span class="installment-number">#{{ installment.installmentNumber }}</span>
-                    <span class="installment-amount">{{ formatCurrency(installment.amount) }}</span>
-                    <span class="installment-due">Due: {{ installment.dueDate | date:'dd MMM yyyy' }}</span>
-                  </div>
-                  <div class="installment-actions">
-                    @if (installment.status === 'PENDING') {
-                      <button class="action-btn pay" type="button" (click)="openPaymentForm(plan, installment)">
-                        Record Payment
-                      </button>
-                    } @else if (installment.status === 'PAID') {
-                      <span class="paid-date">Paid: {{ installment.paidDate | date:'dd MMM' }}</span>
-                    } @else if (installment.status === 'OVERDUE') {
-                      <button class="action-btn pay urgent" type="button" (click)="openPaymentForm(plan, installment)">
-                        Pay Overdue
-                      </button>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-
-            <div class="plan-actions">
-              <button class="action-btn view" type="button" (click)="openForm(plan)">
-                Edit Plan
-              </button>
-              @if (plan.status === 'ACTIVE') {
-                <button class="action-btn danger" type="button" (click)="cancelPlan(plan)">
-                  Cancel Plan
-                </button>
-              }
-            </div>
-          </div>
+          <app-installment-summary
+            [plan]="plan"
+            (recordPayment)="openPaymentForm($event.plan, $event.installment)"
+            (editPlan)="openForm($event)"
+            (cancelPlan)="cancelPlan($event)"
+          ></app-installment-summary>
         }
       </div>
     } @else {
@@ -148,6 +82,8 @@
   <app-fee-payment-form
     [preferredStudentId]="selectedPlanForPayment.studentId"
     [preferredFeeStructureId]="selectedPlanForPayment.feeStructureId"
+    [preferredAmount]="selectedInstallmentForPayment.amount"
+    [isInstallmentPayment]="true"
     [selectedSchoolId]="selectedSchoolId"
     [selectedSchoolName]="selectedSchoolName"
     [students]="students"

@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -280,6 +281,79 @@ public class FeePaymentService {
     }
 
     @Transactional(readOnly = true)
+    public List<PaymentMethodBreakdownDto> getPaymentMethodBreakdown(Long schoolId, LocalDate fromDate, LocalDate toDate, Long gradeId) {
+        if (schoolId == null || fromDate == null || toDate == null) {
+            return List.of();
+        }
+
+        List<FeePayment> payments = feePaymentRepository.findAllWithAssociations(schoolId).stream()
+                .filter(payment -> !Boolean.TRUE.equals(payment.getReversed()))
+                .filter(payment -> payment.getPaymentDate() != null)
+                .filter(payment -> !payment.getPaymentDate().isBefore(fromDate) && !payment.getPaymentDate().isAfter(toDate))
+                .filter(payment -> gradeId == null || (payment.getStudent().getGrade() != null && gradeId.equals(payment.getStudent().getGrade().getId())))
+                .toList();
+
+        double grandTotal = payments.stream()
+                .mapToDouble(payment -> coalesceAmount(payment.getAmount()))
+                .sum();
+
+        Map<PaymentMethod, List<FeePayment>> paymentsByMethod = payments.stream()
+                .filter(payment -> payment.getPaymentMethod() != null)
+                .collect(Collectors.groupingBy(FeePayment::getPaymentMethod, () -> new EnumMap<>(PaymentMethod.class), Collectors.toList()));
+
+        return paymentsByMethod.entrySet().stream()
+                .map(entry -> {
+                    double totalAmount = entry.getValue().stream()
+                            .mapToDouble(payment -> coalesceAmount(payment.getAmount()))
+                            .sum();
+                    int paymentCount = entry.getValue().size();
+                    double averageAmount = paymentCount > 0 ? totalAmount / paymentCount : 0.0;
+                    double percentageOfTotal = grandTotal > 0 ? (totalAmount / grandTotal) * 100.0 : 0.0;
+
+                    return new PaymentMethodBreakdownDto(
+                            entry.getKey(),
+                            roundAmount(totalAmount),
+                            paymentCount,
+                            roundAmount(averageAmount),
+                            roundAmount(percentageOfTotal)
+                    );
+                })
+                .sorted(Comparator.comparing(PaymentMethodBreakdownDto::getTotalAmount).reversed())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReversedPaymentReportDto> getReversedPaymentReports(Long schoolId, LocalDate fromDate, LocalDate toDate, Long gradeId) {
+        if (schoolId == null || fromDate == null || toDate == null) {
+            return List.of();
+        }
+
+        return feePaymentRepository.findAllWithAssociations(schoolId).stream()
+                .filter(payment -> Boolean.TRUE.equals(payment.getReversed()))
+                .filter(payment -> payment.getPaymentDate() != null)
+                .filter(payment -> !payment.getPaymentDate().isBefore(fromDate) && !payment.getPaymentDate().isAfter(toDate))
+                .filter(payment -> gradeId == null || (payment.getStudent().getGrade() != null && gradeId.equals(payment.getStudent().getGrade().getId())))
+                .map(payment -> new ReversedPaymentReportDto(
+                        payment.getId(),
+                        payment.getStudent().getId(),
+                        resolveStudentName(payment.getStudent()),
+                        payment.getStudent().getStudentNumber(),
+                        payment.getStudent().getGrade() != null ? payment.getStudent().getGrade().getId() : null,
+                        payment.getStudent().getGrade() != null ? payment.getStudent().getGrade().getName() : null,
+                        payment.getFeeStructure().getTerm() != null ? payment.getFeeStructure().getTerm().name() : null,
+                        payment.getFeeStructure().getAcademicYear(),
+                        payment.getPaymentDate(),
+                        payment.getPaymentMethod(),
+                        coalesceAmount(payment.getAmount()),
+                        payment.getReferenceNumber(),
+                        payment.getReversedAt(),
+                        payment.getReversalReason()
+                ))
+                .sorted(Comparator.comparing(ReversedPaymentReportDto::getReversedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<FeePaymentDto> getFeePayments(Long schoolId) {
         return feePaymentRepository.findAllWithAssociations(schoolId).stream()
                 .map(this::toDto)
@@ -332,90 +406,38 @@ public class FeePaymentService {
     }
 
     @Transactional(readOnly = true)
+    public List<FeePaymentDto> getStudentPaymentHistory(Long schoolId, Long studentId, boolean includeReversed) {
+        if (studentId == null || studentId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student is required");
+        }
+
+        return feePaymentRepository.findStudentHistoryWithAssociations(schoolId, studentId, includeReversed).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public StudentPaymentSummaryDto getStudentPaymentSummary(Long paymentId) {
         FeePayment payment = feePaymentRepository.findWithAssociationsById(paymentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fee payment not found"));
-        
-        Long studentId = payment.getStudent().getId();
-        Long schoolId = payment.getStudent().getSchool().getId();
-        School school = payment.getStudent().getSchool();
-        
-        // Get current term and academic year from school
-        Term currentTerm = school.getCurrentTerm();
-        String academicYear = school.getAcademicYear();
-        
-        List<FeePayment> allStudentPayments = feePaymentRepository.findAllWithAssociations(schoolId)
-                .stream()
-                .filter(p -> p.getStudent().getId().equals(studentId))
-                .filter(p -> !Boolean.TRUE.equals(p.getReversed()))
-                .toList();
-        
-        // Only include fee structures for current academic year and up to current term
-        List<FeeStructure> allStructures = feeStructureRepository.findAllWithAssociations(schoolId)
-                .stream()
-                .filter(s -> s.getGrade().getId().equals(payment.getStudent().getGrade().getId()))
-                .filter(s -> academicYear != null && academicYear.equals(s.getAcademicYear()))
-                .filter(s -> currentTerm == null || s.getTerm() == null || termOrder(s.getTerm()) <= termOrder(currentTerm))
-                .toList();
-        
-        double totalFeesAcrossAllTerms = allStructures.stream()
-                .mapToDouble(this::resolveTotalFee)
-                .sum();
-        
-        double totalPaidAcrossAllTerms = allStudentPayments.stream()
-                .mapToDouble(p -> p.getAmount() != null ? p.getAmount() : 0.0)
-                .sum();
-        
-        double totalOutstandingAcrossAllTerms = Math.max(0, totalFeesAcrossAllTerms - totalPaidAcrossAllTerms);
-        
-        Map<String, List<FeeStructure>> structuresByTerm = allStructures.stream()
-                .collect(Collectors.groupingBy(s -> s.getTerm() + "-" + s.getAcademicYear()));
-        
-        List<StudentPaymentSummaryDto.TermSummaryDto> termSummaries = structuresByTerm.entrySet().stream()
-                .map(entry -> {
-                    String[] parts = entry.getKey().split("-", 2);
-                    String term = parts[0];
-                    String academicYearForTerm = parts.length > 1 ? parts[1] : "";
-                    
-                    List<FeeStructure> termStructures = entry.getValue();
-                    double termTotalFee = termStructures.stream().mapToDouble(this::resolveTotalFee).sum();
-                    
-                    double termTotalPaid = allStudentPayments.stream()
-                            .filter(p -> termStructures.stream().anyMatch(s -> s.getId().equals(p.getFeeStructure().getId())))
-                            .mapToDouble(p -> p.getAmount() != null ? p.getAmount() : 0.0)
-                            .sum();
-                    
-                    double termBalance = Math.max(0, termTotalFee - termTotalPaid);
-                    
-                    int paymentCount = (int) allStudentPayments.stream()
-                            .filter(p -> termStructures.stream().anyMatch(s -> s.getId().equals(p.getFeeStructure().getId())))
-                            .count();
-                    
-                    return StudentPaymentSummaryDto.TermSummaryDto.builder()
-                            .term(term)
-                            .academicYear(academicYearForTerm)
-                            .totalFee(roundAmount(termTotalFee))
-                            .totalPaid(roundAmount(termTotalPaid))
-                            .balance(roundAmount(termBalance))
-                            .status(termBalance <= 0.009 ? "PAID" : "OUTSTANDING")
-                            .paymentCount(paymentCount)
-                            .build();
-                })
-                .sorted(Comparator.comparing(StudentPaymentSummaryDto.TermSummaryDto::getAcademicYear)
-                        .thenComparing(s -> termOrder(Term.valueOf(s.getTerm()))))
-                .toList();
-        
-        return StudentPaymentSummaryDto.builder()
-                .studentId(studentId)
-                .studentName(resolveStudentName(payment.getStudent()))
-                .studentNumber(payment.getStudent().getStudentNumber())
-                .gradeId(payment.getStudent().getGrade().getId())
-                .gradeName(payment.getStudent().getGrade().getName())
-                .totalFeesAcrossAllTerms(roundAmount(totalFeesAcrossAllTerms))
-                .totalPaidAcrossAllTerms(roundAmount(totalPaidAcrossAllTerms))
-                .totalOutstandingAcrossAllTerms(roundAmount(totalOutstandingAcrossAllTerms))
-                .termSummaries(termSummaries)
-                .build();
+
+        return buildStudentPaymentSummary(payment.getStudent());
+    }
+
+    @Transactional(readOnly = true)
+    public StudentPaymentSummaryDto getStudentPaymentStatement(Long schoolId, Long studentId) {
+        if (studentId == null || studentId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student is required");
+        }
+
+        Student student = studentRepository.findWithAssociationsById(studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+
+        if (schoolId != null && (student.getSchool() == null || !schoolId.equals(student.getSchool().getId()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student does not belong to the selected school");
+        }
+
+        return buildStudentPaymentSummary(student);
     }
 
     @Transactional
@@ -500,6 +522,94 @@ public class FeePaymentService {
         FeePayment existing = feePaymentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fee payment not found"));
         feePaymentRepository.delete(existing);
+    }
+
+    private StudentPaymentSummaryDto buildStudentPaymentSummary(Student student) {
+        if (student.getSchool() == null) {
+            return StudentPaymentSummaryDto.builder()
+                    .studentId(student.getId())
+                    .studentName(resolveStudentName(student))
+                    .studentNumber(student.getStudentNumber())
+                    .gradeId(student.getGrade() != null ? student.getGrade().getId() : null)
+                    .gradeName(student.getGrade() != null ? student.getGrade().getName() : null)
+                    .totalFeesAcrossAllTerms(0.0)
+                    .totalPaidAcrossAllTerms(0.0)
+                    .totalOutstandingAcrossAllTerms(0.0)
+                    .termSummaries(List.of())
+                    .build();
+        }
+
+        Long schoolId = student.getSchool().getId();
+        School school = student.getSchool();
+        Term currentTerm = school.getCurrentTerm();
+        String academicYear = school.getAcademicYear();
+
+        List<FeePayment> allStudentPayments = feePaymentRepository.findStudentHistoryWithAssociations(schoolId, student.getId(), false);
+
+        List<FeeStructure> allStructures = feeStructureRepository.findAllWithAssociations(schoolId).stream()
+                .filter(structure -> student.getGrade() != null && structure.getGrade().getId().equals(student.getGrade().getId()))
+                .filter(structure -> academicYear != null && academicYear.equals(structure.getAcademicYear()))
+                .filter(structure -> currentTerm == null || structure.getTerm() == null || termOrder(structure.getTerm()) <= termOrder(currentTerm))
+                .toList();
+
+        double totalFeesAcrossAllTerms = allStructures.stream()
+                .mapToDouble(this::resolveTotalFee)
+                .sum();
+
+        double totalPaidAcrossAllTerms = allStudentPayments.stream()
+                .mapToDouble(payment -> payment.getAmount() != null ? payment.getAmount() : 0.0)
+                .sum();
+
+        double totalOutstandingAcrossAllTerms = Math.max(0, totalFeesAcrossAllTerms - totalPaidAcrossAllTerms);
+
+        Map<String, List<FeeStructure>> structuresByTerm = allStructures.stream()
+                .collect(Collectors.groupingBy(structure -> structure.getTerm() + "-" + structure.getAcademicYear()));
+
+        List<StudentPaymentSummaryDto.TermSummaryDto> termSummaries = structuresByTerm.entrySet().stream()
+                .map(entry -> {
+                    String[] parts = entry.getKey().split("-", 2);
+                    String term = parts[0];
+                    String academicYearForTerm = parts.length > 1 ? parts[1] : "";
+
+                    List<FeeStructure> termStructures = entry.getValue();
+                    double termTotalFee = termStructures.stream().mapToDouble(this::resolveTotalFee).sum();
+
+                    double termTotalPaid = allStudentPayments.stream()
+                            .filter(payment -> termStructures.stream().anyMatch(structure -> structure.getId().equals(payment.getFeeStructure().getId())))
+                            .mapToDouble(payment -> payment.getAmount() != null ? payment.getAmount() : 0.0)
+                            .sum();
+
+                    double termBalance = Math.max(0, termTotalFee - termTotalPaid);
+
+                    int paymentCount = (int) allStudentPayments.stream()
+                            .filter(payment -> termStructures.stream().anyMatch(structure -> structure.getId().equals(payment.getFeeStructure().getId())))
+                            .count();
+
+                    return StudentPaymentSummaryDto.TermSummaryDto.builder()
+                            .term(term)
+                            .academicYear(academicYearForTerm)
+                            .totalFee(roundAmount(termTotalFee))
+                            .totalPaid(roundAmount(termTotalPaid))
+                            .balance(roundAmount(termBalance))
+                            .status(termBalance <= 0.009 ? "PAID" : "OUTSTANDING")
+                            .paymentCount(paymentCount)
+                            .build();
+                })
+                .sorted(Comparator.comparing(StudentPaymentSummaryDto.TermSummaryDto::getAcademicYear)
+                        .thenComparing(summary -> termOrder(Term.valueOf(summary.getTerm()))))
+                .toList();
+
+        return StudentPaymentSummaryDto.builder()
+                .studentId(student.getId())
+                .studentName(resolveStudentName(student))
+                .studentNumber(student.getStudentNumber())
+                .gradeId(student.getGrade() != null ? student.getGrade().getId() : null)
+                .gradeName(student.getGrade() != null ? student.getGrade().getName() : null)
+                .totalFeesAcrossAllTerms(roundAmount(totalFeesAcrossAllTerms))
+                .totalPaidAcrossAllTerms(roundAmount(totalPaidAcrossAllTerms))
+                .totalOutstandingAcrossAllTerms(roundAmount(totalOutstandingAcrossAllTerms))
+                .termSummaries(termSummaries)
+                .build();
     }
 
     private Student resolveStudent(Long studentId) {

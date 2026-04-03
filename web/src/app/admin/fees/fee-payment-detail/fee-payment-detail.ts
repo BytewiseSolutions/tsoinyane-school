@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { BackendService } from '../../../util/backend.service';
 import { FeePayment } from '../fee-payment';
 import { FeeReceiptService } from '../fee-receipt.service';
+import { StudentPaymentSummary } from '../student-payment-summary';
 
 interface LearnerHistoryGroup {
   key: string;
@@ -25,7 +26,7 @@ interface LearnerHistoryGroup {
 })
 export class FeePaymentDetail implements OnInit {
   payment: FeePayment | null = null;
-  studentSummary: any = null; // Will be properly typed
+  studentSummary: StudentPaymentSummary | null = null;
   learnerHistory: FeePayment[] = [];
   isLoading = true;
   isLoadingHistory = false;
@@ -60,7 +61,7 @@ export class FeePaymentDetail implements OnInit {
           totalPaid: Number(payment.totalPaid ?? 0),
           balance: Number(payment.balance ?? 0),
         };
-        this.loadStudentSummary(id);
+        this.loadStudentSummary(this.payment.schoolId ?? null, this.payment.studentId ?? null);
         this.loadLearnerHistory(this.payment.schoolId ?? null, this.payment.studentId ?? null);
       },
       error: (error: HttpErrorResponse) => {
@@ -191,8 +192,7 @@ export class FeePaymentDetail implements OnInit {
           balance: Number(updated.balance ?? 0),
         };
         this.closeReversalDialog();
-        // Reload both student summary and learner history after reversal
-        this.loadStudentSummary(this.payment.id!);
+        this.loadStudentSummary(this.payment.schoolId ?? null, this.payment.studentId ?? null);
         this.loadLearnerHistory(this.payment.schoolId ?? null, this.payment.studentId ?? null);
       },
       error: (error: HttpErrorResponse) => {
@@ -204,8 +204,13 @@ export class FeePaymentDetail implements OnInit {
     });
   }
 
-  private loadStudentSummary(paymentId: number): void {
-    this.backendService.get<any>(`fee-payment/${paymentId}/student-summary`).subscribe({
+  private loadStudentSummary(schoolId: number | null, studentId: number | null): void {
+    if (!schoolId || !studentId) {
+      this.studentSummary = null;
+      return;
+    }
+
+    this.backendService.get<StudentPaymentSummary>(`fee-payment/student/${studentId}/statement`, { schoolId }).subscribe({
       next: summary => {
         this.studentSummary = summary;
       },
@@ -223,7 +228,10 @@ export class FeePaymentDetail implements OnInit {
 
     this.isLoadingHistory = true;
 
-    this.backendService.get<FeePayment[]>('fee-payment', { schoolId }).subscribe({
+    this.backendService.get<FeePayment[]>(`fee-payment/student/${studentId}/history`, {
+      schoolId,
+      includeReversed: true,
+    }).subscribe({
       next: payments => {
         this.learnerHistory = (payments ?? [])
           .map(payment => ({

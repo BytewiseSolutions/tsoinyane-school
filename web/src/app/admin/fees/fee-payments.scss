@@ -203,6 +203,7 @@
 .actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .table-card .actions .action-btn {
@@ -230,6 +231,16 @@
 .table-card .actions .action-btn.edit {
   border-color: #c8d8ff;
   color: #1f4db6;
+}
+
+.table-card .actions .action-btn.print {
+  border-color: #c9ece1;
+  color: #147d63;
+}
+
+.table-card .actions .action-btn.reverse {
+  border-color: #f5d08a;
+  color: #a05c00;
 }
 
 .status-pill {
@@ -416,6 +427,53 @@
   border: 1px solid #b53a3a;
   background: #c74242;
   color: #fff;
+}
+
+.reverse-confirm-btn {
+  border: 1px solid #b8701f;
+  background: #c8812e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reversal-label {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+
+  span {
+    color: #37527a;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 96px;
+    box-sizing: border-box;
+    border: 1px solid #ccd6f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    resize: vertical;
+    font: inherit;
+    color: #2f3f63;
+    outline: none;
+  }
+}
+
+.reversal-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b53a3a;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {

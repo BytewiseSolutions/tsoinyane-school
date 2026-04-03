@@ -50,6 +50,24 @@ public class FeePaymentController {
         return feePaymentService.getOutstandingReports(schoolId, gradeId);
     }
 
+    @GetMapping("/reports/payment-methods")
+    public List<PaymentMethodBreakdownDto> getPaymentMethodBreakdown(
+            @RequestParam(value = "schoolId", required = false) Long schoolId,
+            @RequestParam(value = "fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(value = "toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(value = "gradeId", required = false) Long gradeId) {
+        return feePaymentService.getPaymentMethodBreakdown(schoolId, fromDate, toDate, gradeId);
+    }
+
+    @GetMapping("/reports/reversed")
+    public List<ReversedPaymentReportDto> getReversedPaymentReports(
+            @RequestParam(value = "schoolId", required = false) Long schoolId,
+            @RequestParam(value = "fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(value = "toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(value = "gradeId", required = false) Long gradeId) {
+        return feePaymentService.getReversedPaymentReports(schoolId, fromDate, toDate, gradeId);
+    }
+
     @GetMapping
     public List<FeePaymentDto> getFeePayments(@RequestParam(value = "schoolId", required = false) Long schoolId) {
         return feePaymentService.getFeePayments(schoolId);
@@ -63,6 +81,21 @@ public class FeePaymentController {
     @GetMapping("/{id}")
     public FeePaymentDto getFeePayment(@PathVariable Long id) {
         return feePaymentService.getFeePayment(id);
+    }
+
+    @GetMapping("/student/{studentId}/history")
+    public List<FeePaymentDto> getStudentPaymentHistory(
+            @PathVariable Long studentId,
+            @RequestParam(value = "schoolId", required = false) Long schoolId,
+            @RequestParam(value = "includeReversed", defaultValue = "true") boolean includeReversed) {
+        return feePaymentService.getStudentPaymentHistory(schoolId, studentId, includeReversed);
+    }
+
+    @GetMapping("/student/{studentId}/statement")
+    public StudentPaymentSummaryDto getStudentPaymentStatement(
+            @PathVariable Long studentId,
+            @RequestParam(value = "schoolId", required = false) Long schoolId) {
+        return feePaymentService.getStudentPaymentStatement(schoolId, studentId);
     }
 
     @GetMapping("/{id}/student-summary")

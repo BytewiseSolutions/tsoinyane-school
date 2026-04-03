@@ -29,6 +29,7 @@ import { Profile } from './admin/profile/profile';
 import { Reports } from './admin/reports/reports';
 import { Fees } from './admin/fees/fees';
 import { InstallmentPlans } from './admin/fees/installment-plans/installment-plans';
+import { InstallmentDetails } from './admin/fees/installment-plans/installment-details';
 import { FeeReports } from './admin/fees/fee-reports';
 import { FeePayments } from './admin/fees/fee-payments';
 import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
@@ -74,6 +75,7 @@ const routes: Routes = [
       { path: 'fees', component: Fees, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'fees/reports', component: FeeReports, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'fees/installments', component: InstallmentPlans, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'fees/installments/:id', component: InstallmentDetails, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'fees/payments', component: FeePayments, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'fees/payments/:id', component: FeePaymentDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'fees/:id', component: FeeStructureDetail, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },

@@ -1,11 +1,16 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Subject, takeUntil } from 'rxjs';
+import { forkJoin, Subject, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { SchoolContextService } from '../layout/school-context';
 import { Grade } from '../grades/grade';
 import { CollectionReport } from './collection-report';
 import { OutstandingReport } from './outstanding-report';
 import { PaymentSummary } from './payment-summary';
+import { PaymentMethodBreakdown } from './payment-method-breakdown';
+import { ReversedPaymentReport } from './reversed-payment-report';
+import { FeeStudent } from './fee-student';
+import { StudentPaymentSummary } from './student-payment-summary';
+import { FeePayment } from './fee-payment';
 
 @Component({
   selector: 'app-fee-reports',
@@ -20,16 +25,22 @@ export class FeeReports implements OnInit, OnDestroy {
   selectedSchoolName = 'No school selected';
   isLoading = false;
   errorMessage = '';
-  activeTab: 'summary' | 'collections' | 'outstanding' = 'summary';
-  
+  activeTab: 'summary' | 'collections' | 'outstanding' | 'methods' | 'reversed' | 'statement' = 'summary';
+
   fromDate = '';
   toDate = '';
   selectedGradeFilter: number | null = null;
-  
+  selectedStudentId: number | null = null;
+
   paymentSummary: PaymentSummary | null = null;
   collectionReports: CollectionReport[] = [];
   outstandingReports: OutstandingReport[] = [];
+  paymentMethodBreakdown: PaymentMethodBreakdown[] = [];
+  reversedReports: ReversedPaymentReport[] = [];
+  studentStatement: StudentPaymentSummary | null = null;
+  studentStatementHistory: FeePayment[] = [];
   gradeOptions: Grade[] = [];
+  students: FeeStudent[] = [];
 
   constructor(
     private backendService: BackendService,
@@ -43,6 +54,7 @@ export class FeeReports implements OnInit, OnDestroy {
         this.selectedSchoolId = school?.id ?? null;
         this.selectedSchoolName = school?.name ?? 'No school selected';
         this.initializeDates();
+        this.loadLookups();
         this.loadData();
       });
   }
@@ -52,8 +64,9 @@ export class FeeReports implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  selectTab(tab: 'summary' | 'collections' | 'outstanding'): void {
+  selectTab(tab: 'summary' | 'collections' | 'outstanding' | 'methods' | 'reversed' | 'statement'): void {
     this.activeTab = tab;
+    this.errorMessage = '';
     this.loadData();
   }
 
@@ -86,20 +99,104 @@ export class FeeReports implements OnInit, OnDestroy {
     this.downloadCsv('outstanding-by-grade.csv', headers, rows);
   }
 
+  exportPaymentMethodsCsv(): void {
+    const headers = ['Payment Method', 'Total Amount', 'Payment Count', 'Average Amount', 'Share Of Total (%)'];
+    const rows = this.paymentMethodBreakdown.map(report => [
+      this.formatPaymentMethod(report.paymentMethod),
+      report.totalAmount.toFixed(2),
+      report.paymentCount.toString(),
+      report.averageAmount.toFixed(2),
+      report.percentageOfTotal.toFixed(2),
+    ]);
+    this.downloadCsv('payment-method-breakdown.csv', headers, rows);
+  }
+
+  exportReversedCsv(): void {
+    const headers = ['Reversed At', 'Payment Date', 'Student', 'Student No.', 'Grade', 'Term', 'Academic Year', 'Method', 'Amount', 'Reference', 'Reason'];
+    const rows = this.reversedReports.map(report => [
+      report.reversedAt ?? '',
+      report.paymentDate,
+      report.studentName,
+      report.studentNumber,
+      report.gradeName ?? '',
+      this.getTermLabel(report.term),
+      report.academicYear ?? '',
+      this.formatPaymentMethod(report.paymentMethod),
+      report.amount.toFixed(2),
+      report.referenceNumber ?? '',
+      report.reversalReason ?? '',
+    ]);
+    this.downloadCsv('reversed-payments.csv', headers, rows);
+  }
+
+  exportStudentStatementCsv(): void {
+    if (!this.studentStatement) {
+      return;
+    }
+
+    const headers = ['Term', 'Academic Year', 'Total Fee', 'Total Paid', 'Balance', 'Status', 'Payment Count'];
+    const rows = this.studentStatement.termSummaries.map(summary => [
+      this.getTermLabel(summary.term),
+      summary.academicYear,
+      summary.totalFee.toFixed(2),
+      summary.totalPaid.toFixed(2),
+      summary.balance.toFixed(2),
+      summary.status,
+      summary.paymentCount.toString(),
+    ]);
+    this.downloadCsv(`learner-statement-${this.studentStatement.studentNumber}.csv`, headers, rows);
+  }
+
   formatCurrency(value: number | null | undefined): string {
     return `M${Number(value ?? 0).toFixed(2)}`;
   }
 
   formatPercentage(value: number): string {
-    return `${value.toFixed(1)}%`;
+    return `${Number(value ?? 0).toFixed(1)}%`;
+  }
+
+  formatPaymentMethod(value: string | null | undefined): string {
+    return String(value ?? 'N/A').replace('_', ' ');
+  }
+
+  getTermLabel(term: string | null | undefined): string {
+    return String(term ?? '').replace('_', ' ');
   }
 
   private initializeDates(): void {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    
+
     this.fromDate = firstDayOfMonth.toISOString().slice(0, 10);
     this.toDate = today.toISOString().slice(0, 10);
+  }
+
+  private loadLookups(): void {
+    if (!this.selectedSchoolId) {
+      this.gradeOptions = [];
+      this.students = [];
+      return;
+    }
+
+    this.backendService.get<Grade[]>('grade').subscribe({
+      next: grades => {
+        this.gradeOptions = (grades ?? []).filter(grade => grade.schoolId === this.selectedSchoolId);
+      },
+      error: () => {
+        this.gradeOptions = [];
+      },
+    });
+
+    this.backendService.get<FeeStudent[]>('student', { schoolId: this.selectedSchoolId }).subscribe({
+      next: students => {
+        this.students = (students ?? []).sort((left, right) =>
+          String(left.userFullName ?? '').localeCompare(String(right.userFullName ?? ''))
+        );
+      },
+      error: () => {
+        this.students = [];
+      },
+    });
   }
 
   private loadData(): void {
@@ -111,15 +208,6 @@ export class FeeReports implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Load grades
-    this.backendService.get<Grade[]>('grade').subscribe({
-      next: grades => {
-        this.gradeOptions = (grades ?? []).filter(grade => grade.schoolId === this.selectedSchoolId);
-      },
-      error: () => { this.gradeOptions = []; },
-    });
-
-    // Load data based on active tab
     switch (this.activeTab) {
       case 'summary':
         this.loadPaymentSummary();
@@ -130,19 +218,20 @@ export class FeeReports implements OnInit, OnDestroy {
       case 'outstanding':
         this.loadOutstandingReports();
         break;
+      case 'methods':
+        this.loadPaymentMethodBreakdown();
+        break;
+      case 'reversed':
+        this.loadReversedReports();
+        break;
+      case 'statement':
+        this.loadStudentStatement();
+        break;
     }
   }
 
   private loadPaymentSummary(): void {
-    if (!this.selectedSchoolId) {
-      this.paymentSummary = null;
-      this.isLoading = false;
-      return;
-    }
-
-    const params = { schoolId: this.selectedSchoolId };
-    
-    this.backendService.get<PaymentSummary>('fee-payment/reports/summary', params).subscribe({
+    this.backendService.get<PaymentSummary>('fee-payment/reports/summary', { schoolId: this.selectedSchoolId! }).subscribe({
       next: summary => {
         this.paymentSummary = summary;
       },
@@ -157,23 +246,7 @@ export class FeeReports implements OnInit, OnDestroy {
   }
 
   private loadCollectionReports(): void {
-    if (!this.selectedSchoolId) {
-      this.collectionReports = [];
-      this.isLoading = false;
-      return;
-    }
-
-    const params: Record<string, string | number> = { 
-      schoolId: this.selectedSchoolId,
-      fromDate: this.fromDate,
-      toDate: this.toDate
-    };
-    
-    if (this.selectedGradeFilter) {
-      params['gradeId'] = this.selectedGradeFilter;
-    }
-
-    this.backendService.get<CollectionReport[]>('fee-payment/reports/collections', params).subscribe({
+    this.backendService.get<CollectionReport[]>('fee-payment/reports/collections', this.buildDateRangeParams()).subscribe({
       next: reports => {
         this.collectionReports = reports ?? [];
       },
@@ -188,14 +261,7 @@ export class FeeReports implements OnInit, OnDestroy {
   }
 
   private loadOutstandingReports(): void {
-    if (!this.selectedSchoolId) {
-      this.outstandingReports = [];
-      this.isLoading = false;
-      return;
-    }
-
-    const params: Record<string, string | number> = { schoolId: this.selectedSchoolId };
-    
+    const params: Record<string, string | number> = { schoolId: this.selectedSchoolId! };
     if (this.selectedGradeFilter) {
       params['gradeId'] = this.selectedGradeFilter;
     }
@@ -214,11 +280,101 @@ export class FeeReports implements OnInit, OnDestroy {
     });
   }
 
+  private loadPaymentMethodBreakdown(): void {
+    this.backendService.get<PaymentMethodBreakdown[]>('fee-payment/reports/payment-methods', this.buildDateRangeParams()).subscribe({
+      next: reports => {
+        this.paymentMethodBreakdown = reports ?? [];
+      },
+      error: () => {
+        this.paymentMethodBreakdown = [];
+        this.errorMessage = 'Failed to load payment method breakdown.';
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private loadReversedReports(): void {
+    this.backendService.get<ReversedPaymentReport[]>('fee-payment/reports/reversed', this.buildDateRangeParams()).subscribe({
+      next: reports => {
+        this.reversedReports = (reports ?? []).map(report => ({
+          ...report,
+          amount: Number(report.amount ?? 0),
+        }));
+      },
+      error: () => {
+        this.reversedReports = [];
+        this.errorMessage = 'Failed to load reversed payment reports.';
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private loadStudentStatement(): void {
+    if (!this.selectedStudentId) {
+      this.studentStatement = null;
+      this.studentStatementHistory = [];
+      this.isLoading = false;
+      return;
+    }
+
+    forkJoin({
+      summary: this.backendService.get<StudentPaymentSummary>(`fee-payment/student/${this.selectedStudentId}/statement`, {
+        schoolId: this.selectedSchoolId!,
+      }),
+      history: this.backendService.get<FeePayment[]>(`fee-payment/student/${this.selectedStudentId}/history`, {
+        schoolId: this.selectedSchoolId!,
+        includeReversed: true,
+      }),
+    }).subscribe({
+      next: ({ summary, history }) => {
+        this.studentStatement = summary;
+        this.studentStatementHistory = (history ?? []).map(payment => ({
+          ...payment,
+          amount: Number(payment.amount ?? 0),
+          totalFee: Number(payment.totalFee ?? 0),
+          totalPaid: Number(payment.totalPaid ?? 0),
+          balance: Number(payment.balance ?? 0),
+        }));
+      },
+      error: () => {
+        this.studentStatement = null;
+        this.studentStatementHistory = [];
+        this.errorMessage = 'Failed to load learner statement.';
+      },
+      complete: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private buildDateRangeParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {
+      schoolId: this.selectedSchoolId!,
+      fromDate: this.fromDate,
+      toDate: this.toDate,
+    };
+
+    if (this.selectedGradeFilter) {
+      params['gradeId'] = this.selectedGradeFilter;
+    }
+
+    return params;
+  }
+
   private resetData(): void {
     this.paymentSummary = null;
     this.collectionReports = [];
     this.outstandingReports = [];
+    this.paymentMethodBreakdown = [];
+    this.reversedReports = [];
+    this.studentStatement = null;
+    this.studentStatementHistory = [];
     this.gradeOptions = [];
+    this.students = [];
     this.isLoading = false;
   }
 

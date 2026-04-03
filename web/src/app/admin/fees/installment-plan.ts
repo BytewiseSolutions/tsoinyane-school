@@ -8,6 +8,7 @@ export interface InstallmentPlan {
   studentNumber: string;
   gradeId: number;
   gradeName: string;
+  schoolId?: number;
   feeStructureId: number;
   term: Term;
   academicYear: string;

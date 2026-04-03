@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { filter, Subject, takeUntil } from 'rxjs';
 import { BackendService } from '../../util/backend.service';
 import { Grade } from '../grades/grade';
@@ -50,6 +51,10 @@ export class FeePayments implements OnInit, OnDestroy {
   showAdvancedSearch = false;
   showDeleteDialog = false;
   paymentToDelete: FeePayment | null = null;
+  showReversalDialog = false;
+  paymentToReverse: FeePayment | null = null;
+  reversalReason = '';
+  reversalError = '';
 
   constructor(
     private backendService: BackendService,
@@ -220,6 +225,10 @@ export class FeePayments implements OnInit, OnDestroy {
     this.actionMessage = '';
   }
 
+  printReceipt(payment: FeePayment): void {
+    this.feeReceiptService.printReceipt(payment);
+  }
+
   openAdvancedSearch(): void {
     this.showAdvancedSearch = true;
   }
@@ -234,6 +243,57 @@ export class FeePayments implements OnInit, OnDestroy {
     this.actionMessage = '';
     this.showAdvancedSearch = false;
     this.loadPayments();
+  }
+
+  openReversalDialog(payment: FeePayment): void {
+    if (!payment.id || payment.reversed) {
+      return;
+    }
+
+    this.paymentToReverse = payment;
+    this.reversalReason = '';
+    this.reversalError = '';
+    this.showReversalDialog = true;
+  }
+
+  closeReversalDialog(): void {
+    this.showReversalDialog = false;
+    this.paymentToReverse = null;
+    this.reversalReason = '';
+    this.reversalError = '';
+  }
+
+  confirmReversal(): void {
+    if (!this.paymentToReverse?.id) {
+      return;
+    }
+
+    if (!this.reversalReason.trim()) {
+      this.reversalError = 'Reversal reason is required.';
+      return;
+    }
+
+    this.isProcessing = true;
+    this.reversalError = '';
+
+    const body = { reason: this.reversalReason.trim() };
+    (this.backendService.post as <T, B>(endpoint: string, body: B) => Observable<T>)<FeePayment, { reason: string }>(
+      `fee-payment/${this.paymentToReverse.id}/reverse`,
+      body
+    ).subscribe({
+      next: () => {
+        this.closeReversalDialog();
+        this.loadPayments();
+        this.loadOutstanding();
+        this.actionMessage = 'Payment reversed successfully.';
+      },
+      error: (error: HttpErrorResponse) => {
+        this.reversalError = error.error?.message || 'Failed to reverse payment.';
+      },
+      complete: () => {
+        this.isProcessing = false;
+      },
+    });
   }
 
   clearAdvancedSearch(): void {
@@ -318,10 +378,29 @@ export class FeePayments implements OnInit, OnDestroy {
   }
 
   viewLearnerHistory(studentId: number): void {
-    const latestPayment = this.payments.find(payment => payment.studentId === studentId);
-    if (latestPayment?.id) {
-      this.viewPayment(latestPayment);
+    if (!this.selectedSchoolId) {
+      this.errorMessage = 'Select a school before viewing learner payment history.';
+      return;
     }
+
+    this.errorMessage = '';
+    this.backendService.get<FeePayment[]>(`fee-payment/student/${studentId}/history`, {
+      schoolId: this.selectedSchoolId,
+      includeReversed: true,
+    }).subscribe({
+      next: payments => {
+        const latestPayment = (payments ?? [])[0];
+        if (!latestPayment?.id) {
+          this.errorMessage = 'No payment history found for the selected learner.';
+          return;
+        }
+
+        this.viewPayment(latestPayment);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to load learner payment history.';
+      },
+    });
   }
 
   exportPaymentsCsv(): void {

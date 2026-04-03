@@ -9,7 +9,6 @@ import { FeeStructure } from '../fee-structure';
 import { InstallmentPlan } from '../installment-plan';
 import { InstallmentSchedule } from '../installment-schedule';
 import { HttpErrorResponse } from '@angular/common/http';
-import { PaymentMethod } from '../payment-method';
 import { Term } from '../../settings/term';
 
 @Component({
@@ -40,6 +39,7 @@ export class InstallmentPlans implements OnInit, OnDestroy {
   showPaymentForm = false;
   selectedPlanForPayment: InstallmentPlan | null = null;
   selectedInstallmentForPayment: InstallmentSchedule | null = null;
+  selectedPlanForDetails: InstallmentPlan | null = null;
   actionMessage = '';
 
   constructor(
@@ -105,6 +105,14 @@ export class InstallmentPlans implements OnInit, OnDestroy {
     this.selectedInstallmentForPayment = null;
   }
 
+  openDetails(plan: InstallmentPlan): void {
+    this.selectedPlanForDetails = plan;
+  }
+
+  closeDetails(): void {
+    this.selectedPlanForDetails = null;
+  }
+
   closeActionMessage(): void {
     this.actionMessage = '';
   }
@@ -165,7 +173,6 @@ export class InstallmentPlans implements OnInit, OnDestroy {
         );
         this.actionMessage = 'Installment payment recorded successfully.';
         this.closePaymentForm();
-        this.loadPayments();
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error.error?.message || 'Failed to record payment.';
@@ -288,10 +295,8 @@ export class InstallmentPlans implements OnInit, OnDestroy {
     this.backendService.get<FeeStructure[]>('fee-structure', params).subscribe({
       next: structures => { 
         this.feeStructures = structures ?? [];
-        console.log('Loaded fee structures:', this.feeStructures);
       },
-      error: (error) => { 
-        console.error('Error loading fee structures:', error);
+      error: () => { 
         this.feeStructures = [];
       },
     });

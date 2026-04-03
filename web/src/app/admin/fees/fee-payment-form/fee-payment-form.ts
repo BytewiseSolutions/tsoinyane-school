@@ -15,6 +15,8 @@ export class FeePaymentForm implements OnInit {
   @Input() existingPayment: FeePayment | null = null;
   @Input() preferredStudentId: number | null = null;
   @Input() preferredFeeStructureId: number | null = null;
+  @Input() preferredAmount: number | null = null;
+  @Input() isInstallmentPayment = false;
   @Input() selectedSchoolId: number | null = null;
   @Input() selectedSchoolName = '';
   @Input() students: FeeStudent[] = [];
@@ -65,6 +67,10 @@ export class FeePaymentForm implements OnInit {
       this.onFeeStructureChange();
     }
 
+    if (this.preferredAmount !== null) {
+      this.payment.amount = this.preferredAmount;
+    }
+
     this.payment.paymentDate = this.today();
   }
 
@@ -87,11 +93,11 @@ export class FeePaymentForm implements OnInit {
     }
 
     return this.feeStructures
-      .filter(structure => structure.gradeId === selectedStudent.gradeId)
-      .filter(structure => structure.schoolId === this.selectedSchoolId)
-      .filter(structure => Number(structure.totalAmount ?? 0) > 0)
+      .filter(structure => (structure.gradeId ?? structure.grade_id) === selectedStudent.gradeId)
+      .filter(structure => (structure.schoolId ?? structure.school_id) === this.selectedSchoolId)
+      .filter(structure => Number(structure.totalAmount ?? structure.amount ?? 0) > 0)
       .sort((left, right) => {
-        const yearDiff = (right.academicYear ?? '').localeCompare(left.academicYear ?? '');
+        const yearDiff = (right.academicYear ?? right.academic_year ?? '').localeCompare(left.academicYear ?? left.academic_year ?? '');
         if (yearDiff !== 0) {
           return yearDiff;
         }
@@ -127,6 +133,8 @@ export class FeePaymentForm implements OnInit {
   }
 
   get duplicatePaymentWarning(): string | null {
+    if (this.isInstallmentPayment) return null;
+
     if (!this.payment.studentId || !this.payment.feeStructureId || !this.payment.amount || !this.payment.paymentDate) {
       return null;
     }
@@ -207,7 +215,7 @@ export class FeePaymentForm implements OnInit {
       return;
     }
 
-    if (amount < this.minimumPaymentAmount) {
+    if (!this.isInstallmentPayment && amount < this.minimumPaymentAmount) {
       this.errorMessage = `Amount must be at least ${this.formatCurrency(this.minimumPaymentAmount)}.`;
       return;
     }
@@ -217,7 +225,7 @@ export class FeePaymentForm implements OnInit {
       return;
     }
 
-    if (amount - this.outstandingBalance > 0.009) {
+    if (!this.isInstallmentPayment && amount - this.outstandingBalance > 0.009) {
       this.errorMessage = 'Amount cannot be greater than the outstanding balance.';
       return;
     }
@@ -270,7 +278,10 @@ export class FeePaymentForm implements OnInit {
   }
 
   getStructureLabel(structure: FeeStructure): string {
-    return `${this.getTermLabel(structure.term)} • ${structure.academicYear} • Total ${this.formatCurrency(structure.totalAmount ?? structure.amount ?? 0)}`;
+    const term = this.getTermLabel(structure.term);
+    const year = structure.academicYear ?? structure.academic_year ?? '';
+    const total = structure.totalAmount ?? structure.amount ?? 0;
+    return `${term} • ${year} • Total ${this.formatCurrency(total)}`;
   }
 
   formatCurrency(value: number | null | undefined): string {

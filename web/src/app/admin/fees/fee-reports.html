@@ -2,31 +2,52 @@
   <div class="page-header">
     <div>
       <h2>Fee Reports</h2>
-      <p>View payment summaries, daily collections, and outstanding balance reports.</p>
+      <p>Track collections, balances, reversals, payment methods, and learner statements for {{ selectedSchoolName }}.</p>
     </div>
   </div>
 
   <div class="reports-tabs">
-    <button 
-      type="button" 
-      class="tab-btn" 
+    <button
+      type="button"
+      class="tab-btn"
       [class.active]="activeTab === 'summary'"
       (click)="selectTab('summary')">
       Payment Summary
     </button>
-    <button 
-      type="button" 
-      class="tab-btn" 
+    <button
+      type="button"
+      class="tab-btn"
       [class.active]="activeTab === 'collections'"
       (click)="selectTab('collections')">
       Daily Collections
     </button>
-    <button 
-      type="button" 
-      class="tab-btn" 
+    <button
+      type="button"
+      class="tab-btn"
       [class.active]="activeTab === 'outstanding'"
       (click)="selectTab('outstanding')">
       Outstanding by Grade
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab === 'methods'"
+      (click)="selectTab('methods')">
+      Payment Methods
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab === 'reversed'"
+      (click)="selectTab('reversed')">
+      Reversed Payments
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab === 'statement'"
+      (click)="selectTab('statement')">
+      Learner Statement
     </button>
   </div>
 
@@ -35,7 +56,7 @@
   } @else if (errorMessage) {
     <div class="state-card error">{{ errorMessage }}</div>
   } @else {
-    
+
     @if (activeTab === 'summary' && paymentSummary) {
       <div class="summary-grid">
         <div class="summary-card">
@@ -70,9 +91,9 @@
           <div class="filter-group">
             <label>Grade</label>
             <select [(ngModel)]="selectedGradeFilter" (change)="onFiltersChanged()">
-              <option [value]="null">All Grades</option>
+              <option [ngValue]="null">All Grades</option>
               @for (grade of gradeOptions; track grade.id) {
-                <option [value]="grade.id">{{ grade.name }}</option>
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
               }
             </select>
           </div>
@@ -120,9 +141,9 @@
           <div class="filter-group">
             <label>Grade</label>
             <select [(ngModel)]="selectedGradeFilter" (change)="onFiltersChanged()">
-              <option [value]="null">All Grades</option>
+              <option [ngValue]="null">All Grades</option>
               @for (grade of gradeOptions; track grade.id) {
-                <option [value]="grade.id">{{ grade.name }}</option>
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
               }
             </select>
           </div>
@@ -161,6 +182,265 @@
         </div>
       } @else {
         <div class="state-card">No outstanding balance data found.</div>
+      }
+    }
+
+    @if (activeTab === 'methods') {
+      <div class="filters-section">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>From Date</label>
+            <input type="date" [(ngModel)]="fromDate" (change)="onFiltersChanged()">
+          </div>
+          <div class="filter-group">
+            <label>To Date</label>
+            <input type="date" [(ngModel)]="toDate" (change)="onFiltersChanged()">
+          </div>
+          <div class="filter-group">
+            <label>Grade</label>
+            <select [(ngModel)]="selectedGradeFilter" (change)="onFiltersChanged()">
+              <option [ngValue]="null">All Grades</option>
+              @for (grade of gradeOptions; track grade.id) {
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          </div>
+          <button type="button" class="export-btn" (click)="exportPaymentMethodsCsv()">
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      @if (paymentMethodBreakdown.length > 0) {
+        <div class="summary-grid compact">
+          @for (report of paymentMethodBreakdown; track report.paymentMethod) {
+            <div class="summary-card method-card">
+              <h3>{{ formatPaymentMethod(report.paymentMethod) }}</h3>
+              <div class="summary-value">{{ formatCurrency(report.totalAmount) }}</div>
+              <div class="summary-meta">{{ report.paymentCount }} payments • {{ formatPercentage(report.percentageOfTotal) }} of total</div>
+              <div class="summary-submeta">Average {{ formatCurrency(report.averageAmount) }}</div>
+            </div>
+          }
+        </div>
+
+        <div class="reports-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Payment Method</th>
+                <th>Total Amount</th>
+                <th>Payments</th>
+                <th>Average Amount</th>
+                <th>Share of Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (report of paymentMethodBreakdown; track report.paymentMethod) {
+                <tr>
+                  <td>{{ formatPaymentMethod(report.paymentMethod) }}</td>
+                  <td class="amount">{{ formatCurrency(report.totalAmount) }}</td>
+                  <td>{{ report.paymentCount }}</td>
+                  <td class="amount">{{ formatCurrency(report.averageAmount) }}</td>
+                  <td>{{ formatPercentage(report.percentageOfTotal) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="state-card">No payment method data found for the selected filters.</div>
+      }
+    }
+
+    @if (activeTab === 'reversed') {
+      <div class="filters-section">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>From Date</label>
+            <input type="date" [(ngModel)]="fromDate" (change)="onFiltersChanged()">
+          </div>
+          <div class="filter-group">
+            <label>To Date</label>
+            <input type="date" [(ngModel)]="toDate" (change)="onFiltersChanged()">
+          </div>
+          <div class="filter-group">
+            <label>Grade</label>
+            <select [(ngModel)]="selectedGradeFilter" (change)="onFiltersChanged()">
+              <option [ngValue]="null">All Grades</option>
+              @for (grade of gradeOptions; track grade.id) {
+                <option [ngValue]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          </div>
+          <button type="button" class="export-btn" (click)="exportReversedCsv()">
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      @if (reversedReports.length > 0) {
+        <div class="reports-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Reversed At</th>
+                <th>Student</th>
+                <th>Grade</th>
+                <th>Payment Date</th>
+                <th>Term</th>
+                <th>Method</th>
+                <th>Amount</th>
+                <th>Reference</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (report of reversedReports; track report.paymentId) {
+                <tr>
+                  <td>{{ report.reversedAt | date:'dd MMM yyyy, HH:mm' }}</td>
+                  <td>
+                    <div class="cell-title">{{ report.studentName }}</div>
+                    <div class="cell-meta">{{ report.studentNumber }}</div>
+                  </td>
+                  <td>{{ report.gradeName || 'N/A' }}</td>
+                  <td>{{ report.paymentDate | date:'dd MMM yyyy' }}</td>
+                  <td>{{ getTermLabel(report.term) }} {{ report.academicYear }}</td>
+                  <td>{{ formatPaymentMethod(report.paymentMethod) }}</td>
+                  <td class="amount outstanding">{{ formatCurrency(report.amount) }}</td>
+                  <td>{{ report.referenceNumber || 'N/A' }}</td>
+                  <td class="reason-cell">{{ report.reversalReason || 'No reason provided' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="state-card">No reversed payments found for the selected filters.</div>
+      }
+    }
+
+    @if (activeTab === 'statement') {
+      <div class="filters-section">
+        <div class="filters-row">
+          <div class="filter-group student-filter">
+            <label>Learner</label>
+            <select [(ngModel)]="selectedStudentId" (change)="onFiltersChanged()">
+              <option [ngValue]="null">Select learner</option>
+              @for (student of students; track student.id) {
+                <option [ngValue]="student.id">
+                  {{ student.userFullName }} @if (student.studentNumber) { ({{ student.studentNumber }}) }
+                </option>
+              }
+            </select>
+          </div>
+          <button type="button" class="export-btn" [disabled]="!studentStatement" (click)="exportStudentStatementCsv()">
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      @if (!selectedStudentId) {
+        <div class="state-card">Select a learner to view a payment statement.</div>
+      } @else if (studentStatement) {
+        <div class="statement-header">
+          <div>
+            <h3>{{ studentStatement.studentName }}</h3>
+            <p>{{ studentStatement.studentNumber }} • {{ studentStatement.gradeName }}</p>
+          </div>
+        </div>
+
+        <div class="summary-grid compact">
+          <div class="summary-card">
+            <h3>Total Fees</h3>
+            <div class="summary-value">{{ formatCurrency(studentStatement.totalFeesAcrossAllTerms) }}</div>
+            <div class="summary-meta">Across all fee terms</div>
+          </div>
+          <div class="summary-card">
+            <h3>Total Paid</h3>
+            <div class="summary-value">{{ formatCurrency(studentStatement.totalPaidAcrossAllTerms) }}</div>
+            <div class="summary-meta">Payments recorded</div>
+          </div>
+          <div class="summary-card">
+            <h3>Outstanding</h3>
+            <div class="summary-value outstanding">{{ formatCurrency(studentStatement.totalOutstandingAcrossAllTerms) }}</div>
+            <div class="summary-meta">Remaining balance</div>
+          </div>
+        </div>
+
+        <div class="reports-table statement-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Term</th>
+                <th>Academic Year</th>
+                <th>Total Fee</th>
+                <th>Total Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Payments</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (summary of studentStatement.termSummaries; track summary.term + '-' + summary.academicYear) {
+                <tr>
+                  <td>{{ getTermLabel(summary.term) }}</td>
+                  <td>{{ summary.academicYear }}</td>
+                  <td class="amount">{{ formatCurrency(summary.totalFee) }}</td>
+                  <td class="amount">{{ formatCurrency(summary.totalPaid) }}</td>
+                  <td class="amount" [class.outstanding]="summary.balance > 0">{{ formatCurrency(summary.balance) }}</td>
+                  <td>
+                    <span class="status-chip" [class.outstanding]="summary.balance > 0">
+                      {{ summary.status }}
+                    </span>
+                  </td>
+                  <td>{{ summary.paymentCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (studentStatementHistory.length > 0) {
+          <div class="section-heading">
+            <h3>Payment History</h3>
+            <p>Includes reversed transactions for a complete learner statement.</p>
+          </div>
+
+          <div class="reports-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Term</th>
+                  <th>Method</th>
+                  <th>Reference</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (payment of studentStatementHistory; track payment.id) {
+                  <tr>
+                    <td>{{ payment.paymentDate | date:'dd MMM yyyy' }}</td>
+                    <td>{{ getTermLabel(payment.term) }} {{ payment.academicYear }}</td>
+                    <td>{{ formatPaymentMethod(payment.paymentMethod) }}</td>
+                    <td>{{ payment.referenceNumber || 'N/A' }}</td>
+                    <td class="amount" [class.outstanding]="payment.reversed">{{ formatCurrency(payment.amount) }}</td>
+                    <td>
+                      <span class="status-chip" [class.outstanding]="payment.reversed">
+                        {{ payment.reversed ? 'REVERSED' : 'POSTED' }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="state-card">No payment history found for this learner.</div>
+        }
+      } @else {
+        <div class="state-card">No learner statement found.</div>
       }
     }
   }

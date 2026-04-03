@@ -68,6 +68,24 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
             join fetch student.grade
             join fetch student.school
             join fetch payment.feeStructure feeStructure
+            where student.id = :studentId
+              and (:schoolId is null or student.school.id = :schoolId)
+              and (:includeReversed = true or payment.reversed is null or payment.reversed = false)
+            order by payment.paymentDate desc, payment.createdAt desc
+            """)
+    List<FeePayment> findStudentHistoryWithAssociations(
+            @Param("schoolId") Long schoolId,
+            @Param("studentId") Long studentId,
+            @Param("includeReversed") boolean includeReversed
+    );
+
+    @Query("""
+            select payment from FeePayment payment
+            join fetch payment.student student
+            join fetch student.user
+            join fetch student.grade
+            join fetch student.school
+            join fetch payment.feeStructure feeStructure
             where payment.id = :id
             """)
     Optional<FeePayment> findWithAssociationsById(@Param("id") Long id);

@@ -26,6 +26,7 @@
   gap: 4px;
   margin-bottom: 32px;
   border-bottom: 1px solid #e5e5e5;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -56,6 +57,10 @@
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
   margin-bottom: 32px;
+
+  &.compact {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
 }
 
 .summary-card {
@@ -87,6 +92,16 @@
     font-size: 14px;
     color: #666;
   }
+
+  .summary-submeta {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #6b7280;
+  }
+}
+
+.method-card {
+  text-align: left;
 }
 
 .filters-section {
@@ -145,6 +160,11 @@
   &:hover {
     background: #047857;
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .reports-table {
@@ -194,6 +214,65 @@
   }
 }
 
+.statement-table {
+  margin-bottom: 24px;
+}
+
+.statement-header,
+.section-heading {
+  margin-bottom: 20px;
+
+  h3 {
+    margin: 0 0 6px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+  }
+}
+
+.student-filter {
+  min-width: 280px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: #ecfdf5;
+  color: #047857;
+
+  &.outstanding {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+}
+
+.cell-title {
+  font-weight: 600;
+  color: #111827;
+}
+
+.cell-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.reason-cell {
+  min-width: 220px;
+  line-height: 1.45;
+}
+
 .state-card {
   background: white;
   border: 1px solid #e5e5e5;
@@ -228,11 +307,15 @@
     min-width: auto;
   }
 
+  .student-filter {
+    min-width: auto;
+  }
+
   .reports-table {
     overflow-x: auto;
 
     table {
-      min-width: 600px;
+      min-width: 720px;
     }
   }
 }

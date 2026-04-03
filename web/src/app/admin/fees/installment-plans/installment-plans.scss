@@ -117,63 +117,28 @@
   }
 }
 
-.plans-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  padding: 24px;
-}
-
-.plan-card {
-  background: white;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
+.plans-list {
   padding: 20px;
-  transition: box-shadow 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  box-sizing: border-box;
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
 }
 
-.plan-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+.plans-list .installment-summary-card:last-child {
+  margin-bottom: 0;
 }
 
-.plan-student {
-  display: grid;
-  gap: 8px;
+.student-cell {
+  min-width: 180px;
+}
 
-  h4 {
-    margin: 0 0 4px 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #1a1a1a;
-  }
+.student-name {
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
 
-  .student-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .student-number,
-  .student-grade {
-    font-size: 12px;
-    color: #475569;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 4px 8px;
-    border-radius: 999px;
-  }
+.student-meta {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .plan-status {
@@ -199,54 +164,33 @@
   }
 }
 
-.plan-details {
+.term-cell {
   display: grid;
-  gap: 12px;
+  gap: 4px;
+  min-width: 100px;
 }
 
-.plan-info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.plan-info-card,
-.plan-progress-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #f8fafc;
-  padding: 12px 14px;
-}
-
-.plan-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.term-year {
+  font-size: 12px;
   color: #64748b;
 }
 
-.plan-term {
-  font-size: 14px;
-  color: #475569;
+.amount-cell {
+  white-space: nowrap;
+  font-weight: 700;
+  color: #0f172a;
 }
 
-.plan-amount {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
+.progress-cell {
+  min-width: 130px;
 
-.plan-progress-card {
   .progress-bar {
     width: 100%;
     height: 8px;
     background: #e5e7eb;
     border-radius: 999px;
     overflow: hidden;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 
     .progress-fill {
       height: 100%;
@@ -257,23 +201,24 @@
 
   .progress-text {
     font-size: 12px;
-    color: #666;
+    color: #64748b;
   }
 }
 
-.installments-list {
+.installments-cell {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  min-width: 360px;
 }
 
-.installment-row {
+.installment-chip {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   padding: 12px;
-  border: 1px solid #f3f4f6;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  background: #fff;
+  background: #f8fafc;
 
   &.status-paid {
     background: #f0fdf4;
@@ -286,48 +231,48 @@
   }
 }
 
-.installment-info {
+.installment-chip-head {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 
   .installment-number {
     font-weight: 600;
-    color: #1a1a1a;
-  }
-
-  .installment-amount {
-    font-size: 14px;
-    color: #666;
-  }
-
-  .installment-due {
-    font-size: 12px;
-    color: #666;
+    color: #0f172a;
   }
 }
 
-.installment-actions {
+.installment-chip-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.installment-chip-action {
   display: flex;
 
   .action-btn {
     width: 100%;
     justify-content: center;
+    min-height: 34px;
   }
 
   .paid-date {
     font-size: 12px;
     color: #16a34a;
-    font-weight: 500;
+    font-weight: 600;
   }
 }
 
 .plan-actions {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  padding-top: 16px;
-  border-top: 1px solid #f3f4f6;
+  min-width: 120px;
+
+  .action-btn {
+    width: 100%;
+  }
 }
 
 .action-btn {
@@ -369,6 +314,11 @@
         background: #b91c1c;
       }
     }
+
+    &.compact {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
   }
 
   &.danger {
@@ -399,17 +349,6 @@
     align-items: stretch;
   }
 
-  .plans-grid {
-    grid-template-columns: 1fr;
-    padding: 16px;
-  }
-
-  .plan-info-grid,
-  .installments-list,
-  .plan-actions {
-    grid-template-columns: 1fr;
-  }
-
   .toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -419,13 +358,12 @@
     }
   }
 
-  .installment-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+  .plan-actions {
+    min-width: 140px;
   }
 
-  .plan-actions {
+  .installments-cell {
     grid-template-columns: 1fr;
+    min-width: 260px;
   }
 }
