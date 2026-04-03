@@ -1,0 +1,364 @@
+.admin-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  gap: 24px;
+
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+  }
+
+  p {
+    color: #666;
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.add-btn {
+  padding: 12px 20px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #1d4ed8;
+  }
+
+  i {
+    font-size: 12px;
+  }
+}
+
+.table-card {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+
+  &.error-card {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 16px;
+    text-align: center;
+  }
+}
+
+.toolbar {
+  padding: 20px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  input, select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    min-width: 200px;
+
+    &:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+  }
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+  padding: 24px;
+}
+
+.plan-card {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 20px;
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.plan-student {
+  h4 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .student-number {
+    font-size: 12px;
+    color: #666;
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 8px;
+  }
+
+  .student-grade {
+    font-size: 12px;
+    color: #666;
+  }
+}
+
+.plan-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.status-active {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  &.status-completed {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  &.status-cancelled {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+}
+
+.plan-details {
+  margin-bottom: 16px;
+}
+
+.plan-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  .plan-term {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .plan-amount {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+}
+
+.plan-progress {
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #f3f4f6;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+
+    .progress-fill {
+      height: 100%;
+      background: #16a34a;
+      transition: width 0.3s ease;
+    }
+  }
+
+  .progress-text {
+    font-size: 12px;
+    color: #666;
+  }
+}
+
+.installments-list {
+  margin-bottom: 16px;
+}
+
+.installment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  margin-bottom: 8px;
+
+  &.status-paid {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  &.status-overdue {
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.installment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .installment-number {
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .installment-amount {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .installment-due {
+    font-size: 12px;
+    color: #666;
+  }
+}
+
+.installment-actions {
+  .paid-date {
+    font-size: 12px;
+    color: #16a34a;
+    font-weight: 500;
+  }
+}
+
+.plan-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.view {
+    background: #f8fafc;
+    color: #475569;
+
+    &:hover {
+      background: #e2e8f0;
+    }
+  }
+
+  &.pay {
+    background: #16a34a;
+    color: white;
+    border-color: #16a34a;
+
+    &:hover {
+      background: #15803d;
+    }
+
+    &.urgent {
+      background: #dc2626;
+      border-color: #dc2626;
+
+      &:hover {
+        background: #b91c1c;
+      }
+    }
+  }
+
+  &.danger {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fecaca;
+
+    &:hover {
+      background: #fecaca;
+    }
+  }
+}
+
+.empty-state {
+  padding: 48px 24px;
+  text-align: center;
+  color: #666;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .admin-page {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .plans-grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+
+    input, select {
+      min-width: auto;
+    }
+  }
+
+  .installment-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .plan-actions {
+    flex-direction: column;
+  }
+}

@@ -126,6 +126,27 @@ export class FeePaymentForm implements OnInit {
     return Math.max(0, Number((this.outstandingBalance - amount).toFixed(2)));
   }
 
+  get duplicatePaymentWarning(): string | null {
+    if (!this.payment.studentId || !this.payment.feeStructureId || !this.payment.amount || !this.payment.paymentDate) {
+      return null;
+    }
+
+    const amount = Number(this.payment.amount);
+    const duplicates = this.payments
+      .filter(payment => payment.studentId === this.payment.studentId)
+      .filter(payment => payment.feeStructureId === this.payment.feeStructureId)
+      .filter(payment => payment.id !== this.payment.id)
+      .filter(payment => !payment.reversed)
+      .filter(payment => payment.paymentDate === this.payment.paymentDate)
+      .filter(payment => Math.abs(Number(payment.amount ?? 0) - amount) < 0.01);
+
+    if (duplicates.length > 0) {
+      return `Warning: A similar payment (${this.formatCurrency(amount)}) already exists for this student on ${this.payment.paymentDate}.`;
+    }
+
+    return null;
+  }
+
   get selectedFeeHelperText(): string {
     if (!this.selectedStudent) {
       return 'Select a student first to see the matching fee records.';
@@ -136,6 +157,14 @@ export class FeePaymentForm implements OnInit {
     }
 
     return 'Select the matching term fee record for this student.';
+  }
+
+  get minimumPaymentAmount(): number {
+    return 10; // Minimum M10.00 payment
+  }
+
+  get maximumSinglePayment(): number {
+    return 10000; // Maximum M10,000.00 single payment
   }
 
   onStudentChange(): void {
@@ -178,6 +207,16 @@ export class FeePaymentForm implements OnInit {
       return;
     }
 
+    if (amount < this.minimumPaymentAmount) {
+      this.errorMessage = `Amount must be at least ${this.formatCurrency(this.minimumPaymentAmount)}.`;
+      return;
+    }
+
+    if (amount > this.maximumSinglePayment) {
+      this.errorMessage = `Amount cannot exceed ${this.formatCurrency(this.maximumSinglePayment)} for a single payment.`;
+      return;
+    }
+
     if (amount - this.outstandingBalance > 0.009) {
       this.errorMessage = 'Amount cannot be greater than the outstanding balance.';
       return;
@@ -190,6 +229,13 @@ export class FeePaymentForm implements OnInit {
 
     if (this.payment.paymentDate > this.today()) {
       this.errorMessage = 'Payment date cannot be in the future.';
+      return;
+    }
+
+    // Check for potential duplicates
+    const duplicateWarning = this.duplicatePaymentWarning;
+    if (duplicateWarning && !this.isEditMode) {
+      this.errorMessage = duplicateWarning + ' Please verify this is not a duplicate payment.';
       return;
     }
 

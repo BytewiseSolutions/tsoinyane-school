@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -146,6 +147,137 @@ public class FeePaymentService {
                 .toList();
 
         return OutstandingSummaryDto.builder().learners(learners).gradeSummary(gradeSummary).build();
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentSummaryDto getPaymentSummary(Long schoolId) {
+        if (schoolId == null) {
+            return new PaymentSummaryDto(0.0, 0.0, 0.0, 0, 0);
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate firstDayOfMonth = today.withDayOfMonth(1);
+
+        // Today's collections
+        Double todayCollected = feePaymentRepository.sumCollectedBySchoolAndDateRange(schoolId, today, today);
+        Integer todayCount = feePaymentRepository.countPaymentsBySchoolAndDateRange(schoolId, today, today);
+
+        // This month's collections
+        Double monthCollected = feePaymentRepository.sumCollectedBySchoolAndDateRange(schoolId, firstDayOfMonth, today);
+        Integer monthCount = feePaymentRepository.countPaymentsBySchoolAndDateRange(schoolId, firstDayOfMonth, today);
+
+        // Total outstanding
+        OutstandingSummaryDto outstanding = getOutstandingSummary(schoolId);
+        Double totalOutstanding = outstanding.getLearners().stream()
+                .mapToDouble(OutstandingLearnerDto::getBalance)
+                .sum();
+
+        return new PaymentSummaryDto(
+                coalesceAmount(todayCollected),
+                coalesceAmount(monthCollected),
+                roundAmount(totalOutstanding),
+                todayCount != null ? todayCount : 0,
+                monthCount != null ? monthCount : 0
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<CollectionReportDto> getCollectionReports(Long schoolId, LocalDate fromDate, LocalDate toDate, Long gradeId) {
+        if (schoolId == null || fromDate == null || toDate == null) {
+            return List.of();
+        }
+
+        List<FeePayment> payments = feePaymentRepository.findAllWithAssociations(schoolId).stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getReversed()))
+                .filter(p -> p.getPaymentDate() != null)
+                .filter(p -> !p.getPaymentDate().isBefore(fromDate) && !p.getPaymentDate().isAfter(toDate))
+                .filter(p -> gradeId == null || (p.getStudent().getGrade() != null && gradeId.equals(p.getStudent().getGrade().getId())))
+                .toList();
+
+        Map<LocalDate, List<FeePayment>> paymentsByDate = payments.stream()
+                .collect(Collectors.groupingBy(FeePayment::getPaymentDate));
+
+        return paymentsByDate.entrySet().stream()
+                .map(entry -> {
+                    LocalDate date = entry.getKey();
+                    List<FeePayment> dayPayments = entry.getValue();
+
+                    double totalCollected = dayPayments.stream().mapToDouble(p -> coalesceAmount(p.getAmount())).sum();
+                    int paymentCount = dayPayments.size();
+
+                    double cashAmount = dayPayments.stream()
+                            .filter(p -> PaymentMethod.CASH.equals(p.getPaymentMethod()))
+                            .mapToDouble(p -> coalesceAmount(p.getAmount()))
+                            .sum();
+
+                    double bankAmount = dayPayments.stream()
+                            .filter(p -> PaymentMethod.BANK.equals(p.getPaymentMethod()))
+                            .mapToDouble(p -> coalesceAmount(p.getAmount()))
+                            .sum();
+
+                    double mobileAmount = dayPayments.stream()
+                            .filter(p -> PaymentMethod.MPESA.equals(p.getPaymentMethod()) || PaymentMethod.ECO_CASH.equals(p.getPaymentMethod()))
+                            .mapToDouble(p -> coalesceAmount(p.getAmount()))
+                            .sum();
+
+                    return new CollectionReportDto(
+                            date,
+                            roundAmount(totalCollected),
+                            paymentCount,
+                            roundAmount(cashAmount),
+                            roundAmount(bankAmount),
+                            roundAmount(mobileAmount)
+                    );
+                })
+                .sorted(Comparator.comparing(CollectionReportDto::getDate).reversed())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<OutstandingReportDto> getOutstandingReports(Long schoolId, Long gradeId) {
+        if (schoolId == null) {
+            return List.of();
+        }
+
+        OutstandingSummaryDto outstanding = getOutstandingSummary(schoolId);
+        List<OutstandingLearnerDto> learners = outstanding.getLearners().stream()
+                .filter(l -> gradeId == null || gradeId.equals(l.getGradeId()))
+                .toList();
+
+        Map<String, List<OutstandingLearnerDto>> learnersByGrade = learners.stream()
+                .collect(Collectors.groupingBy(OutstandingLearnerDto::getGradeName));
+
+        // Get total students per grade
+        List<Student> allStudents = studentRepository.findAllBySchoolId(schoolId).stream()
+                .filter(s -> gradeId == null || (s.getGrade() != null && gradeId.equals(s.getGrade().getId())))
+                .toList();
+
+        Map<String, Long> totalStudentsByGrade = allStudents.stream()
+                .filter(s -> s.getGrade() != null)
+                .collect(Collectors.groupingBy(s -> s.getGrade().getName(), Collectors.counting()));
+
+        return learnersByGrade.entrySet().stream()
+                .map(entry -> {
+                    String gradeName = entry.getKey();
+                    List<OutstandingLearnerDto> gradeLearners = entry.getValue();
+
+                    Long gradeIdForReport = gradeLearners.isEmpty() ? null : gradeLearners.get(0).getGradeId();
+                    int totalStudents = totalStudentsByGrade.getOrDefault(gradeName, 0L).intValue();
+                    int studentsWithOutstanding = gradeLearners.size();
+                    double totalOutstanding = gradeLearners.stream().mapToDouble(OutstandingLearnerDto::getBalance).sum();
+                    double averageOutstanding = studentsWithOutstanding > 0 ? totalOutstanding / studentsWithOutstanding : 0.0;
+
+                    return new OutstandingReportDto(
+                            gradeIdForReport,
+                            gradeName,
+                            totalStudents,
+                            studentsWithOutstanding,
+                            roundAmount(totalOutstanding),
+                            roundAmount(averageOutstanding)
+                    );
+                })
+                .sorted(Comparator.comparing(OutstandingReportDto::getGradeName, Comparator.comparingInt(this::gradeOrder)))
+                .toList();
     }
 
     @Transactional(readOnly = true)

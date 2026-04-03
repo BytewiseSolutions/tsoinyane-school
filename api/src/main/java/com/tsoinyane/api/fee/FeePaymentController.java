@@ -2,6 +2,7 @@ package com.tsoinyane.api.fee;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +27,27 @@ public class FeePaymentController {
     @GetMapping("/outstanding")
     public OutstandingSummaryDto getOutstandingSummary(@RequestParam(value = "schoolId", required = false) Long schoolId) {
         return feePaymentService.getOutstandingSummary(schoolId);
+    }
+
+    @GetMapping("/reports/summary")
+    public PaymentSummaryDto getPaymentSummary(@RequestParam(value = "schoolId", required = false) Long schoolId) {
+        return feePaymentService.getPaymentSummary(schoolId);
+    }
+
+    @GetMapping("/reports/collections")
+    public List<CollectionReportDto> getCollectionReports(
+            @RequestParam(value = "schoolId", required = false) Long schoolId,
+            @RequestParam(value = "fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(value = "toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(value = "gradeId", required = false) Long gradeId) {
+        return feePaymentService.getCollectionReports(schoolId, fromDate, toDate, gradeId);
+    }
+
+    @GetMapping("/reports/outstanding")
+    public List<OutstandingReportDto> getOutstandingReports(
+            @RequestParam(value = "schoolId", required = false) Long schoolId,
+            @RequestParam(value = "gradeId", required = false) Long gradeId) {
+        return feePaymentService.getOutstandingReports(schoolId, gradeId);
     }
 
     @GetMapping

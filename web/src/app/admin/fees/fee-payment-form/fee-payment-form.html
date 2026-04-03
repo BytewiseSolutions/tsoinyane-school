@@ -20,6 +20,13 @@
         <div class="error-banner">{{ errorMessage }}</div>
       }
 
+      @if (duplicatePaymentWarning && !isEditMode) {
+        <div class="warning-banner">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {{ duplicatePaymentWarning }}
+        </div>
+      }
+
       <div class="form-grid">
         <label class="form-field">
           <span>Student</span>

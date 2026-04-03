@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +52,34 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
             @Param("studentId") Long studentId,
             @Param("feeStructureId") Long feeStructureId,
             @Param("paymentId") Long paymentId
+    );
+
+    @Query("""
+            select coalesce(sum(payment.amount), 0) from FeePayment payment
+            join payment.student student
+            where student.school.id = :schoolId
+              and payment.paymentDate >= :fromDate
+              and payment.paymentDate <= :toDate
+              and (payment.reversed is null or payment.reversed = false)
+            """)
+    Double sumCollectedBySchoolAndDateRange(
+            @Param("schoolId") Long schoolId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
+
+    @Query("""
+            select count(payment) from FeePayment payment
+            join payment.student student
+            where student.school.id = :schoolId
+              and payment.paymentDate >= :fromDate
+              and payment.paymentDate <= :toDate
+              and (payment.reversed is null or payment.reversed = false)
+            """)
+    Integer countPaymentsBySchoolAndDateRange(
+            @Param("schoolId") Long schoolId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
     );
 
     boolean existsByStudentId(Long studentId);

@@ -1,0 +1,167 @@
+<div class="reports-page">
+  <div class="page-header">
+    <div>
+      <h2>Fee Reports</h2>
+      <p>View payment summaries, daily collections, and outstanding balance reports.</p>
+    </div>
+  </div>
+
+  <div class="reports-tabs">
+    <button 
+      type="button" 
+      class="tab-btn" 
+      [class.active]="activeTab === 'summary'"
+      (click)="selectTab('summary')">
+      Payment Summary
+    </button>
+    <button 
+      type="button" 
+      class="tab-btn" 
+      [class.active]="activeTab === 'collections'"
+      (click)="selectTab('collections')">
+      Daily Collections
+    </button>
+    <button 
+      type="button" 
+      class="tab-btn" 
+      [class.active]="activeTab === 'outstanding'"
+      (click)="selectTab('outstanding')">
+      Outstanding by Grade
+    </button>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading reports...</div>
+  } @else if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  } @else {
+    
+    @if (activeTab === 'summary' && paymentSummary) {
+      <div class="summary-grid">
+        <div class="summary-card">
+          <h3>Today's Collections</h3>
+          <div class="summary-value">{{ formatCurrency(paymentSummary.totalCollectedToday) }}</div>
+          <div class="summary-meta">{{ paymentSummary.paymentsToday }} payments</div>
+        </div>
+        <div class="summary-card">
+          <h3>This Month's Collections</h3>
+          <div class="summary-value">{{ formatCurrency(paymentSummary.totalCollectedThisMonth) }}</div>
+          <div class="summary-meta">{{ paymentSummary.paymentsThisMonth }} payments</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total Outstanding</h3>
+          <div class="summary-value outstanding">{{ formatCurrency(paymentSummary.totalOutstanding) }}</div>
+          <div class="summary-meta">Across all grades</div>
+        </div>
+      </div>
+    }
+
+    @if (activeTab === 'collections') {
+      <div class="filters-section">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>From Date</label>
+            <input type="date" [(ngModel)]="fromDate" (change)="onFiltersChanged()">
+          </div>
+          <div class="filter-group">
+            <label>To Date</label>
+            <input type="date" [(ngModel)]="toDate" (change)="onFiltersChanged()">
+          </div>
+          <div class="filter-group">
+            <label>Grade</label>
+            <select [(ngModel)]="selectedGradeFilter" (change)="onFiltersChanged()">
+              <option [value]="null">All Grades</option>
+              @for (grade of gradeOptions; track grade.id) {
+                <option [value]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          </div>
+          <button type="button" class="export-btn" (click)="exportCollectionsCsv()">
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      @if (collectionReports.length > 0) {
+        <div class="reports-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Total Collected</th>
+                <th>Payments</th>
+                <th>Cash</th>
+                <th>Bank</th>
+                <th>Mobile</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (report of collectionReports; track report.date) {
+                <tr>
+                  <td>{{ report.date | date:'dd MMM yyyy' }}</td>
+                  <td class="amount">{{ formatCurrency(report.totalCollected) }}</td>
+                  <td>{{ report.paymentCount }}</td>
+                  <td class="amount">{{ formatCurrency(report.cashAmount) }}</td>
+                  <td class="amount">{{ formatCurrency(report.bankAmount) }}</td>
+                  <td class="amount">{{ formatCurrency(report.mobileAmount) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="state-card">No collection data found for the selected period.</div>
+      }
+    }
+
+    @if (activeTab === 'outstanding') {
+      <div class="filters-section">
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>Grade</label>
+            <select [(ngModel)]="selectedGradeFilter" (change)="onFiltersChanged()">
+              <option [value]="null">All Grades</option>
+              @for (grade of gradeOptions; track grade.id) {
+                <option [value]="grade.id">{{ grade.name }}</option>
+              }
+            </select>
+          </div>
+          <button type="button" class="export-btn" (click)="exportOutstandingCsv()">
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      @if (outstandingReports.length > 0) {
+        <div class="reports-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Grade</th>
+                <th>Total Students</th>
+                <th>With Outstanding</th>
+                <th>% Outstanding</th>
+                <th>Total Outstanding</th>
+                <th>Average Outstanding</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (report of outstandingReports; track report.gradeId) {
+                <tr>
+                  <td>{{ report.gradeName }}</td>
+                  <td>{{ report.totalStudents }}</td>
+                  <td>{{ report.studentsWithOutstanding }}</td>
+                  <td>{{ formatPercentage((report.studentsWithOutstanding / report.totalStudents) * 100) }}</td>
+                  <td class="amount outstanding">{{ formatCurrency(report.totalOutstanding) }}</td>
+                  <td class="amount">{{ formatCurrency(report.averageOutstanding) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="state-card">No outstanding balance data found.</div>
+      }
+    }
+  }
+</div>
