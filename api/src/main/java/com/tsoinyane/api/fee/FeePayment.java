@@ -2,6 +2,7 @@ package com.tsoinyane.api.fee;
 
 import com.tsoinyane.api.common.BaseEntity;
 import com.tsoinyane.api.student.Student;
+import com.tsoinyane.api.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Data
@@ -54,7 +56,7 @@ public class FeePayment extends BaseEntity {
     private String notes;
 
     @Column(nullable = false)
-    private boolean reversed = false;
+    private Boolean reversed = false;
 
     @Column(name = "reversed_at")
     private Instant reversedAt;
@@ -64,4 +66,5 @@ public class FeePayment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reversed_by_id")
-    private com.tsoinyane.api.user.User reversedBy;
+    private User reversedBy;
+}

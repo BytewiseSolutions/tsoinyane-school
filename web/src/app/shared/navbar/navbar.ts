@@ -17,6 +17,9 @@ export class Navbar implements OnInit {
   constructor(private schoolService: SchoolService) {}
 
   ngOnInit() {
+    // Load public schools for navbar display
+    this.schoolService.loadPublicSchools();
+    
     this.schoolService.schools$.subscribe(schools => {
       this.schools = schools;
     });

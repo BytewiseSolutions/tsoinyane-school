@@ -2,6 +2,8 @@ package com.tsoinyane.api.fee;
 
 import com.tsoinyane.api.grade.Grade;
 import com.tsoinyane.api.school.School;
+import com.tsoinyane.api.school.SchoolRepository;
+import com.tsoinyane.api.school.Term;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentRepository;
@@ -13,7 +15,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +32,120 @@ public class FeePaymentService {
     private final FeePaymentRepository feePaymentRepository;
     private final StudentRepository studentRepository;
     private final FeeStructureRepository feeStructureRepository;
+    private final SchoolRepository schoolRepository;
     private final CurrentUserService currentUserService;
+
+    @Transactional(readOnly = true)
+    public OutstandingSummaryDto getOutstandingSummary(Long schoolId) {
+        if (schoolId == null) {
+            return OutstandingSummaryDto.builder().learners(List.of()).gradeSummary(List.of()).build();
+        }
+
+        School school = schoolRepository.findById(schoolId).orElse(null);
+        if (school == null) {
+            return OutstandingSummaryDto.builder().learners(List.of()).gradeSummary(List.of()).build();
+        }
+
+        Term currentTerm = school.getCurrentTerm();
+        String academicYear = school.getAcademicYear();
+        if (currentTerm == null || academicYear == null) {
+            return OutstandingSummaryDto.builder().learners(List.of()).gradeSummary(List.of()).build();
+        }
+
+        List<Student> students = studentRepository.findAllBySchoolId(schoolId);
+        List<FeeStructure> structures = feeStructureRepository.findAllWithAssociations(schoolId).stream()
+                .filter(s -> academicYear.equals(s.getAcademicYear()))
+                .filter(s -> s.getTerm() != null && termOrder(s.getTerm()) <= termOrder(currentTerm))
+                .toList();
+        List<FeePayment> payments = feePaymentRepository.findAllWithAssociations(schoolId).stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getReversed()))
+                .toList();
+
+        Map<String, Double> paidByKey = new HashMap<>();
+        Map<String, Integer> countByKey = new HashMap<>();
+        payments.forEach(p -> {
+            String key = p.getStudent().getId() + "-" + p.getFeeStructure().getId();
+            paidByKey.merge(key, p.getAmount(), Double::sum);
+            countByKey.merge(key, 1, Integer::sum);
+        });
+
+        Map<String, FeeStructure> structuresByGradeAndTerm = new LinkedHashMap<>();
+        structures.forEach(s -> structuresByGradeAndTerm.put(s.getGrade().getId() + "-" + s.getTerm().name(), s));
+
+        record OutstandingRecord(Long studentId, String studentName, String studentNumber,
+                                 Long gradeId, String gradeName, String term,
+                                 double totalFee, double totalPaid, double balance, int paymentCount) {}
+
+        List<OutstandingRecord> records = new ArrayList<>();
+
+        for (Student student : students) {
+            if (student.getGrade() == null) continue;
+            for (FeeStructure structure : structures) {
+                if (!structure.getGrade().getId().equals(student.getGrade().getId())) continue;
+                double totalFee = resolveTotalFee(structure);
+                if (totalFee <= 0) continue;
+                String key = student.getId() + "-" + structure.getId();
+                double totalPaid = roundAmount(paidByKey.getOrDefault(key, 0.0));
+                double balance = roundAmount(totalFee - totalPaid);
+                if (balance <= 0.009) continue;
+                int paymentCount = countByKey.getOrDefault(key, 0);
+                records.add(new OutstandingRecord(
+                        student.getId(), resolveStudentName(student), student.getStudentNumber(),
+                        student.getGrade().getId(), student.getGrade().getName(),
+                        structure.getTerm().name(), totalFee, totalPaid, balance, paymentCount
+                ));
+            }
+        }
+
+        Map<Long, OutstandingLearnerDto> learnerMap = new LinkedHashMap<>();
+        Map<Long, Set<String>> termsByStudent = new HashMap<>();
+
+        records.forEach(r -> {
+            OutstandingLearnerDto dto = learnerMap.computeIfAbsent(r.studentId(), id ->
+                    OutstandingLearnerDto.builder()
+                            .studentId(r.studentId()).studentName(r.studentName())
+                            .studentNumber(r.studentNumber()).gradeId(r.gradeId())
+                            .gradeName(r.gradeName()).totalFee(0.0).totalPaid(0.0)
+                            .balance(0.0).paymentCount(0).build());
+            dto.setTotalFee(roundAmount(dto.getTotalFee() + r.totalFee()));
+            dto.setTotalPaid(roundAmount(dto.getTotalPaid() + r.totalPaid()));
+            dto.setBalance(roundAmount(dto.getBalance() + r.balance()));
+            dto.setPaymentCount(dto.getPaymentCount() + r.paymentCount());
+            termsByStudent.computeIfAbsent(r.studentId(), id -> new HashSet<>()).add(r.term());
+        });
+
+        learnerMap.values().forEach(dto ->
+                dto.setTerms(termsByStudent.getOrDefault(dto.getStudentId(), Set.of())
+                        .stream().sorted().collect(Collectors.joining(", "))));
+
+        List<OutstandingLearnerDto> learners = learnerMap.values().stream()
+                .sorted(Comparator.comparingDouble(OutstandingLearnerDto::getBalance).reversed())
+                .toList();
+
+        Map<String, GradeOutstandingSummaryDto> gradeMap = new LinkedHashMap<>();
+        Map<String, Set<Long>> learnersByGrade = new HashMap<>();
+
+        records.forEach(r -> {
+            GradeOutstandingSummaryDto dto = gradeMap.computeIfAbsent(r.gradeName(), name ->
+                    GradeOutstandingSummaryDto.builder()
+                            .gradeName(name).learnerCount(0)
+                            .totalFee(0.0).totalPaid(0.0).balance(0.0).build());
+            dto.setTotalFee(roundAmount(dto.getTotalFee() + r.totalFee()));
+            dto.setTotalPaid(roundAmount(dto.getTotalPaid() + r.totalPaid()));
+            dto.setBalance(roundAmount(dto.getBalance() + r.balance()));
+            learnersByGrade.computeIfAbsent(r.gradeName(), name -> new HashSet<>()).add(r.studentId());
+        });
+
+        gradeMap.values().forEach(dto ->
+                dto.setLearnerCount(learnersByGrade.getOrDefault(dto.getGradeName(), Set.of()).size()));
+
+        List<GradeOutstandingSummaryDto> gradeSummary = gradeMap.values().stream()
+                .sorted(Comparator.comparing(GradeOutstandingSummaryDto::getGradeName,
+                        Comparator.comparingInt(this::gradeOrder)))
+                .toList();
+
+        return OutstandingSummaryDto.builder().learners(learners).gradeSummary(gradeSummary).build();
+    }
 
     @Transactional(readOnly = true)
     public List<FeePaymentDto> getFeePayments(Long schoolId) {
@@ -95,7 +218,7 @@ public class FeePaymentService {
         FeePayment existing = feePaymentRepository.findWithAssociationsById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fee payment not found"));
 
-        if (existing.isReversed()) {
+        if (Boolean.TRUE.equals(existing.getReversed())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This payment has already been reversed");
         }
 
@@ -203,7 +326,7 @@ public class FeePaymentService {
                 .totalFee(totalFee)
                 .totalPaid(totalPaid)
                 .balance(roundAmount(totalFee - totalPaid))
-                .reversed(feePayment.isReversed())
+                .reversed(Boolean.TRUE.equals(feePayment.getReversed()))
                 .reversedAt(feePayment.getReversedAt())
                 .reversalReason(feePayment.getReversalReason())
                 .build();
@@ -255,5 +378,20 @@ public class FeePaymentService {
 
     private double roundAmount(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    private int termOrder(Term term) {
+        return switch (term) {
+            case TERM_1 -> 1;
+            case TERM_2 -> 2;
+            case TERM_3 -> 3;
+            case TERM_4 -> 4;
+        };
+    }
+
+    private int gradeOrder(String gradeName) {
+        if (gradeName == null) return Integer.MAX_VALUE;
+        String digits = gradeName.replaceAll("[^0-9]", "");
+        return digits.isEmpty() ? Integer.MAX_VALUE : Integer.parseInt(digits);
     }
 }

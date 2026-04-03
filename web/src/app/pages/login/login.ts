@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BackendService } from '../../util/backend.service';
+import { SchoolService } from '../../shared/school';
 import { LoginRequest } from './login-request';
 import { LoginResponse } from './login-response';
 import { clearStoredAuth } from '../../auth/auth-session';
@@ -21,7 +22,8 @@ export class Login {
 
   constructor(
     private router: Router,
-    private backendService: BackendService
+    private backendService: BackendService,
+    private schoolService: SchoolService
   ) {}
 
   onLogin() {
@@ -47,6 +49,10 @@ export class Login {
         storage.setItem('tokenType', response.tokenType);
         storage.setItem('expiresAt', String(response.expiresAt));
         storage.setItem('user', JSON.stringify(response.user));
+        
+        // Load schools after successful authentication
+        this.schoolService.loadSchools();
+        
         this.router.navigate([this.resolveRedirect(response)]);
       },
       error: (error: HttpErrorResponse) => {

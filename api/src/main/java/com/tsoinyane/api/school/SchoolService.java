@@ -28,6 +28,10 @@ public class SchoolService {
         return schoolRepository.findAll().stream().map(this::toDto).toList();
     }
 
+    public List<SchoolDto> getPublicSchools() {
+        return schoolRepository.findAll().stream().map(this::toPublicDto).toList();
+    }
+
     @Transactional
     public SchoolDto updateSchool(Long id, SchoolRequest request) {
         School school = schoolRepository.findById(id)
@@ -102,6 +106,17 @@ public class SchoolService {
                 .attendanceThreshold(school.getAttendanceThreshold())
                 .language(school.getLanguage())
                 .type(school.getType())
+                .build();
+    }
+
+    private SchoolDto toPublicDto(School school) {
+        // Return only basic public information
+        return SchoolDto.builder()
+                .id(school.getId())
+                .name(school.getName())
+                .email(school.getEmail())
+                .phone(school.getPhone())
+                .location(school.getLocation())
                 .build();
     }
 

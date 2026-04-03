@@ -25,9 +25,9 @@ export class FeePaymentForm implements OnInit {
 
   readonly paymentMethodOptions = [
     { value: PaymentMethod.CASH, label: 'Cash' },
-    { value: PaymentMethod.BANK_TRANSFER, label: 'Bank Transfer' },
-    { value: PaymentMethod.MOBILE_MONEY, label: 'Mobile Money' },
-    { value: PaymentMethod.CHEQUE, label: 'Cheque' },
+    { value: PaymentMethod.BANK, label: 'Bank' },
+    { value: PaymentMethod.MPESA, label: 'Mpesa' },
+    { value: PaymentMethod.ECO_CASH, label: 'Eco Cash' },
   ];
 
   errorMessage = '';

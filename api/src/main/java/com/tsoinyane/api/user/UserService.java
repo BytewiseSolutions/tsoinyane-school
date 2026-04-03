@@ -3,6 +3,7 @@ package com.tsoinyane.api.user;
 import com.tsoinyane.api.common.Role;
 import com.tsoinyane.api.common.Status;
 import com.tsoinyane.api.common.Title;
+import com.tsoinyane.api.fee.FeePaymentRepository;
 import com.tsoinyane.api.grade.Grade;
 import com.tsoinyane.api.grade.GradeRepository;
 import com.tsoinyane.api.lesson.LessonRepository;
@@ -44,6 +45,7 @@ public class UserService {
     private final StudentLessonRepository studentLessonRepository;
     private final SubjectRepository subjectRepository;
     private final TimetableRepository timetableRepository;
+    private final FeePaymentRepository feePaymentRepository;
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserService currentUserService;
 
@@ -262,6 +264,12 @@ public class UserService {
         }
         
         studentRepository.findByUser_Id(id).ifPresent(student -> {
+            if (feePaymentRepository.existsByStudentId(student.getId())) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Cannot delete this student because they have existing fee payment records"
+                );
+            }
             studentLessonRepository.deleteAllByStudentId(student.getId());
             timetableRepository.deleteStudentAssignments(student.getId());
             subjectRepository.deleteStudentAssignments(student.getId());

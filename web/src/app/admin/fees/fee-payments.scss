@@ -230,6 +230,64 @@
   font-weight: 700;
 }
 
+.grade-summary {
+  margin-bottom: 16px;
+  border: 1px solid #dbe5f5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.grade-summary-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5f6e8f;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 14px;
+  background: #f4f7fc;
+  border-bottom: 1px solid #dbe5f5;
+}
+
+.grade-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grade-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-right: 1px solid #edf2fa;
+  border-bottom: 1px solid #edf2fa;
+  background: #fff;
+  font-size: 13px;
+}
+
+.grade-summary-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy-blue);
+  min-width: 56px;
+}
+
+.grade-summary-fee {
+  color: #5f6e8f;
+
+  strong {
+    color: #1f2f52;
+  }
+}
+
+.grade-summary-balance {
+  color: #5f6e8f;
+  margin-left: auto;
+
+  strong {
+    color: #b32f2f;
+  }
+}
+
 .status-pill.partial {
   background: #fff4e0;
   color: #a05c00;

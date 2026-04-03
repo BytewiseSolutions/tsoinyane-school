@@ -22,6 +22,11 @@ public class FeePaymentController {
 
     private final FeePaymentService feePaymentService;
 
+    @GetMapping("/outstanding")
+    public OutstandingSummaryDto getOutstandingSummary(@RequestParam(value = "schoolId", required = false) Long schoolId) {
+        return feePaymentService.getOutstandingSummary(schoolId);
+    }
+
     @GetMapping
     public List<FeePaymentDto> getFeePayments(@RequestParam(value = "schoolId", required = false) Long schoolId) {
         return feePaymentService.getFeePayments(schoolId);

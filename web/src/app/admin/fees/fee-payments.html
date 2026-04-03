@@ -99,6 +99,20 @@
         </tbody>
       </table>
     } @else if (activeView === 'outstanding' && outstandingLearners.length > 0) {
+      @if (gradeOutstandingSummary.length > 0) {
+        <div class="grade-summary">
+          <div class="grade-summary-heading">Outstanding by Grade</div>
+          <div class="grade-summary-grid">
+            @for (row of gradeOutstandingSummary; track row.gradeName) {
+              <div class="grade-summary-card">
+                <span class="grade-summary-name">{{ row.gradeName }}</span>
+                <span class="grade-summary-fee">Fee: <strong>{{ formatCurrency(row.totalFee) }}</strong></span>
+                <span class="grade-summary-balance">Balance: <strong>{{ formatCurrency(row.balance) }}</strong></span>
+              </div>
+            }
+          </div>
+        </div>
+      }
       <table>
         <thead>
           <tr>
