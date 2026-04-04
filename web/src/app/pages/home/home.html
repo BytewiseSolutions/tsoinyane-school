@@ -1,35 +1,144 @@
-<section class="hero">
-  <div class="hero-content">
-    <h1>Welcome to {{ schoolName }}</h1>
-    <p>Empowering the next generation through quality education in Pitseng, Leribe.</p>
-    <a href="/about" class="hero-btn">Learn More</a>
-  </div>
-</section>
+<section class="home-shell">
+  <section class="hero">
+    <div class="hero-backdrop"></div>
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">{{ eyebrow }}</span>
+        <h1>{{ heroTitle }}</h1>
+        <p class="hero-description">{{ heroDescription }}</p>
 
-<section class="stats">
-  @for (stat of stats; track stat.label) {
-    <div class="stat-card">
-      <i class="fa-solid {{ stat.icon }}"></i>
-      <h3>{{ stat.value }}</h3>
-      <p>{{ stat.label }}</p>
+        <div class="hero-actions">
+          <a routerLink="/about" class="primary-btn">Explore Our Story</a>
+          <a routerLink="/subjects" class="secondary-btn">View Subjects</a>
+        </div>
+
+        <div class="hero-points">
+          <div class="hero-point">
+            <i class="fa-solid fa-location-dot"></i>
+            <span>{{ selectedSchool?.location || 'Pitseng, Leribe' }}</span>
+          </div>
+          <div class="hero-point">
+            <i class="fa-solid fa-phone"></i>
+            <span>{{ selectedSchool?.phone || 'School contact available above' }}</span>
+          </div>
+          <div class="hero-point">
+            <i class="fa-solid fa-envelope"></i>
+            <span>{{ selectedSchool?.email || 'School email available above' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-spotlight">
+        <div class="spotlight-card">
+          <span class="spotlight-label">School Spotlight</span>
+          <h3>{{ schoolName }}</h3>
+          <p>{{ spotlightTitle }}</p>
+
+          <div class="spotlight-badges">
+            <span>Discipline</span>
+            <span>Academic Focus</span>
+            <span>Community Values</span>
+          </div>
+        </div>
+      </div>
     </div>
-  }
-</section>
+  </section>
 
-<section class="highlights">
-  <div class="highlight-card">
-    <i class="fa-solid fa-book-open"></i>
-    <h3>Quality Education</h3>
-    <p>From primary to high school, we deliver a nationally recognised curriculum that prepares students for life beyond the classroom.</p>
-  </div>
-  <div class="highlight-card">
-    <i class="fa-solid fa-people-group"></i>
-    <h3>Rooted in Community</h3>
-    <p>Serving the villages of Tsoinyane and Pitseng in Leribe, we are proud to be a cornerstone of our local community.</p>
-  </div>
-  <div class="highlight-card">
-    <i class="fa-solid fa-graduation-cap"></i>
-    <h3>Combined School</h3>
-    <p>Primary and High School share the same yard, creating a seamless and supportive learning journey from start to finish.</p>
-  </div>
+  <section class="stats-band">
+    @for (stat of stats; track stat.label) {
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid {{ stat.icon }}"></i></div>
+        <div class="stat-copy">
+          <h3>{{ stat.value }}</h3>
+          <p>{{ stat.label }}</p>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="story-section">
+    <div class="section-heading">
+      <span>Why Families Choose Us</span>
+      <h2>Education shaped by purpose, consistency, and local pride</h2>
+      <p>
+        Tsoinyane schools serve learners with a balance of structure and care, helping students grow academically while staying rooted in their community.
+      </p>
+    </div>
+
+    <div class="feature-grid">
+      @for (feature of features; track feature.title) {
+        <article class="feature-card">
+          <div class="feature-icon"><i class="fa-solid {{ feature.icon }}"></i></div>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="journey-section">
+    <div class="journey-copy">
+      <span>Learning Journey</span>
+      <h2>One clear path from foundation to achievement</h2>
+      <p>
+        Whether a learner joins in the early years or the senior grades, the school experience is designed to move steadily from support to confidence to readiness.
+      </p>
+    </div>
+
+    <div class="journey-steps">
+      @for (step of journeySteps; track step.title; let index = $index) {
+        <div class="journey-step">
+          <div class="step-number">0{{ index + 1 }}</div>
+          <div class="step-content">
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.description }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="subjects-section">
+    <div class="section-heading">
+      <span>Subjects From Our Database</span>
+      <h2>Explore what learners can study at {{ schoolName }}</h2>
+      <p>
+        These subjects are now loaded directly from the system, so the landing page reflects the real academic setup for the selected school.
+      </p>
+    </div>
+
+    @if (isLoadingSubjects) {
+      <div class="subjects-state">Loading subjects...</div>
+    } @else if (subjectError) {
+      <div class="subjects-state error">{{ subjectError }}</div>
+    } @else if (featuredSubjects.length > 0) {
+      <div class="subjects-grid">
+        @for (subject of featuredSubjects; track subject.id ?? subject.code) {
+          <article class="subject-card">
+            <div class="subject-card-top">
+              <span class="subject-code">{{ subject.code }}</span>
+              <span class="subject-badge">{{ subject.assignmentCount ?? 0 }} grade{{ (subject.assignmentCount ?? 0) === 1 ? '' : 's' }}</span>
+            </div>
+            <h3>{{ subject.name }}</h3>
+            <p>{{ subject.schoolName || schoolName }}</p>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="subjects-state">No subjects are available for the selected school yet.</div>
+    }
+  </section>
+
+  <section class="cta-section">
+    <div class="cta-card">
+      <div>
+        <span>Ready to Learn More?</span>
+        <h2>See the subjects, meet the school, and take the next step with confidence.</h2>
+      </div>
+      <div class="cta-actions">
+        <a routerLink="/subjects" class="primary-btn">Browse Subjects</a>
+        <a routerLink="/contact" class="secondary-btn light">Contact the School</a>
+      </div>
+    </div>
+  </section>
 </section>
