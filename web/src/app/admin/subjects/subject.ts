@@ -2,6 +2,8 @@ import { Status } from '../users/status';
 
 export interface SchoolSubject {
   id?: number;
+  subjectId?: number | null;
+  assignmentId?: number | null;
   code: string;
   name: string;
   schoolId: number | null;
@@ -11,5 +13,6 @@ export interface SchoolSubject {
   teacherId: number | null;
   teacherName?: string | null;
   studentCount?: number | null;
+  assignmentCount?: number | null;
   status: Status | null;
 }

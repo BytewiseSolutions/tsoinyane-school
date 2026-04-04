@@ -4,7 +4,8 @@ import com.tsoinyane.api.attendance.AttendanceStatus;
 import com.tsoinyane.api.homework.HomeworkStatus;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.subject.Subject;
-import com.tsoinyane.api.subject.SubjectRepository;
+import com.tsoinyane.api.subjectassignment.SubjectAssignment;
+import com.tsoinyane.api.subjectassignment.SubjectAssignmentRepository;
 import com.tsoinyane.api.teacher.Teacher;
 import com.tsoinyane.api.teacher.TeacherRepository;
 import com.tsoinyane.api.timetable.Timetable;
@@ -28,7 +29,7 @@ public class LessonService {
 
     private final LessonRepository lessonRepository;
     private final StudentLessonRepository studentLessonRepository;
-    private final SubjectRepository subjectRepository;
+    private final SubjectAssignmentRepository subjectAssignmentRepository;
     private final TeacherRepository teacherRepository;
     private final TimetableRepository timetableRepository;
     private final CurrentUserService currentUserService;
@@ -52,9 +53,9 @@ public class LessonService {
 
     @Transactional
     public LessonDto createLesson(LessonDto request) {
-        Subject subject = resolveSubject(request.getSubjectId());
-        Teacher teacher = resolveTeacher(request.getTeacherId());
         Timetable timetable = resolveTimetable(request.getTimetableId());
+        SubjectAssignment assignment = resolveSubjectAssignment(request.getSubjectAssignmentId(), request.getSubjectId(), timetable);
+        Teacher teacher = resolveTeacher(request.getTeacherId(), assignment, timetable);
         validateTimes(request.getStartTime(), request.getEndTime());
         User actor = currentUserService.getCurrentUser();
 
@@ -65,7 +66,7 @@ public class LessonService {
                 .endTime(request.getEndTime())
                 .status(request.getStatus() != null ? request.getStatus() : LessonStatus.PENDING)
                 .submitted(request.getSubmitted() != null ? request.getSubmitted() : Boolean.FALSE)
-                .subject(subject)
+                .subjectAssignment(assignment)
                 .teacher(teacher)
                 .timetable(timetable)
                 .createdBy(actor)
@@ -80,9 +81,9 @@ public class LessonService {
         Lesson lesson = lessonRepository.findWithAssociationsById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found: " + id));
 
-        Subject subject = resolveSubject(request.getSubjectId());
-        Teacher teacher = resolveTeacher(request.getTeacherId());
         Timetable timetable = resolveTimetable(request.getTimetableId());
+        SubjectAssignment assignment = resolveSubjectAssignment(request.getSubjectAssignmentId(), request.getSubjectId(), timetable);
+        Teacher teacher = resolveTeacher(request.getTeacherId(), assignment, timetable);
         validateTimes(request.getStartTime(), request.getEndTime());
         User actor = currentUserService.getCurrentUser();
 
@@ -92,7 +93,7 @@ public class LessonService {
         lesson.setEndTime(request.getEndTime());
         lesson.setStatus(request.getStatus());
         lesson.setSubmitted(request.getSubmitted() != null ? request.getSubmitted() : lesson.getSubmitted());
-        lesson.setSubject(subject);
+        lesson.setSubjectAssignment(assignment);
         lesson.setTeacher(teacher);
         lesson.setTimetable(timetable);
         lesson.setUpdatedBy(actor);
@@ -109,17 +110,39 @@ public class LessonService {
         lessonRepository.deleteById(id);
     }
 
-    private Subject resolveSubject(Long subjectId) {
+    private SubjectAssignment resolveSubjectAssignment(Long subjectAssignmentId, Long subjectId, Timetable timetable) {
+        if (subjectAssignmentId != null && subjectAssignmentId > 0) {
+            return subjectAssignmentRepository.findWithAssociationsById(subjectAssignmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subjectAssignmentId: " + subjectAssignmentId));
+        }
+
+        if (timetable != null && timetable.getSubjectAssignment() != null) {
+            return timetable.getSubjectAssignment();
+        }
+
         if (subjectId == null || subjectId <= 0) {
             return null;
         }
 
-        return subjectRepository.findWithAssociationsById(subjectId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subjectId: " + subjectId));
+        List<SubjectAssignment> assignments = subjectAssignmentRepository.findAllBySubjectId(subjectId);
+        if (assignments.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subjectId: " + subjectId);
+        }
+        if (assignments.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select a specific subject assignment for this lesson");
+        }
+
+        return assignments.get(0);
     }
 
-    private Teacher resolveTeacher(Long teacherId) {
+    private Teacher resolveTeacher(Long teacherId, SubjectAssignment assignment, Timetable timetable) {
         if (teacherId == null || teacherId <= 0) {
+            if (assignment != null && assignment.getTeacher() != null) {
+                return assignment.getTeacher();
+            }
+            if (timetable != null && timetable.getSubjectAssignment() != null) {
+                return timetable.getSubjectAssignment().getTeacher();
+            }
             return null;
         }
 
@@ -184,7 +207,8 @@ public class LessonService {
     }
 
     private LessonDto toDto(Lesson lesson, LessonStats stats) {
-        Subject subject = lesson.getSubject();
+        SubjectAssignment assignment = lesson.getSubjectAssignment();
+        Subject subject = assignment != null ? assignment.getSubject() : null;
         Teacher teacher = lesson.getTeacher();
         Timetable timetable = lesson.getTimetable();
 
@@ -204,6 +228,7 @@ public class LessonService {
                 .endTime(lesson.getEndTime())
                 .status(lesson.getStatus())
                 .submitted(lesson.getSubmitted())
+                .subjectAssignmentId(assignment != null ? assignment.getId() : null)
                 .subjectId(subject != null ? subject.getId() : null)
                 .subjectName(subject != null ? subject.getName() : null)
                 .teacherId(teacher != null ? teacher.getId() : null)

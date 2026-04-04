@@ -1,0 +1,416 @@
+<div class="details-page">
+  <div class="page-header">
+    <div>
+      <button class="back-link" type="button" (click)="goBack()">Back to My Lessons</button>
+      <h2>My Lesson Details</h2>
+      <p>View this lesson session and its students for {{ selectedSchoolName }}.</p>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="state-card">Loading lesson details...</div>
+  } @else if (errorMessage || !lesson) {
+    <div class="state-card error">{{ errorMessage || 'Lesson not found.' }}</div>
+  } @else {
+    <div class="lesson-hero">
+      <div>
+        <p class="hero-kicker">Lesson Session</p>
+        <h3>{{ lesson.subjectName || 'Subject' }}</h3>
+        <p class="hero-subtitle">
+          {{ gradeLabel }} • {{ formatLessonDate(lesson.date) }} • {{ formatTimeRange() }}
+        </p>
+      </div>
+      <div class="hero-chips">
+        <span class="hero-chip">{{ learnerCount }} learners</span>
+        <span class="hero-chip">{{ dayLabel }}</span>
+        <span class="hero-chip hero-chip-status" [class]="getStatusClass(lesson.status)">
+          {{ statusLabel }}
+        </span>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-item">
+        <span>Subject</span>
+        <strong>{{ lesson.subjectName || 'N/A' }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Grade</span>
+        <strong>{{ gradeLabel }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Day</span>
+        <strong>{{ dayLabel }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Date</span>
+        <strong>{{ formatLessonDate(lesson.date) }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Time</span>
+        <strong>{{ formatTimeRange() }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Status</span>
+        <strong>
+          <span class="status-badge" [class]="getStatusClass(lesson.status)">
+            {{ statusLabel }}
+          </span>
+        </strong>
+      </div>
+      <div class="summary-item">
+        <span>Learners</span>
+        <strong>{{ learnerCount }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Teacher</span>
+        <strong>{{ lesson.teacherName || teacherProfile?.userFullName || 'N/A' }}</strong>
+      </div>
+    </div>
+
+    <div class="detail-tabs" role="tablist" aria-label="Lesson detail tabs">
+      <button
+        type="button"
+        class="detail-tab"
+        [class.active]="activeTab === 'overview'"
+        (click)="setActiveTab('overview')"
+      >
+        Overview
+      </button>
+      <button
+        type="button"
+        class="detail-tab"
+        [class.active]="activeTab === 'students'"
+        (click)="setActiveTab('students')"
+      >
+        Students
+      </button>
+    </div>
+
+    @if (activeTab === 'overview') {
+      <div class="details-grid">
+        <div class="details-card">
+          <div class="section-header">
+            <div>
+              <h3>Lesson Actions</h3>
+              <p>Manage this lesson session and navigate to the related subject.</p>
+            </div>
+          </div>
+
+          @if (lessonActionMessage) {
+            <div class="info-banner success">{{ lessonActionMessage }}</div>
+          }
+
+          <div class="action-row">
+            <button type="button" class="action-btn primary" [disabled]="isSavingLesson" (click)="openRelatedSubject()">
+              Open Subject
+            </button>
+            @if (canSubmitLesson) {
+              <button type="button" class="action-btn success" [disabled]="isSavingLesson" (click)="submitLesson()">
+                {{ isSavingLesson ? 'Saving...' : 'Submit Lesson' }}
+              </button>
+            }
+            @if (canCancelLesson) {
+              <button type="button" class="action-btn danger" [disabled]="isSavingLesson" (click)="toggleCancelEditor()">
+                Cancel Lesson
+              </button>
+            }
+            @if (canReopenLesson) {
+              <button type="button" class="action-btn" [disabled]="isSavingLesson" (click)="reopenLesson()">
+                Reopen Lesson
+              </button>
+            }
+          </div>
+
+          @if (showCancelEditor) {
+            <div class="cancel-editor">
+              <label for="cancellationReason">Cancellation Reason</label>
+              <textarea
+                id="cancellationReason"
+                [(ngModel)]="cancellationReasonDraft"
+                name="cancellationReasonDraft"
+                rows="3"
+                placeholder="Explain why this lesson is being cancelled..."
+              ></textarea>
+              <div class="action-row">
+                <button type="button" class="action-btn danger" [disabled]="isSavingLesson" (click)="cancelLesson()">
+                  {{ isSavingLesson ? 'Saving...' : 'Confirm Cancel' }}
+                </button>
+                <button type="button" class="action-btn" [disabled]="isSavingLesson" (click)="toggleCancelEditor()">
+                  Close
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="details-card">
+          <div class="section-header">
+            <div>
+              <h3>Attendance Summary</h3>
+              <p>Current attendance totals for this lesson.</p>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span>Present</span>
+              <strong>{{ presentCount }}</strong>
+            </div>
+            <div class="metric-card">
+              <span>Late</span>
+              <strong>{{ lateCount }}</strong>
+            </div>
+            <div class="metric-card">
+              <span>Absent</span>
+              <strong>{{ absentCount }}</strong>
+            </div>
+            <div class="metric-card">
+              <span>Pending</span>
+              <strong>{{ attendancePendingCount }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="details-card">
+          <div class="section-header">
+            <div>
+              <h3>Homework Summary</h3>
+              <p>Current homework totals for this lesson.</p>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span>Done</span>
+              <strong>{{ homeworkDoneCount }}</strong>
+            </div>
+            <div class="metric-card">
+              <span>Not Done</span>
+              <strong>{{ homeworkNotDoneCount }}</strong>
+            </div>
+            <div class="metric-card">
+              <span>None</span>
+              <strong>{{ homeworkNoneCount }}</strong>
+            </div>
+            <div class="metric-card">
+              <span>Pending</span>
+              <strong>{{ homeworkPendingCount }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="details-card">
+          <div class="section-header">
+            <div>
+              <h3>Lesson Notes</h3>
+              <p>General lesson notes are not enabled yet. Cancellation notes appear here when used.</p>
+            </div>
+          </div>
+          <div class="note-block">
+            {{ lesson.cancellationReason || 'No lesson note has been recorded for this session yet.' }}
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="details-card">
+        <div class="section-header">
+          <div>
+            <h3>Students</h3>
+            <p>Update attendance, homework, comments, and absence reasons for this lesson.</p>
+          </div>
+          <button
+            type="button"
+            class="action-btn primary"
+            [disabled]="!canBulkSaveStudentLessons"
+            (click)="saveAllStudentLessons()"
+          >
+            {{ isBulkSavingStudentLessons ? 'Saving Changes...' : 'Save All Changes' }}
+          </button>
+        </div>
+
+        <div class="student-summary-strip">
+          <span><strong>{{ totalStudentsCount }}</strong> students</span>
+          <span><strong>{{ savedStudentUpdateCount }}</strong> saved</span>
+          <span><strong>{{ pendingStudentUpdateCount }}</strong> pending updates</span>
+          @if (missingAbsenceReasonCount > 0) {
+            <span class="warning"><strong>{{ missingAbsenceReasonCount }}</strong> need absence reasons</span>
+          }
+        </div>
+
+        <div class="student-totals-grid">
+          <div class="metric-card present">
+            <span>Present</span>
+            <strong>{{ presentCount }}</strong>
+          </div>
+          <div class="metric-card late">
+            <span>Late</span>
+            <strong>{{ lateCount }}</strong>
+          </div>
+          <div class="metric-card absent">
+            <span>Absent</span>
+            <strong>{{ absentCount }}</strong>
+          </div>
+          <div class="metric-card pending">
+            <span>Attendance Pending</span>
+            <strong>{{ attendancePendingCount }}</strong>
+          </div>
+          <div class="metric-card done">
+            <span>Homework Done</span>
+            <strong>{{ homeworkDoneCount }}</strong>
+          </div>
+          <div class="metric-card not-done">
+            <span>Homework Not Done</span>
+            <strong>{{ homeworkNotDoneCount }}</strong>
+          </div>
+          <div class="metric-card none">
+            <span>No Homework</span>
+            <strong>{{ homeworkNoneCount }}</strong>
+          </div>
+          <div class="metric-card pending">
+            <span>Homework Pending</span>
+            <strong>{{ homeworkPendingCount }}</strong>
+          </div>
+        </div>
+
+        @if (studentsActionMessage) {
+          <div class="info-banner success">{{ studentsActionMessage }}</div>
+        }
+
+        @if (studentsError) {
+          <p class="empty-state error-text">{{ studentsError }}</p>
+        }
+
+        @if (studentsLoading) {
+          <p class="empty-state">Loading lesson students...</p>
+        } @else if (hasStudentLessons) {
+          <div class="table-wrap">
+            <table class="students-table editable">
+              <thead>
+                <tr>
+                  <th class="sticky-col sticky-index">#</th>
+                  <th class="sticky-col sticky-student-number">Student Number</th>
+                  <th class="sticky-col sticky-student-name">Name</th>
+                  <th>Attendance</th>
+                  <th>Absence Reason</th>
+                  <th>Homework</th>
+                  <th>Comment</th>
+                  <th>Absence Comment</th>
+                  <th class="sticky-col sticky-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (student of sortedStudentLessons; track student.id) {
+                  <tr [class.row-dirty]="isStudentLessonDirty(student)">
+                    <td class="sticky-col sticky-index">{{ $index + 1 }}</td>
+                    <td class="sticky-col sticky-student-number identity-cell">
+                      <strong>{{ student.studentNumber ? '#' + student.studentNumber : 'N/A' }}</strong>
+                    </td>
+                    <td class="sticky-col sticky-student-name identity-cell">
+                      <strong>{{ student.studentName || 'Unknown' }}</strong>
+                    </td>
+                    <td>
+                      <div class="field-stack">
+                        <span
+                          class="value-badge"
+                          [class]="getAttendanceBadgeClass(getStudentDraft(student.id).attendanceStatus)"
+                        >
+                          {{ formatEnumLabel(getStudentDraft(student.id).attendanceStatus) }}
+                        </span>
+                        <select
+                          [(ngModel)]="getStudentDraft(student.id).attendanceStatus"
+                          (ngModelChange)="onAttendanceStatusChanged(student.id)"
+                          [name]="'attendanceStatus_' + student.id"
+                        >
+                          @for (status of attendanceStatusOptions; track status) {
+                            <option [ngValue]="status">{{ formatEnumLabel(status) }}</option>
+                          }
+                        </select>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="field-stack">
+                        <select
+                          [(ngModel)]="getStudentDraft(student.id).absenceReason"
+                          (ngModelChange)="onStudentDraftChanged()"
+                          [disabled]="getStudentDraft(student.id).attendanceStatus !== AttendanceStatus.ABSENT"
+                          [class.required-input]="isAbsenceReasonRequired(student)"
+                          [name]="'absenceReason_' + student.id"
+                        >
+                          <option [ngValue]="null">Select reason</option>
+                          @for (reason of absenceReasonOptions; track reason) {
+                            <option [ngValue]="reason">{{ formatEnumLabel(reason) }}</option>
+                          }
+                        </select>
+                        @if (getStudentValidationMessage(student)) {
+                          <span class="field-hint warning">{{ getStudentValidationMessage(student) }}</span>
+                        }
+                      </div>
+                    </td>
+                    <td>
+                      <div class="field-stack">
+                        <span
+                          class="value-badge"
+                          [class]="getHomeworkBadgeClass(getStudentDraft(student.id).homeworkStatus)"
+                        >
+                          {{ formatEnumLabel(getStudentDraft(student.id).homeworkStatus) }}
+                        </span>
+                        <select
+                          [(ngModel)]="getStudentDraft(student.id).homeworkStatus"
+                          (ngModelChange)="onStudentDraftChanged()"
+                          [name]="'homeworkStatus_' + student.id"
+                        >
+                          @for (status of homeworkStatusOptions; track status) {
+                            <option [ngValue]="status">{{ formatEnumLabel(status) }}</option>
+                          }
+                        </select>
+                      </div>
+                    </td>
+                    <td>
+                      <textarea
+                        [(ngModel)]="getStudentDraft(student.id).comment"
+                        (ngModelChange)="onStudentDraftChanged()"
+                        class="compact-textarea"
+                        [name]="'comment_' + student.id"
+                        rows="1"
+                        placeholder="Student comment"
+                      ></textarea>
+                    </td>
+                    <td>
+                      <textarea
+                        [(ngModel)]="getStudentDraft(student.id).absenceComment"
+                        (ngModelChange)="onStudentDraftChanged()"
+                        [disabled]="getStudentDraft(student.id).attendanceStatus !== AttendanceStatus.ABSENT"
+                        class="compact-textarea"
+                        [name]="'absenceComment_' + student.id"
+                        rows="1"
+                        placeholder="Absence comment"
+                      ></textarea>
+                    </td>
+                    <td class="sticky-col sticky-actions">
+                      <div class="row-actions">
+                        <span class="save-state" [class]="getStudentSaveStateClass(student)">
+                          {{ getStudentSaveStateLabel(student) }}
+                        </span>
+                        <button
+                          type="button"
+                          class="action-btn primary"
+                          [disabled]="!isStudentLessonDirty(student) || isSavingStudentLesson(student.id) || isAbsenceReasonRequired(student)"
+                          (click)="saveStudentLesson(student)"
+                        >
+                          {{ isSavingStudentLesson(student.id) ? 'Saving...' : 'Save' }}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-state">No students are linked to this lesson yet.</p>
+        }
+      </div>
+    }
+  }
+</div>

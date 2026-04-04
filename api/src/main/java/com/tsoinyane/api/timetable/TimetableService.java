@@ -8,7 +8,8 @@ import com.tsoinyane.api.school.School;
 import com.tsoinyane.api.security.CurrentUserService;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.subject.Subject;
-import com.tsoinyane.api.subject.SubjectRepository;
+import com.tsoinyane.api.subjectassignment.SubjectAssignment;
+import com.tsoinyane.api.subjectassignment.SubjectAssignmentRepository;
 import com.tsoinyane.api.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,7 +33,7 @@ public class TimetableService {
     private static final int RECURRING_LESSON_WEEKS = 12;
 
     private final TimetableRepository timetableRepository;
-    private final SubjectRepository subjectRepository;
+    private final SubjectAssignmentRepository subjectAssignmentRepository;
     private final LessonRepository lessonRepository;
     private final StudentLessonRepository studentLessonRepository;
     private final CurrentUserService currentUserService;
@@ -53,18 +54,18 @@ public class TimetableService {
 
     @Transactional
     public TimetableDto createTimetable(TimetableDto request) {
-        Subject subject = resolveSubject(request.getSubjectId());
+        SubjectAssignment assignment = resolveSubjectAssignment(request.getSubjectAssignmentId(), request.getSubjectId());
         DayOfWeek dayOfWeek = requireDayOfWeek(request);
         validateTimes(request.getStartTime(), request.getEndTime());
-        Set<Student> students = resolveStudents(subject);
-        validateNoConflicts(subject, dayOfWeek, request.getStartTime(), request.getEndTime(), null, students);
+        Set<Student> students = resolveStudents(assignment);
+        validateNoConflicts(assignment, dayOfWeek, request.getStartTime(), request.getEndTime(), null, students);
         User actor = currentUserService.getCurrentUser();
 
         Timetable timetable = Timetable.builder()
                 .dayOfWeek(dayOfWeek)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
-                .subject(subject)
+                .subjectAssignment(assignment)
                 .students(students)
                 .createdBy(actor)
                 .updatedBy(actor)
@@ -81,17 +82,17 @@ public class TimetableService {
         Timetable timetable = timetableRepository.findWithAssociationsById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Timetable not found: " + id));
 
-        Subject subject = resolveSubject(request.getSubjectId());
+        SubjectAssignment assignment = resolveSubjectAssignment(request.getSubjectAssignmentId(), request.getSubjectId());
         DayOfWeek dayOfWeek = requireDayOfWeek(request);
         validateTimes(request.getStartTime(), request.getEndTime());
-        Set<Student> students = resolveStudents(subject);
-        validateNoConflicts(subject, dayOfWeek, request.getStartTime(), request.getEndTime(), timetable.getId(), students);
+        Set<Student> students = resolveStudents(assignment);
+        validateNoConflicts(assignment, dayOfWeek, request.getStartTime(), request.getEndTime(), timetable.getId(), students);
         User actor = currentUserService.getCurrentUser();
 
         timetable.setDayOfWeek(dayOfWeek);
         timetable.setStartTime(request.getStartTime());
         timetable.setEndTime(request.getEndTime());
-        timetable.setSubject(subject);
+        timetable.setSubjectAssignment(assignment);
         timetable.setStudents(students);
         timetable.setUpdatedBy(actor);
 
@@ -143,25 +144,38 @@ public class TimetableService {
         );
     }
 
-    private Subject resolveSubject(Long subjectId) {
-        if (subjectId == null || subjectId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Subject is required");
+    private SubjectAssignment resolveSubjectAssignment(Long subjectAssignmentId, Long subjectId) {
+        if (subjectAssignmentId != null && subjectAssignmentId > 0) {
+            return subjectAssignmentRepository.findWithStudentsById(subjectAssignmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subjectAssignmentId: " + subjectAssignmentId));
         }
 
-        return subjectRepository.findWithStudentsById(subjectId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subjectId: " + subjectId));
+        if (subjectId == null || subjectId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Subject assignment is required");
+        }
+
+        List<SubjectAssignment> assignments = subjectAssignmentRepository.findAllBySubjectId(subjectId);
+        if (assignments.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subjectId: " + subjectId);
+        }
+        if (assignments.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select a specific subject assignment for this timetable");
+        }
+
+        return assignments.get(0);
     }
 
-    private Set<Student> resolveStudents(Subject subject) {
-        Set<Student> students = subject.getStudents() == null
+    private Set<Student> resolveStudents(SubjectAssignment assignment) {
+        Set<Student> students = assignment.getStudents() == null
                 ? new LinkedHashSet<>()
-                : new LinkedHashSet<>(subject.getStudents());
+                : new LinkedHashSet<>(assignment.getStudents());
 
         if (students.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Assign students to the subject before creating a timetable");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Assign students to the subject assignment before creating a timetable");
         }
 
-        School school = subject.getSchool();
+        Subject subject = assignment.getSubject();
+        School school = subject != null ? subject.getSchool() : null;
         List<Long> invalidSchoolIds = students.stream()
                 .filter(student -> student.getSchool() == null || school == null || !student.getSchool().getId().equals(school.getId()))
                 .map(Student::getId)
@@ -174,13 +188,14 @@ public class TimetableService {
     }
 
     private void validateNoConflicts(
-            Subject subject,
+            SubjectAssignment assignment,
             DayOfWeek dayOfWeek,
             LocalTime startTime,
             LocalTime endTime,
             Long excludeTimetableId,
             Set<Student> students
     ) {
+        Subject subject = assignment.getSubject();
         School school = subject.getSchool();
         if (school == null || school.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Subject school is required");
@@ -196,17 +211,18 @@ public class TimetableService {
                 continue;
             }
 
-            Subject existingSubject = existing.getSubject();
-            if (existingSubject != null && existingSubject.getId() != null && existingSubject.getId().equals(subject.getId())) {
+            SubjectAssignment existingAssignment = existing.getSubjectAssignment();
+            Subject existingSubject = existingAssignment != null ? existingAssignment.getSubject() : null;
+            if (existingAssignment != null && existingAssignment.getId() != null && existingAssignment.getId().equals(assignment.getId())) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        "This subject already has an overlapping timetable on " + dayOfWeek + " at " + formatTimeRange(existing.getStartTime(), existing.getEndTime())
+                        "This subject assignment already has an overlapping timetable on " + dayOfWeek + " at " + formatTimeRange(existing.getStartTime(), existing.getEndTime())
                 );
             }
 
-            Long teacherId = subject.getTeacher() != null ? subject.getTeacher().getId() : null;
-            Long existingTeacherId = existingSubject != null && existingSubject.getTeacher() != null
-                    ? existingSubject.getTeacher().getId()
+            Long teacherId = assignment.getTeacher() != null ? assignment.getTeacher().getId() : null;
+            Long existingTeacherId = existingAssignment != null && existingAssignment.getTeacher() != null
+                    ? existingAssignment.getTeacher().getId()
                     : null;
             if (teacherId != null && teacherId.equals(existingTeacherId)) {
                 throw new ResponseStatusException(
@@ -268,8 +284,8 @@ public class TimetableService {
                     .endTime(endTime)
                     .status(LessonStatus.PENDING)
                     .submitted(Boolean.FALSE)
-                    .subject(timetable.getSubject())
-                    .teacher(timetable.getSubject() != null ? timetable.getSubject().getTeacher() : null)
+                    .subjectAssignment(timetable.getSubjectAssignment())
+                    .teacher(timetable.getSubjectAssignment() != null ? timetable.getSubjectAssignment().getTeacher() : null)
                     .timetable(timetable)
                     .createdBy(actor)
                     .updatedBy(actor)
@@ -293,7 +309,8 @@ public class TimetableService {
     }
 
     private TimetableDto toDto(Timetable timetable) {
-        Subject subject = timetable.getSubject();
+        SubjectAssignment assignment = timetable.getSubjectAssignment();
+        Subject subject = assignment != null ? assignment.getSubject() : null;
         School school = subject != null ? subject.getSchool() : null;
 
         return TimetableDto.builder()
@@ -309,8 +326,15 @@ public class TimetableService {
                 .dayOfWeek(timetable.getDayOfWeek())
                 .startTime(timetable.getStartTime())
                 .endTime(timetable.getEndTime())
+                .subjectAssignmentId(assignment != null ? assignment.getId() : null)
                 .subjectId(subject != null ? subject.getId() : null)
                 .subjectName(subject != null ? subject.getName() : null)
+                .gradeId(assignment != null && assignment.getGrade() != null ? assignment.getGrade().getId() : null)
+                .gradeName(assignment != null && assignment.getGrade() != null ? assignment.getGrade().getName() : null)
+                .teacherId(assignment != null && assignment.getTeacher() != null ? assignment.getTeacher().getId() : null)
+                .teacherName(assignment != null && assignment.getTeacher() != null && assignment.getTeacher().getUser() != null
+                        ? assignment.getTeacher().getUser().getDisplayName()
+                        : null)
                 .studentIds(timetable.getStudents().stream().map(Student::getId).toList())
                 .studentCount(timetable.getStudents().size())
                 .lessonCount((int) lessonRepository.countByTimetable_Id(timetable.getId()))

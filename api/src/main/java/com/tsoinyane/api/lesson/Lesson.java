@@ -1,7 +1,7 @@
 package com.tsoinyane.api.lesson;
 
 import com.tsoinyane.api.common.BaseEntity;
-import com.tsoinyane.api.subject.Subject;
+import com.tsoinyane.api.subjectassignment.SubjectAssignment;
 import com.tsoinyane.api.teacher.Teacher;
 import com.tsoinyane.api.timetable.Timetable;
 import jakarta.persistence.Column;
@@ -27,8 +27,8 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @Entity
 @Table(name = "lesson")
-@EqualsAndHashCode(callSuper = true, exclude = {"subject", "teacher", "timetable"})
-@ToString(callSuper = true, exclude = {"subject", "teacher", "timetable"})
+@EqualsAndHashCode(callSuper = true, exclude = {"subjectAssignment", "teacher", "timetable"})
+@ToString(callSuper = true, exclude = {"subjectAssignment", "teacher", "timetable"})
 public class Lesson extends BaseEntity {
 
     @Column(name = "cancellation_reason")
@@ -51,8 +51,8 @@ public class Lesson extends BaseEntity {
     private Boolean submitted;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_id")
-    private Subject subject;
+    @JoinColumn(name = "subject_assignment_id")
+    private SubjectAssignment subjectAssignment;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")

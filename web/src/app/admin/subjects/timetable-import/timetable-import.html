@@ -30,13 +30,26 @@
       </div>
       <div class="context-card">
         <span class="context-label">Grade</span>
-        <strong>{{ subject.gradeName || 'N/A' }}</strong>
+        <strong>{{ activeAssignment?.gradeName || 'N/A' }}</strong>
       </div>
       <div class="context-card">
         <span class="context-label">Teacher</span>
-        <strong>{{ subject.teacherName || 'N/A' }}</strong>
+        <strong>{{ activeAssignment?.teacherName || 'N/A' }}</strong>
       </div>
     </div>
+
+    @if (subjectAssignments.length > 1) {
+      <div class="context-card">
+        <span class="context-label">Assignment</span>
+        <select [(ngModel)]="selectedAssignmentId" name="selectedAssignmentId">
+          @for (assignment of subjectAssignments; track assignment.assignmentId) {
+            <option [ngValue]="assignment.assignmentId">
+              {{ assignment.gradeName || 'No grade' }} • {{ assignment.teacherName || 'No teacher' }}
+            </option>
+          }
+        </select>
+      </div>
+    }
 
     <div class="steps-grid">
       @for (step of stepItems; track step; let index = $index) {
@@ -144,9 +157,9 @@
 
               <div class="reference-data">
                 <h4>Existing Timetable Entries</h4>
-                @if (existingTimetables.length > 0) {
+                @if (visibleTimetables.length > 0) {
                   <div class="reference-list">
-                    @for (entry of existingTimetables; track entry.id ?? (entry.dayOfWeek + entry.startTime + entry.endTime)) {
+                    @for (entry of visibleTimetables; track entry.id ?? (entry.dayOfWeek + entry.startTime + entry.endTime)) {
                       <span class="reference-item">{{ getDayLabel(entry.dayOfWeek) }} {{ formatTimeRange(entry) }}</span>
                     }
                   </div>

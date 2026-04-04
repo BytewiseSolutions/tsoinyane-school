@@ -21,7 +21,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     @Query("""
             select l from Lesson l
-            left join fetch l.subject s
+            left join fetch l.subjectAssignment sa
+            left join fetch sa.subject s
             left join fetch l.teacher t
             left join fetch t.user
             left join fetch l.timetable tt
@@ -32,7 +33,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     @Query("""
             select l from Lesson l
-            left join fetch l.subject s
+            left join fetch l.subjectAssignment sa
+            left join fetch sa.subject s
             left join fetch l.teacher t
             left join fetch t.user
             left join fetch l.timetable tt
@@ -43,7 +45,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     @Query("""
             select l from Lesson l
-            left join fetch l.subject s
+            left join fetch l.subjectAssignment sa
+            left join fetch sa.subject s
             left join fetch l.teacher t
             left join fetch t.user
             left join fetch l.timetable tt

@@ -194,6 +194,36 @@
         }
       </section>
     }
+
+    @if (canAssignStudentGrade) {
+      <section class="details-card assignment-card">
+        <div class="section-heading">
+          <div>
+            <h3>Assign Grade</h3>
+            <p>Choose the grade for this student so fees, reports, and subject filters can use it.</p>
+          </div>
+          <button type="button" class="save-btn" [disabled]="isSavingStudentGrade || !selectedStudentGradeId" (click)="saveStudentGradeAssignment()">
+            {{ isSavingStudentGrade ? 'Saving...' : 'Save Grade' }}
+          </button>
+        </div>
+
+        @if (filteredStudentGrades.length) {
+          <div class="student-grade-form">
+            <div class="form-group">
+              <label>Student Grade</label>
+              <select [(ngModel)]="selectedStudentGradeId" name="selectedStudentGradeId">
+                <option [ngValue]="null">Select grade</option>
+                @for (grade of filteredStudentGrades; track grade.id) {
+                  <option [ngValue]="grade.id">{{ grade.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        } @else {
+          <div class="inline-note">Assign a school to this user first to make grade options available.</div>
+        }
+      </section>
+    }
   }
 </div>
 

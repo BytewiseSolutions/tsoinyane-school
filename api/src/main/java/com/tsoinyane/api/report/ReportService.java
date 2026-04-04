@@ -6,6 +6,8 @@ import com.tsoinyane.api.lesson.StudentLesson;
 import com.tsoinyane.api.lesson.StudentLessonRepository;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentRepository;
+import com.tsoinyane.api.subject.Subject;
+import com.tsoinyane.api.subjectassignment.SubjectAssignment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,8 +33,10 @@ public class ReportService {
         List<StudentLesson> lessons = studentLessonRepository.findAllByStudentId(student.getId());
 
         Map<Long, List<StudentLesson>> bySubject = lessons.stream()
-                .filter(sl -> sl.getLesson() != null && sl.getLesson().getSubject() != null)
-                .collect(Collectors.groupingBy(sl -> sl.getLesson().getSubject().getId()));
+                .filter(sl -> sl.getLesson() != null
+                        && sl.getLesson().getSubjectAssignment() != null
+                        && sl.getLesson().getSubjectAssignment().getSubject() != null)
+                .collect(Collectors.groupingBy(sl -> sl.getLesson().getSubjectAssignment().getSubject().getId()));
 
         List<StudentReportDto.SubjectReportDto> subjectReports = bySubject.entrySet().stream()
                 .map(entry -> buildSubjectReport(entry.getKey(), entry.getValue()))
@@ -73,8 +77,8 @@ public class ReportService {
     }
 
     private StudentReportDto.SubjectReportDto buildSubjectReport(Long subjectId, List<StudentLesson> lessons) {
-        var subject = lessons.get(0).getLesson().getSubject();
-        var teacher = subject.getTeacher();
+        SubjectAssignment assignment = lessons.get(0).getLesson().getSubjectAssignment();
+        Subject subject = assignment != null ? assignment.getSubject() : null;
         int total = lessons.size();
         int present = (int) lessons.stream().filter(sl -> sl.getAttendanceStatus() == AttendanceStatus.PRESENT).count();
         int absent = (int) lessons.stream().filter(sl -> sl.getAttendanceStatus() == AttendanceStatus.ABSENT).count();
@@ -84,9 +88,11 @@ public class ReportService {
 
         return StudentReportDto.SubjectReportDto.builder()
                 .subjectId(subjectId)
-                .subjectName(subject.getName())
-                .subjectCode(subject.getCode())
-                .teacherName(teacher != null && teacher.getUser() != null ? teacher.getUser().getDisplayName() : "N/A")
+                .subjectName(subject != null ? subject.getName() : "N/A")
+                .subjectCode(subject != null ? subject.getCode() : "N/A")
+                .teacherName(assignment != null && assignment.getTeacher() != null && assignment.getTeacher().getUser() != null
+                        ? assignment.getTeacher().getUser().getDisplayName()
+                        : "N/A")
                 .totalLessons(total)
                 .present(present)
                 .absent(absent)

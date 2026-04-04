@@ -19,6 +19,7 @@ export class AdminHeader implements OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   notificationsOpen = false;
+  dashboardTitle = 'Admin Dashboard';
   currentUserRole = 'Administrator';
   isSystemAdmin = false;
   schools: SchoolOption[] = [];
@@ -49,9 +50,7 @@ export class AdminHeader implements OnDestroy {
         this.loadNotifications();
       });
 
-    if (this.isSystemAdmin || this.isSchoolAdmin()) {
-      this.loadSchoolsForContext();
-    }
+    this.loadSchoolsForContext();
   }
 
   ngOnDestroy() {
@@ -192,6 +191,7 @@ export class AdminHeader implements OnDestroy {
         this.currentUserRole = this.formatRole(primaryRole);
       }
       this.isSystemAdmin = this.hasSystemAdminRole(user);
+      this.dashboardTitle = this.resolveDashboardTitle(user);
     } catch {
   
     }
@@ -255,6 +255,23 @@ export class AdminHeader implements OnDestroy {
     }
 
     return 'ADMINISTRATOR';
+  }
+
+  private resolveDashboardTitle(user: AuthUser): string {
+    const normalizedRoles = [
+      this.normalizeRole(user.role),
+      ...(user.roles ?? []).map(role => this.normalizeRole(role)),
+    ];
+
+    if (normalizedRoles.includes('TEACHER') && !normalizedRoles.includes('SYSTEM_ADMIN') && !normalizedRoles.includes('SCHOOL_ADMIN')) {
+      return 'Teacher Dashboard';
+    }
+
+    if (normalizedRoles.includes('SCHOOL_ADMIN')) {
+      return 'School Admin Dashboard';
+    }
+
+    return 'Admin Dashboard';
   }
 
   private normalizeRole(role?: string): string {

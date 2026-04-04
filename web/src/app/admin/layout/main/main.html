@@ -6,96 +6,188 @@
   }
 
   <div class="admin-stats">
-    <div class="stat-card">
-      <div class="stat-icon"><i class="fa-solid fa-user-graduate"></i></div>
-      <div class="stat-info">
-        <h4>Total Students</h4>
-        <h2>{{ isLoading ? '...' : totalStudents }}</h2>
+    @for (card of statCards; track card.label) {
+      <div class="stat-card" [class.clickable]="!!card.route" (click)="openCard(card)">
+        <div class="stat-icon"><i class="fa-solid {{ card.icon }}"></i></div>
+        <div class="stat-info">
+          <h4>{{ card.label }}</h4>
+          <h2>{{ isLoading ? '...' : card.value }}</h2>
+        </div>
       </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon"><i class="fa-solid fa-chalkboard-teacher"></i></div>
-      <div class="stat-info">
-        <h4>Total Teachers</h4>
-        <h2>{{ isLoading ? '...' : totalTeachers }}</h2>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon"><i class="fa-solid fa-book-open"></i></div>
-      <div class="stat-info">
-        <h4>Total Grades</h4>
-        <h2>{{ isLoading ? '...' : totalGrades }}</h2>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon"><i class="fa-solid fa-flask"></i></div>
-      <div class="stat-info">
-        <h4>Total Subjects</h4>
-        <h2>{{ isLoading ? '...' : totalSubjects }}</h2>
-      </div>
-    </div>
+    }
   </div>
 
-  <div class="admin-panels">
-    <div class="panel">
-      <h3>Recent Students</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>School</th>
-            <th>Grade</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (student of recentStudents; track student.id) {
+  <div class="admin-panels" [class.teacher-panels]="isTeacherDashboard">
+    @if (isTeacherDashboard) {
+      <div class="panel">
+        <div class="panel-header">
+          <h3>My Subjects</h3>
+          <button type="button" class="view-all-btn" (click)="openPanel('/admin/my-subjects')">View All</button>
+        </div>
+        <table>
+          <thead>
             <tr>
-              <td>{{ student.name }}</td>
-              <td>{{ student.school }}</td>
-              <td>{{ student.grade }}</td>
-              <td>
-                <span
-                  class="badge"
-                  [class.active]="student.status === 'Active'"
-                  [class.inactive]="student.status === 'Inactive'"
-                >
-                  {{ student.status }}
-                </span>
-              </td>
+              <th>Subject</th>
+              <th>Code</th>
+              <th>Grade</th>
+              <th>Learners</th>
             </tr>
-          }
-          @if (!isLoading && recentStudents.length === 0) {
-            <tr>
-              <td colspan="4" class="empty-state">No recent students found for this school.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            @for (subject of teacherSubjects; track subject.id ?? subject.code) {
+              <tr>
+                <td>{{ subject.name }}</td>
+                <td>{{ subject.code }}</td>
+                <td>{{ subject.gradeName || 'N/A' }}</td>
+                <td>{{ subject.studentCount ?? 0 }}</td>
+              </tr>
+            }
+            @if (!isLoading && teacherSubjects.length === 0) {
+              <tr>
+                <td colspan="4" class="empty-state">No assigned subjects found for this teacher in the selected school.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
-    <div class="panel">
-      <h3>Upcoming Events</h3>
-      <ul class="events-list">
-        @for (event of upcomingEvents; track event.id ?? event.name) {
-          <li>
-            <div class="event-date">{{ event.date | date: 'MMM d' }}</div>
-            <div class="event-info">
-              <h4>{{ event.name }}</h4>
-              <p>{{ event.location }}</p>
-            </div>
-          </li>
-        }
-        @if (!upcomingEvents.length) {
-          <li>
-            <div class="event-info">
-              <h4>No upcoming events</h4>
-              <p>There are no scheduled events for this school yet.</p>
-            </div>
-          </li>
-        }
-      </ul>
-    </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Upcoming Lessons</h3>
+          <button type="button" class="view-all-btn" (click)="openPanel('/admin/my-lessons')">View All</button>
+        </div>
+        <ul class="events-list">
+          @for (lesson of upcomingLessons; track getLessonTrackKey(lesson)) {
+            <li>
+              <div class="event-date">{{ getLessonDate(lesson) | date: 'MMM d' }}</div>
+              <div class="event-info">
+                <h4>{{ lesson.subjectName || 'Lesson' }}</h4>
+                <p>{{ getLessonDate(lesson) | date: 'HH:mm' }}</p>
+                <span class="badge" [class.active]="getLessonBadgeClass(lesson) === 'active'" [class.inactive]="getLessonBadgeClass(lesson) === 'inactive'" [class.pending]="getLessonBadgeClass(lesson) === 'pending'">
+                  {{ getLessonBadge(lesson) }}
+                </span>
+              </div>
+            </li>
+          }
+          @if (!upcomingLessons.length) {
+            <li>
+              <div class="event-info">
+                <h4>No upcoming lessons</h4>
+                <p>Your scheduled lessons will appear here.</p>
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Upcoming Assessments</h3>
+          <button type="button" class="view-all-btn" (click)="openPanel('/admin/my-assessments')">View All</button>
+        </div>
+        <ul class="events-list">
+          @for (assessment of upcomingAssessments; track getAssessmentTrackKey(assessment)) {
+            <li>
+              <div class="event-date">{{ getAssessmentDate(assessment.assessmentDate) | date: 'MMM d' }}</div>
+              <div class="event-info">
+                <h4>{{ assessment.title || 'Assessment' }}</h4>
+                <p>{{ assessment.subjectName || 'Unknown Subject' }}{{ assessment.gradeName ? ' • ' + assessment.gradeName : '' }}</p>
+                <span class="badge pending">{{ assessment.type }}</span>
+              </div>
+            </li>
+          }
+          @if (!upcomingAssessments.length) {
+            <li>
+              <div class="event-info">
+                <h4>No upcoming assessments</h4>
+                <p>Your scheduled assessments will appear here.</p>
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Needs Attention</h3>
+        </div>
+        <div class="attention-list">
+          @for (item of needsAttention; track item.label) {
+            <button type="button" class="attention-item" (click)="openAttentionItem(item)">
+              <div class="attention-count">{{ item.count }}</div>
+              <div class="attention-info">
+                <h4>{{ item.label }}</h4>
+                <p>{{ item.description }}</p>
+              </div>
+            </button>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Recent Students</h3>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>School</th>
+              <th>Grade</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (student of recentStudents; track student.id) {
+              <tr>
+                <td>{{ student.name }}</td>
+                <td>{{ student.school }}</td>
+                <td>{{ student.grade }}</td>
+                <td>
+                  <span
+                    class="badge"
+                    [class.active]="student.status === 'Active'"
+                    [class.inactive]="student.status === 'Inactive'"
+                  >
+                    {{ student.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+            @if (!isLoading && recentStudents.length === 0) {
+              <tr>
+                <td colspan="4" class="empty-state">No recent students found for this school.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Upcoming Events</h3>
+        </div>
+        <ul class="events-list">
+          @for (event of upcomingEvents; track event.id ?? event.name) {
+            <li>
+              <div class="event-date">{{ event.date | date: 'MMM d' }}</div>
+              <div class="event-info">
+                <h4>{{ event.name }}</h4>
+                <p>{{ event.location }}</p>
+              </div>
+            </li>
+          }
+          @if (!upcomingEvents.length) {
+            <li>
+              <div class="event-info">
+                <h4>No upcoming events</h4>
+                <p>There are no scheduled events for this school yet.</p>
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+    }
   </div>
 
 </main>

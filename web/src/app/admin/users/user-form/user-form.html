@@ -1,7 +1,7 @@
 <div class="student-form-overlay" (click)="close()">
   <div class="student-form-card" (click)="$event.stopPropagation()">
     <div class="form-header">
-      <h3>{{ isEdit ? 'Edit User' : 'Add User' }}</h3>
+      <h3>{{ formTitle }}</h3>
       <button class="close-btn" type="button" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
@@ -63,28 +63,11 @@
             [placeholder]="isEdit ? 'Leave blank to keep current password' : ''"
           />
         </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select [(ngModel)]="form.status" name="status" required>
-            @for (status of statusOptions; track status) {
-              <option [value]="status">{{ status }}</option>
-            }
-          </select>
-        </div>
       </div>
 
       @if (isStudentRoleSelected()) {
         <div class="form-row">
-          <div class="form-group">
-            <label>Grade</label>
-            <select [(ngModel)]="form.gradeId" name="gradeId" required>
-              <option [ngValue]="null">Select grade</option>
-              @for (grade of availableGrades; track grade.id) {
-                <option [ngValue]="grade.id">{{ grade.name }}</option>
-              }
-            </select>
-          </div>
-          <div class="form-group">
+          <div class="form-group full-width">
             <label>Student Number</label>
             <input
               type="text"
@@ -92,26 +75,6 @@
               [placeholder]="isEdit ? 'Will be assigned if missing' : 'Auto-generated on save (ST001, ST002...)'"
               readonly
             />
-          </div>
-        </div>
-      }
-
-      @if (isTeacherRoleSelected()) {
-        <div class="form-row">
-          <div class="form-group full-width">
-            <label>Grades</label>
-            <ng-select
-              [items]="availableGrades"
-              bindLabel="name"
-              bindValue="id"
-              [multiple]="true"
-              [searchable]="true"
-              [clearable]="true"
-              [(ngModel)]="form.teacherGradeIds"
-              name="teacherGradeIds"
-              placeholder="Select teacher grades"
-            >
-            </ng-select>
           </div>
         </div>
       }
@@ -127,7 +90,7 @@
       <div class="form-actions">
         <button type="button" class="cancel-btn" (click)="close()">Cancel</button>
         <button type="submit" class="submit-btn" [disabled]="isSubmitting">
-          {{ isSubmitting ? 'Saving...' : (isEdit ? 'Update User' : 'Add User') }}
+          {{ submitButtonLabel }}
         </button>
       </div>
     </form>

@@ -24,26 +24,195 @@
         </strong>
       </div>
       <div class="summary-item">
+        <span>Assignments</span>
+        <strong>{{ subjectAssignments.length }}</strong>
+      </div>
+      <div class="summary-item">
         <span>Grade</span>
-        <strong>{{ subject.gradeName || 'N/A' }}</strong>
+        <strong>{{ activeAssignment?.gradeName || 'N/A' }}</strong>
       </div>
       <div class="summary-item">
         <span>Teacher</span>
-        <strong>{{ subject.teacherName || 'N/A' }}</strong>
+        <strong>{{ activeAssignment?.teacherName || 'N/A' }}</strong>
       </div>
       <div class="summary-item">
         <span>Students</span>
-        <strong>{{ subject.studentCount ?? assignedStudents.length }}</strong>
+        <strong>{{ activeAssignment?.studentCount ?? assignedStudents.length }}</strong>
       </div>
     </div>
 
+    @if (subjectAssignments.length > 1) {
+      <div class="summary-card active-assignment-card">
+        <div class="summary-item active-assignment-item">
+          <span>Active Assignment</span>
+          <select
+            class="active-assignment-select"
+            [(ngModel)]="activeAssignmentId"
+            (ngModelChange)="onAssignmentChanged()"
+            name="activeAssignmentId"
+          >
+            @for (assignment of subjectAssignments; track assignment.assignmentId) {
+              <option [ngValue]="assignment.assignmentId">
+                {{ assignment.gradeName || 'No grade' }} • {{ assignment.teacherName || 'No teacher' }}
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+    }
+
     <div class="tabs-card">
       <div class="tab-bar">
-        <button class="tab-btn" [class.active]="activeTab === 'students'" (click)="activeTab = 'students'">Students</button>
+        <button class="tab-btn" [class.active]="activeTab === 'grade'" (click)="activeTab = 'grade'">Grade</button>
+        <button class="tab-btn" [class.active]="activeTab === 'teacher'" (click)="activeTab = 'teacher'">Teacher</button>
+        <button class="tab-btn" [class.active]="activeTab === 'students'" (click)="activeTab = 'students'">Student</button>
         <button class="tab-btn" [class.active]="activeTab === 'timetable'" (click)="activeTab = 'timetable'">Timetable</button>
       </div>
 
       <div class="tab-content">
+        @if (activeTab === 'grade') {
+          <div class="info-section">
+            <div class="section-heading">
+              <h4>Grades</h4>
+              <p>Review which grades currently have this subject assigned and add more below.</p>
+            </div>
+
+            <p class="assign-helper-text">Select one or more grades. You can assign teachers later in the Teacher tab.</p>
+            <div class="assign-row">
+              <ng-select
+                [items]="selectableGrades"
+                bindLabel="name"
+                [multiple]="true"
+                [searchable]="true"
+                [clearable]="true"
+                [closeOnSelect]="false"
+                [(ngModel)]="selectedGradesToAdd"
+                name="selectedGradesToAdd"
+                placeholder="Search and select grades..."
+                class="grade-select"
+                (add)="onGradeItemAdded($event)"
+                (remove)="onGradeItemRemoved($event)"
+              >
+                <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                  <span class="ng-value-label">{{ item.name }}</span>
+                  <span class="ng-value-icon right" (click)="clear(item)">×</span>
+                </ng-template>
+                <ng-template ng-option-tmp let-item="item" let-item$="item$">
+                  <input type="checkbox" [checked]="item$.selected" />
+                  {{ item.name }}
+                </ng-template>
+              </ng-select>
+              <button
+                class="assign-btn"
+                type="button"
+                [disabled]="isSavingGradeAssignment || !selectedGradesToAdd.length"
+                (click)="addGradeAssignment()"
+              >
+                {{ isSavingGradeAssignment ? 'Saving...' : 'Assign' }}
+              </button>
+            </div>
+            @if (gradeTabError) {
+              <p class="tab-error">{{ gradeTabError }}</p>
+            }
+
+            @if (gradeRows.length > 0) {
+              <table class="students-table info-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Grade</th>
+                    <th>Assignments</th>
+                    <th>Teachers</th>
+                    <th>Students</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of gradeRows; track row.gradeId ?? row.gradeName) {
+                    <tr>
+                      <td>{{ $index + 1 }}</td>
+                      <td>{{ row.gradeName }}</td>
+                      <td>{{ row.assignmentCount }}</td>
+                      <td>{{ row.teacherCount }}</td>
+                      <td>{{ row.studentCount }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <p class="tab-placeholder">No grades are linked to this subject yet.</p>
+            }
+          </div>
+        }
+        @if (activeTab === 'teacher') {
+          <div class="info-section">
+            <div class="section-heading">
+              <h4>Teachers</h4>
+              <p>Review which teachers are currently linked to this subject.</p>
+            </div>
+
+            <div class="manage-card">
+              <div class="manage-card-header">
+                <h5>Assign Teacher</h5>
+                <p>Select a grade assignment, then assign or update its teacher.</p>
+              </div>
+              <div class="manage-form">
+                <div class="form-group">
+                  <label>Grade Assignment</label>
+                  <select [(ngModel)]="selectedAssignmentIdForTeacher" (ngModelChange)="onTeacherAssignmentSelectionChanged()" name="selectedAssignmentIdForTeacher">
+                    <option [ngValue]="null">Select grade assignment</option>
+                    @for (assignment of teacherAssignments; track assignment.assignmentId) {
+                      <option [ngValue]="assignment.assignmentId ?? null">
+                        {{ assignment.gradeName || 'No grade' }} • {{ assignment.teacherName || 'No teacher assigned' }}
+                      </option>
+                    }
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Teacher</label>
+                  <select [(ngModel)]="selectedTeacherIdForAssignment" name="selectedTeacherIdForAssignment">
+                    <option [ngValue]="null">Select teacher</option>
+                    @for (teacher of availableTeachersForSelectedAssignment; track teacher.id) {
+                      <option [ngValue]="teacher.id ?? null">{{ teacher.userFullName || teacher.userEmail }}</option>
+                    }
+                  </select>
+                </div>
+                <button class="assign-btn" type="button" [disabled]="isSavingTeacherAssignment" (click)="assignTeacherToGrade()">
+                  {{ isSavingTeacherAssignment ? 'Saving...' : 'Assign Teacher' }}
+                </button>
+              </div>
+              @if (teacherTabError) {
+                <p class="tab-error">{{ teacherTabError }}</p>
+              }
+            </div>
+
+            @if (teacherRows.length > 0) {
+              <table class="students-table info-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Teacher</th>
+                    <th>Assignments</th>
+                    <th>Grades</th>
+                    <th>Students</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of teacherRows; track row.teacherId ?? row.teacherName) {
+                    <tr>
+                      <td>{{ $index + 1 }}</td>
+                      <td>{{ row.teacherName }}</td>
+                      <td>{{ row.assignmentCount }}</td>
+                      <td>{{ row.gradeCount }}</td>
+                      <td>{{ row.studentCount }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <p class="tab-placeholder">No teachers are linked to this subject yet.</p>
+            }
+          </div>
+        }
         @if (activeTab === 'students') {
           <div class="students-section">
             <div class="section-heading">
@@ -365,13 +534,13 @@
         } @else {
           <p>Transfer <strong>{{ transferringStudent.displayName }}</strong> to another subject.</p>
         }
-        <p>Select a target subject from the same grade only.</p>
+        <p>Select a target assignment from the same grade only.</p>
         <div class="form-group">
-          <label>Select Subject</label>
+          <label>Select Assignment</label>
           <select [(ngModel)]="targetSubjectId" name="targetSubject">
-            <option [ngValue]="null">Select a subject...</option>
-            @for (s of availableSubjects; track s.id) {
-              <option [ngValue]="s.id">{{ s.name }} ({{ s.code }})</option>
+            <option [ngValue]="null">Select an assignment...</option>
+            @for (s of availableSubjects; track s.assignmentId ?? s.id) {
+              <option [ngValue]="s.assignmentId">{{ s.name }} ({{ s.code }}) • {{ s.gradeName || 'No grade' }}</option>
             }
           </select>
         </div>
@@ -415,8 +584,11 @@
             <input type="time" [(ngModel)]="timetableForm.endTime" name="timetableEndTime" />
           </div>
           <div class="form-group full-width info-group">
-            <label>Students</label>
-            <p>This timetable will automatically apply to all students currently assigned to this subject.</p>
+            <label>Assignment</label>
+            <p>
+              {{ activeAssignment?.gradeName || 'No grade' }} • {{ activeAssignment?.teacherName || 'No teacher' }}.
+              This timetable will automatically apply to all students currently assigned to this assignment.
+            </p>
           </div>
         </div>
         @if (timetableError) {

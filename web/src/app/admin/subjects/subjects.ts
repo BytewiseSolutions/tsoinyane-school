@@ -1,15 +1,12 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Subject, catchError, finalize, forkJoin, of, takeUntil } from 'rxjs';
+import { Subject, finalize, takeUntil } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { BackendService } from '../../util/backend.service';
 import { SchoolContextService } from '../layout/school-context';
-import { Grade } from '../grades/grade';
 import { Status } from '../users/status';
 import { SchoolSubject } from './subject';
-import { SubjectTeacherOption } from './subject-teacher-option';
-import { Teacher } from '../teachers/teacher';
 
 @Component({
   selector: 'app-admin-subjects',
@@ -36,13 +33,9 @@ export class AdminSubjects implements OnInit, OnDestroy {
   errorMessage = '';
   searchTerm = '';
   selectedStatusFilter: Status | 'ALL' = 'ALL';
-  selectedGradeFilter: number | null = null;
-  selectedTeacherFilter: number | null = null;
   selectedSort = 'code-asc';
   pageSize = 10;
   currentPage = 1;
-  availableGrades: Grade[] = [];
-  teacherOptions: SubjectTeacherOption[] = [];
 
   subjects: SchoolSubject[] = [];
 
@@ -58,7 +51,8 @@ export class AdminSubjects implements OnInit, OnDestroy {
       .subscribe(school => {
         this.selectedSchoolId = school?.id ?? null;
         this.selectedSchoolName = school?.name ?? '';
-        this.loadReferenceData();
+        this.resetFilters();
+        this.loadSubjects();
       });
   }
 
@@ -72,8 +66,6 @@ export class AdminSubjects implements OnInit, OnDestroy {
     return [...this.subjects]
       .filter(subject => this.matchesSearch(subject, query))
       .filter(subject => this.selectedStatusFilter === 'ALL' || subject.status === this.selectedStatusFilter)
-      .filter(subject => this.selectedGradeFilter === null || subject.gradeId === this.selectedGradeFilter)
-      .filter(subject => this.selectedTeacherFilter === null || subject.teacherId === this.selectedTeacherFilter)
       .sort((left, right) => this.compareSubjects(left, right));
   }
 
@@ -131,42 +123,22 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   viewSubject(subject: SchoolSubject) {
-    this.router.navigate(['/admin/subjects', subject.id]);
+    const subjectId = Number(subject.subjectId ?? subject.id ?? 0);
+    this.router.navigate(['/admin/subjects', subjectId]);
   }
 
   onSaved(subject: SchoolSubject) {
-    if (this.selectedSubject) {
-      const id = this.selectedSubject.id!;
-      const payload: SchoolSubject = { ...subject, schoolId: this.selectedSchoolId };
-
-      this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${id}`, payload).subscribe({
-        next: (updated) => {
-          this.subjects = this.subjects.map(item =>
-            item.id === id ? this.mapSavedSubject(updated) : item
-          );
-          this.closeForm();
-        },
-        error: (error: HttpErrorResponse) => {
-          this.errorMessage = error.error?.message || 'Failed to update subject.';
-        },
-      });
-      return;
-    }
-
     const payload: SchoolSubject = {
       ...subject,
       schoolId: this.selectedSchoolId,
     };
 
-    this.backendService.post<SchoolSubject, SchoolSubject>('subject', payload).subscribe({
-      next: (savedSubject) => {
-        this.subjects = [this.mapSavedSubject(savedSubject), ...this.subjects];
-        this.closeForm();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to create subject.';
-      },
-    });
+    if (this.selectedSubject) {
+      this.updateSubject(payload);
+      return;
+    }
+
+    this.createSubject(payload);
   }
 
   deleteSubject(subject: SchoolSubject) {
@@ -182,27 +154,28 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   confirmDeleteSubject() {
-    if (!this.subjectToDelete?.id || this.isProcessing) return;
-
-    const targetSubject = this.subjectToDelete;
+    const targetSubjectId = Number(this.subjectToDelete?.subjectId ?? this.subjectToDelete?.id ?? 0);
+    if (!targetSubjectId || this.isProcessing) return;
 
     this.isProcessing = true;
     this.errorMessage = '';
 
-    this.backendService.delete(`subject/${targetSubject.id}`)
+    this.backendService.delete(`subject/${targetSubjectId}`)
       .pipe(finalize(() => {
         this.isProcessing = false;
       }))
       .subscribe({
-      next: () => {
-        this.subjects = this.subjects.filter(subject => subject.id !== targetSubject.id);
-        this.cancelDeleteSubject();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to delete subject.';
-        this.cancelDeleteSubject();
-      },
-    });
+        next: () => {
+          this.subjects = this.subjects.filter(subject =>
+            Number(subject.subjectId ?? subject.id ?? 0) !== targetSubjectId
+          );
+          this.cancelDeleteSubject();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to delete subject.';
+          this.cancelDeleteSubject();
+        },
+      });
   }
 
   toggleStatus(subject: SchoolSubject) {
@@ -221,28 +194,31 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   confirmToggleStatus() {
-    if (!this.subjectToToggleStatus?.id || this.isProcessing) {
+    const targetSubjectId = Number(this.subjectToToggleStatus?.subjectId ?? this.subjectToToggleStatus?.id ?? 0);
+    if (!targetSubjectId || this.isProcessing) {
       return;
     }
 
-    const targetSubject = this.subjectToToggleStatus;
+    const targetSubject = this.subjectToToggleStatus!;
+    this.isProcessing = true;
+    this.errorMessage = '';
+
     const payload: SchoolSubject = {
       ...targetSubject,
       schoolId: this.selectedSchoolId,
       status: this.pendingStatus,
     };
 
-    this.isProcessing = true;
-    this.errorMessage = '';
-
-    this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${targetSubject.id}`, payload)
+    this.saveSubject(payload, targetSubjectId)
       .pipe(finalize(() => {
         this.isProcessing = false;
       }))
       .subscribe({
-        next: (updatedSubject) => {
+        next: updatedSubject => {
           this.subjects = this.subjects.map(subject =>
-            subject.id === updatedSubject.id ? this.mapSavedSubject(updatedSubject) : subject
+            Number(subject.subjectId ?? subject.id ?? 0) === targetSubjectId
+              ? this.mapSavedSubject(updatedSubject)
+              : subject
           );
           this.cancelToggleStatus();
         },
@@ -266,9 +242,6 @@ export class AdminSubjects implements OnInit, OnDestroy {
     const rows = this.filteredSubjects.map(subject => ({
       'Subject Code': subject.code,
       'Subject Name': subject.name,
-      Grade: subject.gradeName ?? '',
-      Teacher: subject.teacherName ?? '',
-      'Student Count': subject.studentCount ?? 0,
       Status: this.getStatusLabel(subject.status),
     }));
 
@@ -308,9 +281,7 @@ export class AdminSubjects implements OnInit, OnDestroy {
     }
 
     return subject.code.toLowerCase().includes(query)
-      || subject.name.toLowerCase().includes(query)
-      || (subject.gradeName ?? '').toLowerCase().includes(query)
-      || (subject.teacherName ?? '').toLowerCase().includes(query);
+      || subject.name.toLowerCase().includes(query);
   }
 
   private compareSubjects(left: SchoolSubject, right: SchoolSubject): number {
@@ -321,14 +292,6 @@ export class AdminSubjects implements OnInit, OnDestroy {
         return this.compareText(left.name, right.name);
       case 'name-desc':
         return this.compareText(right.name, left.name);
-      case 'grade-asc':
-        return this.compareText(left.gradeName, right.gradeName);
-      case 'grade-desc':
-        return this.compareText(right.gradeName, left.gradeName);
-      case 'teacher-asc':
-        return this.compareText(left.teacherName, right.teacherName);
-      case 'teacher-desc':
-        return this.compareText(right.teacherName, left.teacherName);
       case 'code-asc':
       default:
         return this.compareText(left.code, right.code);
@@ -339,10 +302,8 @@ export class AdminSubjects implements OnInit, OnDestroy {
     return (left ?? '').localeCompare(right ?? '', undefined, { sensitivity: 'base' });
   }
 
-  private loadReferenceData() {
+  private loadSubjects() {
     if (!this.selectedSchoolId) {
-      this.availableGrades = [];
-      this.teacherOptions = [];
       this.subjects = [];
       this.isLoading = false;
       this.errorMessage = '';
@@ -351,52 +312,99 @@ export class AdminSubjects implements OnInit, OnDestroy {
 
     this.isLoading = true;
     this.errorMessage = '';
-    const errorMessages: string[] = [];
 
-    forkJoin({
-      subjects: this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId }).pipe(
-        catchError((error: HttpErrorResponse) => {
-          errorMessages.push(error.error?.message || 'Failed to load subjects.');
-          return of([] as SchoolSubject[]);
-        })
-      ),
-      grades: this.backendService.get<Grade[]>('grade').pipe(
-        catchError(() => of([] as Grade[]))
-      ),
-      teachers: this.backendService.get<Teacher[]>('teacher', { schoolId: this.selectedSchoolId }).pipe(
-        catchError((error: HttpErrorResponse) => {
-          errorMessages.push(error.error?.message || 'Failed to load teachers for subjects.');
-          return of([] as Teacher[]);
-        })
-      ),
-    })
+    this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId })
       .pipe(finalize(() => {
         this.isLoading = false;
       }))
-      .subscribe(({ subjects, grades, teachers }) => {
-        this.availableGrades = (grades ?? []).filter(grade => grade.schoolId === this.selectedSchoolId);
-        this.teacherOptions = (teachers ?? []).map(teacher => ({
-          id: teacher.id ?? 0,
-          name: teacher.userFullName || teacher.userEmail || 'Unknown Teacher',
-          schoolId: teacher.schoolId ?? null,
-          gradeIds: teacher.gradeIds ?? [],
-        })).filter(teacher => teacher.id > 0);
-        this.subjects = (subjects ?? []).map(subject => this.mapSavedSubject(subject));
-        this.errorMessage = errorMessages.join(' ');
+      .subscribe({
+        next: subjects => {
+          this.subjects = (subjects ?? []).map(subject => this.mapSavedSubject(subject));
+        },
+        error: (error: HttpErrorResponse) => {
+          this.subjects = [];
+          this.errorMessage = error.error?.message || 'Failed to load subjects.';
+        },
       });
   }
 
   private mapSavedSubject(subject: SchoolSubject): SchoolSubject {
-    const gradeName = this.availableGrades.find(grade => grade.id === subject.gradeId)?.name ?? subject.gradeName ?? null;
-    const teacherName = this.teacherOptions.find(teacher => teacher.id === subject.teacherId)?.name ?? subject.teacherName ?? null;
-
     return {
       ...subject,
+      id: Number(subject.id ?? subject.subjectId ?? 0),
+      subjectId: Number(subject.subjectId ?? subject.id ?? 0),
       schoolId: subject.schoolId ?? this.selectedSchoolId,
       schoolName: subject.schoolName ?? (this.selectedSchoolName || null),
-      gradeName,
-      teacherName,
-      studentCount: subject.studentCount ?? 0,
+      gradeId: null,
+      gradeName: null,
+      teacherId: null,
+      teacherName: null,
+      studentCount: null,
+      assignmentId: null,
+      assignmentCount: Number(subject.assignmentCount ?? 0),
+      status: subject.status ?? Status.ACTIVE,
     };
+  }
+
+  private createSubject(subject: SchoolSubject): void {
+    this.saveSubject(subject).subscribe({
+      next: savedSubject => {
+        this.subjects = [this.mapSavedSubject(savedSubject), ...this.subjects];
+        this.closeForm();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to create subject.';
+      },
+    });
+  }
+
+  private updateSubject(subject: SchoolSubject): void {
+    const targetSubjectId = Number(this.selectedSubject?.subjectId ?? this.selectedSubject?.id ?? 0);
+    if (!targetSubjectId) {
+      this.errorMessage = 'Failed to update subject.';
+      return;
+    }
+
+    this.saveSubject(subject, targetSubjectId).subscribe({
+      next: updatedSubject => {
+        this.subjects = this.subjects.map(item =>
+          Number(item.subjectId ?? item.id ?? 0) === targetSubjectId
+            ? this.mapSavedSubject(updatedSubject)
+            : item
+        );
+        this.closeForm();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to update subject.';
+      },
+    });
+  }
+
+  private saveSubject(subject: SchoolSubject, subjectId?: number) {
+    const subjectPayload: SchoolSubject = {
+      code: subject.code,
+      name: subject.name,
+      schoolId: this.selectedSchoolId,
+      schoolName: this.selectedSchoolName || null,
+      gradeId: null,
+      gradeName: null,
+      teacherId: null,
+      teacherName: null,
+      status: subjectId ? (subject.status ?? Status.ACTIVE) : (subject.status ?? null),
+    };
+
+    return subjectId
+      ? this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${subjectId}`, {
+          ...subjectPayload,
+          id: subjectId,
+        })
+      : this.backendService.post<SchoolSubject, SchoolSubject>('subject', subjectPayload);
+  }
+
+  private resetFilters(): void {
+    this.searchTerm = '';
+    this.selectedStatusFilter = 'ALL';
+    this.selectedSort = 'code-asc';
+    this.currentPage = 1;
   }
 }

@@ -32,33 +32,17 @@
 
   <div class="table-card">
     <div class="table-toolbar">
-      <input type="text" placeholder="Search by code, name, grade or teacher..." [(ngModel)]="searchTerm" (ngModelChange)="onFiltersChanged()" name="searchSubjects" />
+      <input type="text" placeholder="Search by code or name..." [(ngModel)]="searchTerm" (ngModelChange)="onFiltersChanged()" name="searchSubjects" />
       <select [(ngModel)]="selectedStatusFilter" (ngModelChange)="onFiltersChanged()" name="subjectStatusFilter">
         <option [ngValue]="'ALL'">All Statuses</option>
         <option [ngValue]="Status.ACTIVE">Active</option>
         <option [ngValue]="Status.INACTIVE">Inactive</option>
-      </select>
-      <select [(ngModel)]="selectedGradeFilter" (ngModelChange)="onFiltersChanged()" name="subjectGradeFilter">
-        <option [ngValue]="null">All Grades</option>
-        @for (grade of availableGrades; track grade.id) {
-          <option [ngValue]="grade.id ?? null">{{ grade.name }}</option>
-        }
-      </select>
-      <select [(ngModel)]="selectedTeacherFilter" (ngModelChange)="onFiltersChanged()" name="subjectTeacherFilter">
-        <option [ngValue]="null">All Teachers</option>
-        @for (teacher of teacherOptions; track teacher.id) {
-          <option [ngValue]="teacher.id">{{ teacher.name }}</option>
-        }
       </select>
       <select [(ngModel)]="selectedSort" (ngModelChange)="onFiltersChanged()" name="subjectSort">
         <option value="code-asc">Code A-Z</option>
         <option value="code-desc">Code Z-A</option>
         <option value="name-asc">Subject Name A-Z</option>
         <option value="name-desc">Subject Name Z-A</option>
-        <option value="grade-asc">Grade A-Z</option>
-        <option value="grade-desc">Grade Z-A</option>
-        <option value="teacher-asc">Teacher A-Z</option>
-        <option value="teacher-desc">Teacher Z-A</option>
       </select>
     </div>
     <table>
@@ -66,9 +50,6 @@
         <tr>
           <th>Code</th>
           <th>Subject</th>
-          <th>Grade</th>
-          <th>Teacher</th>
-          <th>Students</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -76,16 +57,13 @@
       <tbody>
         @if (isLoading) {
           <tr>
-            <td colspan="7">Loading subject options...</td>
+            <td colspan="4">Loading subjects...</td>
           </tr>
         }
         @for (subject of paginatedSubjects; track subject.id ?? (subject.code + subject.name)) {
           <tr>
             <td>{{ subject.code }}</td>
             <td>{{ subject.name }}</td>
-            <td>{{ subject.gradeName || 'N/A' }}</td>
-            <td>{{ subject.teacherName || 'N/A' }}</td>
-            <td>{{ subject.studentCount ?? 0 }}</td>
             <td><span class="badge" [class.active]="getStatusLabel(subject.status) === 'Active'" [class.inactive]="getStatusLabel(subject.status) === 'Inactive'">{{ getStatusLabel(subject.status) }}</span></td>
             <td class="actions">
               <button class="view-btn" (click)="viewSubject(subject)"><i class="fa-solid fa-eye"></i></button>
@@ -99,7 +77,7 @@
         }
         @if (!isLoading && filteredSubjects.length === 0) {
           <tr>
-            <td colspan="7">No subjects match the current search, filters, or sort.</td>
+            <td colspan="4">No subjects match the current search, filters, or sort.</td>
           </tr>
         }
       </tbody>
@@ -137,8 +115,6 @@
     [existingSubject]="selectedSubject"
     [schoolId]="selectedSchoolId"
     [schoolName]="selectedSchoolName"
-    [gradeOptions]="availableGrades"
-    [teacherOptions]="teacherOptions"
     (closed)="closeForm()"
     (saved)="onSaved($event)" />
 }

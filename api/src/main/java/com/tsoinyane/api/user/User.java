@@ -56,4 +56,11 @@ public class User extends BaseEntity {
         return (this.title != null ? this.title + " " : "")
                 + this.firstName + " " + this.lastName;
     }
+
+    @PrePersist
+    void applyDefaults() {
+        if (status == null) {
+            status = Status.ACTIVE;
+        }
+    }
 }

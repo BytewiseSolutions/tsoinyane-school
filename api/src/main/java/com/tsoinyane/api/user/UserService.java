@@ -14,6 +14,7 @@ import com.tsoinyane.api.school.SchoolRepository;
 import com.tsoinyane.api.student.Student;
 import com.tsoinyane.api.student.StudentRepository;
 import com.tsoinyane.api.subject.SubjectRepository;
+import com.tsoinyane.api.subjectassignment.SubjectAssignmentRepository;
 import com.tsoinyane.api.teacher.Teacher;
 import com.tsoinyane.api.teacher.TeacherRepository;
 import com.tsoinyane.api.timetable.TimetableRepository;
@@ -44,6 +45,7 @@ public class UserService {
     private final LessonRepository lessonRepository;
     private final StudentLessonRepository studentLessonRepository;
     private final SubjectRepository subjectRepository;
+    private final SubjectAssignmentRepository subjectAssignmentRepository;
     private final TimetableRepository timetableRepository;
     private final FeePaymentRepository feePaymentRepository;
     private final PasswordEncoder passwordEncoder;
@@ -272,11 +274,11 @@ public class UserService {
             }
             studentLessonRepository.deleteAllByStudentId(student.getId());
             timetableRepository.deleteStudentAssignments(student.getId());
-            subjectRepository.deleteStudentAssignments(student.getId());
+            subjectAssignmentRepository.deleteStudentAssignments(student.getId());
             studentRepository.delete(student);
         });
         teacherRepository.findByUser_Id(id).ifPresent(teacher -> {
-            if (subjectRepository.existsByTeacher_Id(teacher.getId())) {
+            if (subjectAssignmentRepository.existsByTeacher_Id(teacher.getId())) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
                         "Cannot delete this user because the teacher is still assigned to subjects"
@@ -443,20 +445,21 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student must belong to a school");
         }
 
-        if (gradeId == null || gradeId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Grade is required for students");
-        }
-
         School school = user.getSchools().stream()
                 .sorted(Comparator.comparing(School::getId))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student must belong to a school"));
 
-        Grade grade = gradeRepository.findById(gradeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gradeId: " + gradeId));
+        Grade grade = null;
+        if (gradeId != null && gradeId > 0) {
+            grade = gradeRepository.findById(gradeId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gradeId: " + gradeId));
 
-        if (grade.getSchool() == null || !grade.getSchool().getId().equals(school.getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected grade does not belong to the student's school");
+            if (grade.getSchool() == null || !grade.getSchool().getId().equals(school.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected grade does not belong to the student's school");
+            }
+        } else if (existingStudent != null) {
+            grade = existingStudent.getGrade();
         }
 
         Student student = existingStudent != null ? existingStudent : Student.builder().build();

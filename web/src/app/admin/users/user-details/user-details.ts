@@ -25,6 +25,7 @@ export class UserDetails implements OnInit {
   saveMessage = '';
   isSavingSchools = false;
   isSavingTeacherGrades = false;
+  isSavingStudentGrade = false;
   isEditingPersonal = false;
   isEditingAccount = false;
   isSavingPersonal = false;
@@ -33,6 +34,7 @@ export class UserDetails implements OnInit {
   availableGrades: Grade[] = [];
   selectedSchoolIds: number[] = [];
   selectedTeacherGradeIds: number[] = [];
+  selectedStudentGradeId: number | null = null;
   personalForm = {
     title: Title.Mr as Title | null,
     firstName: '',
@@ -100,6 +102,10 @@ export class UserDetails implements OnInit {
     return this.hasRole(Role.TEACHER);
   }
 
+  get canAssignStudentGrade(): boolean {
+    return this.hasRole(Role.STUDENT) && !this.hasRole(Role.TEACHER);
+  }
+
   get isStudent(): boolean {
     return this.hasRole(Role.STUDENT);
   }
@@ -121,6 +127,18 @@ export class UserDetails implements OnInit {
     return this.availableGrades.filter(grade => {
       const schoolId = grade.schoolId ?? null;
       return schoolId != null && this.selectedSchoolIds.includes(schoolId);
+    });
+  }
+
+  get filteredStudentGrades(): Grade[] {
+    const schoolIds = this.user?.schoolIds ?? [];
+    if (!schoolIds.length) {
+      return [];
+    }
+
+    return this.availableGrades.filter(grade => {
+      const schoolId = grade.schoolId ?? null;
+      return schoolId != null && schoolIds.includes(schoolId);
     });
   }
 
@@ -351,6 +369,37 @@ export class UserDetails implements OnInit {
     });
   }
 
+  saveStudentGradeAssignment(): void {
+    if (!this.user?.id || this.isSavingStudentGrade) {
+      return;
+    }
+
+    if (!this.selectedStudentGradeId) {
+      this.errorMessage = 'Please select a grade for the student.';
+      this.saveMessage = '';
+      return;
+    }
+
+    this.isSavingStudentGrade = true;
+    this.errorMessage = '';
+    this.saveMessage = '';
+
+    this.backendService.put<User, User>(`user/${this.user.id}`, this.buildUpdatePayload({
+      gradeId: this.selectedStudentGradeId,
+    })).subscribe({
+      next: (response) => {
+        this.applyUserResponse(response);
+        this.saveMessage = 'Student grade updated successfully.';
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to update student grade.';
+      },
+      complete: () => {
+        this.isSavingStudentGrade = false;
+      },
+    });
+  }
+
   private loadUser(id: number): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -427,7 +476,7 @@ export class UserDetails implements OnInit {
       ...overrides,
       password: null,
       schoolIds: overrides.schoolIds ?? user.schoolIds ?? [],
-      gradeId: user.gradeId ?? null,
+      gradeId: overrides.gradeId ?? user.gradeId ?? null,
       teacherGradeIds: overrides.teacherGradeIds ?? user.teacherGradeIds ?? [],
     };
   }
@@ -436,6 +485,7 @@ export class UserDetails implements OnInit {
     this.user = user;
     this.selectedSchoolIds = [...(user.schoolIds ?? [])];
     this.selectedTeacherGradeIds = [...(user.teacherGradeIds ?? [])];
+    this.selectedStudentGradeId = user.gradeId ?? null;
     this.personalForm = {
       title: user.title ?? Title.Mr,
       firstName: user.firstName ?? '',

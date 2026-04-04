@@ -1,0 +1,206 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>My Assessments</h2>
+      <p>Manage tests, assignments, and marks for {{ selectedSchoolName }}.</p>
+    </div>
+    <button type="button" class="primary-btn" (click)="openCreateForm()">New Assessment</button>
+  </div>
+
+  @if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  }
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Assessments</h4>
+      <p>{{ isLoading ? '...' : totalAssessments }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Published</h4>
+      <p>{{ isLoading ? '...' : publishedAssessments }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Drafts</h4>
+      <p>{{ isLoading ? '...' : draftAssessments }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Marking Progress</h4>
+      <p>{{ isLoading ? '...' : markedProgressLabel }}</p>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        name="assessmentSearch"
+        placeholder="Search by title, subject, code, grade, or type..."
+      />
+      <select [(ngModel)]="selectedSubjectAssignmentFilter" name="assessmentSubjectFilter">
+        <option [ngValue]="'ALL'">All Subjects</option>
+        @for (subject of subjectFilterOptions; track subject.assignmentId) {
+          <option [ngValue]="subject.assignmentId">
+            {{ subject.name }}{{ subject.gradeName ? ' • ' + subject.gradeName : '' }}
+          </option>
+        }
+      </select>
+      <select [(ngModel)]="selectedStatusFilter" name="assessmentStatusFilter">
+        @for (status of assessmentStatuses; track status) {
+          <option [ngValue]="status">
+            {{ status === 'ALL' ? 'All Statuses' : formatStatus(status) }}
+          </option>
+        }
+      </select>
+    </div>
+
+    @if (isLoading) {
+      <div class="state-card">Loading your assessments...</div>
+    } @else if (filteredAssessments.length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Assessment</th>
+              <th>Subject</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Marks</th>
+              <th>Average</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (assessment of filteredAssessments; track assessment.id) {
+              <tr>
+                <td>
+                  <div class="title-cell">{{ assessment.title || 'Untitled Assessment' }}</div>
+                  <div class="meta-note">{{ assessment.description || 'No description' }}</div>
+                </td>
+                <td>
+                  <div class="title-cell">{{ assessment.subjectName || 'Unknown Subject' }}</div>
+                  <div class="meta-note">{{ assessment.subjectCode || 'No code' }}{{ assessment.gradeName ? ' • ' + assessment.gradeName : '' }}</div>
+                </td>
+                <td>{{ formatType(assessment.type) }}</td>
+                <td>
+                  <span class="status-badge" [class]="getStatusClass(assessment.status)">
+                    {{ formatStatus(assessment.status) }}
+                  </span>
+                </td>
+                <td>{{ formatDateTime(assessment.assessmentDate) }}</td>
+                <td>{{ assessment.markedCount ?? 0 }}/{{ assessment.studentCount ?? 0 }}</td>
+                <td>{{ assessment.averagePercentage ?? 0 }}%</td>
+                <td>
+                  <div class="action-stack">
+                    <button type="button" class="action-btn" (click)="openSubject(assessment)">Subject</button>
+                    <button type="button" class="action-btn" (click)="editAssessment(assessment)">Edit</button>
+                    <button type="button" class="action-btn primary" (click)="viewAssessment(assessment)">View</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="state-card">
+        @if (assessments.length > 0) {
+          No assessments match the current filters.
+        } @else {
+          No assessments have been created for your subjects yet.
+        }
+      </div>
+    }
+  </div>
+
+  @if (showForm) {
+    <div class="dialog-backdrop">
+      <div class="dialog-card">
+        <div class="dialog-header">
+          <div>
+            <h3>{{ editingAssessmentId ? 'Edit Assessment' : 'New Assessment' }}</h3>
+            <p>Create an assessment and then capture marks on the detail page.</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeForm()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        @if (formError) {
+          <div class="form-error">{{ formError }}</div>
+        }
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Subject</span>
+            <select [(ngModel)]="assessmentForm.subjectAssignmentId" name="assessmentSubjectAssignmentId">
+              <option [ngValue]="null">Select subject</option>
+              @for (subject of subjectFilterOptions; track subject.assignmentId) {
+                <option [ngValue]="subject.assignmentId">
+                  {{ subject.name }}{{ subject.gradeName ? ' • ' + subject.gradeName : '' }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Type</span>
+            <select [(ngModel)]="assessmentForm.type" name="assessmentType">
+              @for (type of assessmentTypes; track type) {
+                <option [ngValue]="type">{{ formatType(type) }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field field-wide">
+            <span>Title</span>
+            <input type="text" [(ngModel)]="assessmentForm.title" name="assessmentTitle" placeholder="Midterm Test" />
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select [(ngModel)]="assessmentForm.status" name="assessmentStatus">
+              @for (status of formAssessmentStatuses; track status) {
+                <option [ngValue]="status">{{ formatStatus(status) }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Date</span>
+            <input type="datetime-local" [(ngModel)]="assessmentForm.assessmentDate" name="assessmentDate" />
+          </label>
+
+          <label class="field">
+            <span>Total Marks</span>
+            <input type="number" min="1" [(ngModel)]="assessmentForm.totalMarks" name="assessmentTotalMarks" />
+          </label>
+
+          <label class="field">
+            <span>Pass Mark</span>
+            <input type="number" min="0" [(ngModel)]="assessmentForm.passMark" name="assessmentPassMark" />
+          </label>
+
+          <label class="field field-wide">
+            <span>Description</span>
+            <textarea
+              rows="4"
+              [(ngModel)]="assessmentForm.description"
+              name="assessmentDescription"
+              placeholder="Add instructions or assessment notes"
+            ></textarea>
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" class="action-btn" (click)="closeForm()">Cancel</button>
+          <button type="button" class="primary-btn" [disabled]="isSaving" (click)="saveAssessment()">
+            {{ isSaving ? 'Saving...' : (editingAssessmentId ? 'Save Changes' : 'Create Assessment') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

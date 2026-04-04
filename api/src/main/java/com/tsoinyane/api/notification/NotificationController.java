@@ -28,19 +28,19 @@ public class NotificationController {
     }
 
     @PostMapping
-    @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN"})
+    @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN", "ROLE_TEACHER"})
     public NotificationDto createNotification(@Valid @RequestBody NotificationRequest request) {
         return notificationService.createNotification(request);
     }
 
     @PutMapping("/{id}")
-    @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN"})
+    @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN", "ROLE_TEACHER"})
     public NotificationDto updateNotification(@PathVariable Long id, @Valid @RequestBody NotificationRequest request) {
         return notificationService.updateNotification(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN"})
+    @Secured({"ROLE_SYSTEM_ADMIN", "ROLE_SCHOOL_ADMIN", "ROLE_TEACHER"})
     public void deleteNotification(@PathVariable Long id) {
         notificationService.deleteNotification(id);
     }

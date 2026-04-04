@@ -79,8 +79,6 @@
                         <th>Status</th>
                         <th>Subject Code</th>
                         <th>Subject Name</th>
-                        <th>Grade Name</th>
-                        <th>Teacher Name</th>
                         <th>Messages</th>
                       </tr>
                     </thead>
@@ -95,8 +93,6 @@
                           </td>
                           <td>{{ result.code || '-' }}</td>
                           <td>{{ result.name || '-' }}</td>
-                          <td>{{ result.gradeName || '-' }}</td>
-                          <td>{{ result.teacherName || '-' }}</td>
                           <td>{{ result.status === 'valid' ? 'OK' : result.message }}</td>
                         </tr>
                       }
@@ -112,33 +108,19 @@
                 <div class="reference-list">
                   <span class="reference-item">Subject Code</span>
                   <span class="reference-item">Subject Name</span>
-                  <span class="reference-item">Grade Name</span>
-                  <span class="reference-item">Teacher Name</span>
                   <span class="reference-item">Status</span>
                 </div>
               </div>
 
-              @if (availableGrades.length > 0) {
-                <div class="reference-data">
-                  <h4>Available Grades in {{ selectedSchoolName }}</h4>
-                  <div class="reference-list">
-                    @for (grade of availableGrades; track grade.id) {
-                      <span class="reference-item">{{ grade.name }}</span>
-                    }
-                  </div>
+              <div class="reference-data">
+                <h4>Suggested Subject Names</h4>
+                <div class="reference-list">
+                  @for (subject of suggestedEnglishSubjects; track subject.code) {
+                    <span class="reference-item">{{ subject.name }} ({{ subject.code }})</span>
+                  }
                 </div>
-              }
+              </div>
 
-              @if (availableTeachers.length > 0) {
-                <div class="reference-data">
-                  <h4>Available Teachers in {{ selectedSchoolName }}</h4>
-                  <div class="reference-list">
-                    @for (teacher of availableTeachers; track teacher.id) {
-                      <span class="reference-item">{{ teacher.userFullName || teacher.userEmail }}</span>
-                    }
-                  </div>
-                </div>
-              }
             </div>
           }
           @if (index === 3) {

@@ -49,9 +49,15 @@ import { FeePaymentForm } from './admin/fees/fee-payment-form/fee-payment-form';
 import { FeePaymentDetail } from './admin/fees/fee-payment-detail/fee-payment-detail';
 import { FeeStructureForm } from './admin/fees/fee-structure-form/fee-structure-form';
 import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
-import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
-import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
-import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
+import { MySubjects } from './admin/teacher/my-subjects';
+import { MyStudents } from './admin/teacher/my-students';
+import { MyStudentDetails } from './admin/teacher/my-student-details';
+import { MySubjectDetails } from './admin/teacher/my-subject-details/my-subject-details';
+import { MyLessonDetails } from './admin/teacher/my-lesson-details';
+import { MyTimetable } from './admin/teacher/my-timetable';
+import { MyLessons } from './admin/teacher/my-lessons';
+import { MyAssessments } from './admin/teacher/my-assessments';
+import { MyAssessmentDetails } from './admin/teacher/my-assessment-details';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
@@ -109,8 +115,14 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     FeeStructureForm,
     FeeStructureDetail,
     MySubjects,
+    MyStudents,
+    MyStudentDetails,
+    MySubjectDetails,
+    MyLessonDetails,
     MyTimetable,
     MyLessons,
+    MyAssessments,
+    MyAssessmentDetails,
     Settings,
     SubjectForm,
     SubjectDetail,

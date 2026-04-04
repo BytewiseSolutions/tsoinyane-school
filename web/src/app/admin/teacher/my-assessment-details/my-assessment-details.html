@@ -1,0 +1,165 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <button type="button" class="back-link" (click)="goBack()">
+        <i class="fa-solid fa-arrow-left"></i> Back to My Assessments
+      </button>
+      <h2>{{ title }}</h2>
+      <p>Capture marks and feedback for this assessment in {{ selectedSchoolName }}.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  }
+
+  @if (isLoading) {
+    <div class="state-card">Loading assessment details...</div>
+  } @else if (assessment) {
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>Subject</h4>
+        <p>{{ assessment.subjectName || 'N/A' }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Type</h4>
+        <p>{{ assessment.type || 'N/A' }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Total Marks</h4>
+        <p>{{ assessment.totalMarks ?? 0 }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Pass Mark</h4>
+        <p>{{ assessment.passMark ?? 0 }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Marked</h4>
+        <p>{{ markedCount }}/{{ marks.length }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Average</h4>
+        <p>{{ averagePercentage }}%</p>
+      </div>
+      <div class="summary-card">
+        <h4>Pass Rate</h4>
+        <p>{{ passRate }}%</p>
+      </div>
+      <div class="summary-card">
+        <h4>Status</h4>
+        <p>{{ formatStatus(assessment.status) }}</p>
+      </div>
+    </div>
+
+    <div class="detail-tabs">
+      <button type="button" class="detail-tab" [class.active]="activeTab === 'overview'" (click)="setActiveTab('overview')">
+        Overview
+      </button>
+      <button type="button" class="detail-tab" [class.active]="activeTab === 'marks'" (click)="setActiveTab('marks')">
+        Marks
+      </button>
+    </div>
+
+    @if (activeTab === 'overview') {
+      <div class="detail-grid">
+        <div class="detail-card">
+          <h3>Assessment Summary</h3>
+          <div class="detail-row">
+            <span>Subject Code</span>
+            <strong>{{ assessment.subjectCode || 'N/A' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Grade</span>
+            <strong>{{ assessment.gradeName || 'N/A' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Teacher</span>
+            <strong>{{ assessment.teacherName || 'N/A' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Date</span>
+            <strong>{{ formatDateTime(assessment.assessmentDate) }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Description</span>
+            <strong>{{ assessment.description || 'No description provided.' }}</strong>
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <h3>Quick Actions</h3>
+          <div class="action-stack">
+            <button type="button" class="action-btn primary" (click)="setActiveTab('marks')">
+              Enter Marks
+            </button>
+            <button type="button" class="action-btn" (click)="openSubject()">
+              Open Subject
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="detail-card">
+        <div class="marks-header">
+          <div>
+            <h3>Student Marks</h3>
+            <p>{{ marks.length }} learners | {{ markedCount }} scored | {{ pendingCount }} pending</p>
+          </div>
+          <button type="button" class="primary-btn" [disabled]="!hasDirtyMarks || isSaving" (click)="saveAllMarks()">
+            {{ isSaving ? 'Saving...' : 'Save All Marks' }}
+          </button>
+        </div>
+
+        @if (marks.length > 0) {
+          <div class="table-wrap">
+            <table class="marks-table">
+              <thead>
+                <tr>
+                  <th class="sticky-col">Student Number</th>
+                  <th class="sticky-col second">Student Name</th>
+                  <th>Score</th>
+                  <th>Percent</th>
+                  <th>Result</th>
+                  <th>Comment</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (mark of marks; track mark.studentId) {
+                  <tr [class.dirty-row]="mark.isDirty">
+                    <td class="sticky-col">{{ mark.studentNumber || 'No student number' }}</td>
+                    <td class="sticky-col second">{{ mark.studentName || 'Unknown Student' }}</td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        [max]="assessment.totalMarks ?? null"
+                        [value]="mark.score ?? ''"
+                        (input)="updateScore(mark, $any($event.target).value)"
+                      />
+                    </td>
+                    <td>{{ getDisplayPercentage(mark) }}%</td>
+                    <td>
+                      <span class="result-badge" [class]="getResultStatus(mark)">
+                        {{ getResultStatus(mark) }}
+                      </span>
+                    </td>
+                    <td>
+                      <textarea
+                        rows="2"
+                        [value]="mark.comment ?? ''"
+                        (input)="updateComment(mark, $any($event.target).value)"
+                        placeholder="Feedback or comment"
+                      ></textarea>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-note">No students are linked to this assessment yet.</div>
+        }
+      </div>
+    }
+  }
+</div>

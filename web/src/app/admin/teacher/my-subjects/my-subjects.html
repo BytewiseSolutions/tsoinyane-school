@@ -1,0 +1,98 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>My Subjects</h2>
+      <p>View the subjects currently assigned to you for {{ selectedSchoolName }}.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  }
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Assigned Subjects</h4>
+      <p>{{ isLoading ? '...' : mySubjects.length }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Active Subjects</h4>
+      <p>{{ isLoading ? '...' : activeSubjectCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Grades Covered</h4>
+      <p>{{ isLoading ? '...' : gradeCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Total Learners</h4>
+      <p>{{ isLoading ? '...' : totalLearners }}</p>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        name="subjectSearch"
+        placeholder="Search by subject, code, or grade..."
+      />
+      <select [(ngModel)]="statusFilter" name="subjectStatusFilter">
+        <option value="ALL">All Status</option>
+        <option value="ACTIVE">Active</option>
+        <option value="PENDING">Pending</option>
+        <option value="INACTIVE">Inactive</option>
+        <option value="DELETED">Deleted</option>
+      </select>
+    </div>
+
+    @if (isLoading) {
+      <div class="state-card">Loading your subjects...</div>
+    } @else if (filteredSubjects.length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Code</th>
+              <th>Grade</th>
+              <th>Learners</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (subject of filteredSubjects; track subject.assignmentId ?? subject.id ?? subject.code) {
+              <tr>
+                <td>
+                  <div class="subject-name">{{ subject.name }}</div>
+                </td>
+                <td>{{ subject.code }}</td>
+                <td>{{ subject.gradeName || 'N/A' }}</td>
+                <td>{{ subject.studentCount ?? 0 }}</td>
+                <td>
+                  <span class="status-badge" [class]="getStatusClass(subject.status)">
+                    {{ getStatusLabel(subject.status) }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="action-btn" (click)="viewSubject(subject)">
+                    View
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="state-card">
+        @if (mySubjects.length > 0) {
+          No subjects match the current filters.
+        } @else {
+          No subjects are assigned to you in this school yet.
+        }
+      </div>
+    }
+  </div>
+</div>

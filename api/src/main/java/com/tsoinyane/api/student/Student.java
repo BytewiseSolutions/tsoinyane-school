@@ -26,7 +26,7 @@ public class Student extends BaseEntity {
     private School school;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "grade_id", nullable = false)
+    @JoinColumn(name = "grade_id")
     private Grade grade;
 
     @Column(nullable = false, unique = true)

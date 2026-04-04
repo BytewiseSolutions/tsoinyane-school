@@ -34,9 +34,15 @@ import { FeeReports } from './admin/fees/fee-reports';
 import { FeePayments } from './admin/fees/fee-payments';
 import { FeeStructureDetail } from './admin/fees/fee-structure-detail/fee-structure-detail';
 import { FeePaymentDetail } from './admin/fees/fee-payment-detail/fee-payment-detail';
-import { MySubjects } from './admin/teacher/my-subjects/my-subjects';
-import { MyTimetable } from './admin/teacher/my-timetable/my-timetable';
-import { MyLessons } from './admin/teacher/my-lessons/my-lessons';
+import { MySubjects } from './admin/teacher/my-subjects';
+import { MyStudents } from './admin/teacher/my-students';
+import { MyStudentDetails } from './admin/teacher/my-student-details';
+import { MySubjectDetails } from './admin/teacher/my-subject-details/my-subject-details';
+import { MyLessonDetails } from './admin/teacher/my-lesson-details';
+import { MyTimetable } from './admin/teacher/my-timetable';
+import { MyLessons } from './admin/teacher/my-lessons';
+import { MyAssessments } from './admin/teacher/my-assessments';
+import { MyAssessmentDetails } from './admin/teacher/my-assessment-details';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
 import { AuthGuard } from './auth/auth-guard';
@@ -82,11 +88,17 @@ const routes: Routes = [
       { path: 'activity-logs', component: ActivityLogs, data: { roles: ['SYSTEM_ADMIN'] } },
       { path: 'notifications', component: Notifications },
       { path: 'profile', component: Profile },
-      { path: 'reports', component: Reports, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
+      { path: 'reports', component: Reports, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] } },
       { path: 'settings', component: Settings, data: { roles: ['SYSTEM_ADMIN', 'SCHOOL_ADMIN'] } },
       { path: 'my-subjects', component: MySubjects, data: { roles: ['TEACHER'] } },
+      { path: 'my-students', component: MyStudents, data: { roles: ['TEACHER'] } },
+      { path: 'my-students/:studentId', component: MyStudentDetails, data: { roles: ['TEACHER'] } },
+      { path: 'my-subjects/:assignmentId', component: MySubjectDetails, data: { roles: ['TEACHER'] } },
       { path: 'my-timetable', component: MyTimetable, data: { roles: ['TEACHER'] } },
       { path: 'my-lessons', component: MyLessons, data: { roles: ['TEACHER'] } },
+      { path: 'my-lessons/:lessonId', component: MyLessonDetails, data: { roles: ['TEACHER'] } },
+      { path: 'my-assessments', component: MyAssessments, data: { roles: ['TEACHER'] } },
+      { path: 'my-assessments/:assessmentId', component: MyAssessmentDetails, data: { roles: ['TEACHER'] } },
     ]
   },
   { path: '**', component: NotFound },

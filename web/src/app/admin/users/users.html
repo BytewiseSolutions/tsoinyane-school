@@ -2,32 +2,68 @@
   <div class="page-header">
     <div>
       <h2>Users</h2>
-      <p>Manage System Admins, Teachers, and Students from one place.</p>
+      <p>{{ pageDescription }}</p>
     </div>
     <div class="header-actions">
+      <button class="import-btn" type="button" (click)="exportFilteredUsers()">
+        <i class="fa-solid fa-file-export"></i> Export
+      </button>
       <a class="import-btn" routerLink="/admin/users/import"><i class="fa-solid fa-file-import"></i> Import</a>
-      <button class="add-btn" type="button" (click)="openAddUserForm()"><i class="fa-solid fa-plus"></i> Add User</button>
+      @if (isSystemAdmin) {
+        <button class="quick-add-btn" type="button" (click)="openAddUserForm([Role.SCHOOL_ADMIN])">
+          <i class="fa-solid fa-user-shield"></i> Add School Admin
+        </button>
+      }
+      <button class="quick-add-btn" type="button" (click)="openAddUserForm([Role.TEACHER])">
+        <i class="fa-solid fa-chalkboard-user"></i> Add Teacher
+      </button>
+      <button class="quick-add-btn" type="button" (click)="openAddUserForm([Role.STUDENT])">
+        <i class="fa-solid fa-user-graduate"></i> Add Student
+      </button>
     </div>
   </div>
 
   <div class="summary-grid">
-    <div class="summary-card">
-      <h4>Total Users</h4>
-      <p>{{ totalUsers }}</p>
-    </div>
-    <div class="summary-card">
-      <h4>Admins</h4>
-      <p>{{ totalAdmins }}</p>
-    </div>
-    <div class="summary-card">
-      <h4>Teachers</h4>
-      <p>{{ totalTeachers }}</p>
-    </div>
-    <div class="summary-card">
-      <h4>Students</h4>
-      <p>{{ totalStudents }}</p>
-    </div>
+    @for (card of summaryCards; track card.label) {
+      <button
+        type="button"
+        class="summary-card interactive"
+        [class.active]="roleFilter === card.filter"
+        (click)="setRoleFilter(card.filter)"
+      >
+        <h4>{{ card.label }}</h4>
+        <p>{{ card.value }}</p>
+      </button>
+    }
   </div>
+
+  <div class="users-tabs" role="tablist" aria-label="User type filters">
+    @for (tab of availableRoleTabs; track tab.value) {
+      <button
+        type="button"
+        class="users-tab"
+        [class.active]="roleFilter === tab.value"
+        (click)="setRoleFilter(tab.value)"
+      >
+        <span>{{ tab.label }}</span>
+        <span class="tab-count">{{ getCountForRoleFilter(tab.value) }}</span>
+      </button>
+    }
+  </div>
+
+  @if (hasUsersNeedingRoleCleanup) {
+    <div class="cleanup-banner">
+      <div>
+        <strong>{{ usersNeedingRoleCleanup.length }}</strong>
+        user{{ usersNeedingRoleCleanup.length === 1 ? '' : 's' }} have multiple roles and should be cleaned up.
+      </div>
+      <div class="cleanup-list">
+        @for (user of usersNeedingRoleCleanup.slice(0, 3); track user.id) {
+          <a [routerLink]="['/admin/users', user.id]">{{ getFullName(user) }}</a>
+        }
+      </div>
+    </div>
+  }
 
   <div class="table-card">
     <div class="toolbar">
@@ -36,11 +72,16 @@
         [(ngModel)]="searchTerm"
         (ngModelChange)="onFiltersChanged()"
         name="searchTerm"
-        placeholder="Search by name, email or role..."
+        placeholder="Search by name, email, role or grade..."
       />
-      <select [(ngModel)]="roleFilter" (ngModelChange)="onFiltersChanged()" name="roleFilter">
-        @for (filter of availableRoleFilters; track filter.value) {
-          <option [value]="filter.value">{{ filter.label }}</option>
+      <select [(ngModel)]="statusFilter" (ngModelChange)="onFiltersChanged()" name="statusFilter">
+        @for (status of statusFilterOptions; track status.value) {
+          <option [value]="status.value">{{ status.label }}</option>
+        }
+      </select>
+      <select [(ngModel)]="sortOption" (ngModelChange)="onFiltersChanged()" name="sortOption">
+        @for (sort of sortOptions; track sort.value) {
+          <option [value]="sort.value">{{ sort.label }}</option>
         }
       </select>
     </div>
@@ -53,24 +94,81 @@
       <div class="empty-state">{{ errorMessage }}</div>
     }
 
+    @if (hasSelectedUsers) {
+      <div class="bulk-actions-bar">
+        <div class="bulk-summary">
+          {{ selectedUsersCount }} user{{ selectedUsersCount === 1 ? '' : 's' }} selected
+        </div>
+        <div class="bulk-actions">
+          <button type="button" class="bulk-btn" [disabled]="isProcessing" (click)="bulkActivateUsers()">
+            Activate
+          </button>
+          <button type="button" class="bulk-btn" [disabled]="isProcessing" (click)="bulkDeactivateUsers()">
+            Deactivate
+          </button>
+          <button type="button" class="bulk-btn danger" [disabled]="isProcessing" (click)="openBulkDeleteDialog()">
+            Remove
+          </button>
+          <button type="button" class="bulk-btn ghost" (click)="clearSelectedUsers()">
+            Clear
+          </button>
+        </div>
+      </div>
+    }
+
     <table>
       <thead>
         <tr>
-          <th>Full Name</th>
-          <th>Email</th>
+          <th class="selection-column">
+            <input
+              type="checkbox"
+              [checked]="allPaginatedUsersSelected"
+              [indeterminate]="partiallySelectedPaginatedUsers"
+              (change)="toggleAllPaginatedUsers($any($event.target).checked)"
+            />
+          </th>
+          <th>
+            <button type="button" class="sortable-header" [class.active]="isSortActive('created')" (click)="toggleSort('created')">
+              Created <span>{{ getSortIndicator('created') }}</span>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="sortable-header" [class.active]="isSortActive('name')" (click)="toggleSort('name')">
+              Full Name <span>{{ getSortIndicator('name') }}</span>
+            </button>
+          </th>
+          <th>Phone</th>
           <th>Role</th>
-          <th>Grade Info</th>
-          <th>Status</th>
+          <th>
+            <button type="button" class="sortable-header" [class.active]="isSortActive('status')" (click)="toggleSort('status')">
+              Status <span>{{ getSortIndicator('status') }}</span>
+            </button>
+          </th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         @for (user of paginatedUsers; track user.id) {
           <tr>
+            <td class="selection-column">
+              @if (canEditUser(user) && user.id) {
+                <input
+                  type="checkbox"
+                  [checked]="isUserSelected(user.id)"
+                  (change)="toggleUserSelection(user.id, $any($event.target).checked)"
+                />
+              }
+            </td>
+            <td>{{ formatDate(user.createdAt) }}</td>
             <td>{{ getFullName(user) }}</td>
-            <td>{{ user.email }}</td>
-            <td><span class="role-tag">{{ getRoleLabels(user) }}</span></td>
-            <td class="grade-info">{{ getGradeInfo(user) }}</td>
+            <td>{{ user.phone || 'N/A' }}</td>
+            <td>
+              <div class="role-tags">
+                @for (roleLabel of getRoleBadges(user); track roleLabel) {
+                  <span class="role-tag">{{ roleLabel }}</span>
+                }
+              </div>
+            </td>
             <td>
               <span
                 class="badge"
@@ -84,6 +182,11 @@
             </td>
             <td class="actions">
               <a class="action-btn" [routerLink]="['/admin/users', user.id]">View</a>
+              @if (canAssignGradeFromList(user)) {
+                <a class="action-btn edit" [routerLink]="['/admin/users', user.id]">
+                  {{ needsStudentGrade(user) ? 'Assign Grade' : 'Update Grade' }}
+                </a>
+              }
               @if (canEditUser(user)) {
                 <button class="action-btn edit" type="button" (click)="editUser(user)">
                   Edit
@@ -100,18 +203,18 @@
             </td>
           </tr>
         }
-        @if (filteredUsers.length === 0) {
+        @if (sortedUsers.length === 0) {
           <tr>
-            <td colspan="6" class="empty-state">No users found for the selected filter.</td>
+            <td colspan="7" class="empty-state">{{ emptyStateMessage }}</td>
           </tr>
         }
       </tbody>
     </table>
 
-    @if (filteredUsers.length > 0) {
+    @if (sortedUsers.length > 0) {
       <div class="pagination-bar">
         <div class="pagination-summary">
-          Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredUsers.length }}
+          Showing {{ pageStart }}-{{ pageEnd }} of {{ sortedUsers.length }}
         </div>
         <div class="pagination-controls">
           <label class="page-size">
@@ -136,7 +239,31 @@
 </div>
 
 @if (showUserForm) {
-  <app-user-form [existingUser]="editingUser" (closed)="closeAddUserForm()" (saved)="onUserSaved($event)"></app-user-form>
+  <app-user-form
+    [existingUser]="editingUser"
+    [presetRoles]="presetRoles"
+    (closed)="closeAddUserForm()"
+    (saved)="onUserSaved($event)"
+  ></app-user-form>
+}
+
+@if (showBulkDeleteDialog) {
+  <div class="confirm-overlay" (click)="cancelBulkDeleteUsers()">
+    <div class="confirm-card" (click)="$event.stopPropagation()">
+      <h3>Delete Selected Users</h3>
+      <p>
+        Are you sure you want to delete
+        <strong>{{ selectedUsersCount }}</strong>
+        selected user{{ selectedUsersCount === 1 ? '' : 's' }}?
+      </p>
+      <div class="confirm-actions">
+        <button type="button" class="cancel-btn" (click)="cancelBulkDeleteUsers()">Cancel</button>
+        <button type="button" class="delete-btn" [disabled]="isProcessing" (click)="confirmBulkDeleteUsers()">
+          {{ isProcessing ? 'Deleting...' : 'Delete Selected' }}
+        </button>
+      </div>
+    </div>
+  </div>
 }
 
 @if (showDeleteDialog && userToDelete) {

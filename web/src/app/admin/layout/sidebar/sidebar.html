@@ -97,6 +97,11 @@
         @if (!collapsed) { <span>My Subjects</span> }
         @if (collapsed) { <span class="tooltip">My Subjects</span> }
       </a>
+      <a routerLink="/admin/my-students" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-user-graduate"></i>
+        @if (!collapsed) { <span>My Students</span> }
+        @if (collapsed) { <span class="tooltip">My Students</span> }
+      </a>
       <a routerLink="/admin/my-timetable" routerLinkActive="active" (click)="closeOnMobile()">
         <i class="fa-solid fa-calendar-week"></i>
         @if (!collapsed) { <span>My Timetable</span> }
@@ -107,13 +112,23 @@
         @if (!collapsed) { <span>My Lessons</span> }
         @if (collapsed) { <span class="tooltip">My Lessons</span> }
       </a>
+      <a routerLink="/admin/my-assessments" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-clipboard-check"></i>
+        @if (!collapsed) { <span>My Assessments</span> }
+        @if (collapsed) { <span class="tooltip">My Assessments</span> }
+      </a>
 
-      @if (!collapsed) { <span class="nav-section-label">Communication</span> }
+      @if (!collapsed) { <span class="nav-section-label">Communication & Reports</span> }
 
       <a routerLink="/admin/notifications" routerLinkActive="active" (click)="closeOnMobile()">
         <i class="fa-solid fa-bell"></i>
         @if (!collapsed) { <span>Notifications</span> }
         @if (collapsed) { <span class="tooltip">Notifications</span> }
+      </a>
+      <a routerLink="/admin/reports" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-chart-bar"></i>
+        @if (!collapsed) { <span>Reports</span> }
+        @if (collapsed) { <span class="tooltip">Reports</span> }
       </a>
     }
 

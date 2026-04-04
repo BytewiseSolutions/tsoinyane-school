@@ -1,0 +1,180 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>My Lessons</h2>
+      <p>View your scheduled lessons for {{ selectedSchoolName }}.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  }
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Lessons</h4>
+      <p>{{ isLoading ? '...' : totalLessons }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Pending</h4>
+      <p>{{ isLoading ? '...' : pendingLessonsCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Submitted</h4>
+      <p>{{ isLoading ? '...' : submittedLessonsCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Cancelled</h4>
+      <p>{{ isLoading ? '...' : cancelledLessonsCount }}</p>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFiltersChanged()"
+        name="lessonSearch"
+        placeholder="Search by subject, grade, day, session, or status..."
+      />
+      <select [(ngModel)]="selectedSubjectAssignmentFilter" (ngModelChange)="onFiltersChanged()" name="lessonSubjectFilter">
+        <option [ngValue]="'ALL'">All Subjects</option>
+        @for (subject of subjectFilterOptions; track subject.assignmentId) {
+          <option [ngValue]="subject.assignmentId">
+            {{ subject.name }}{{ subject.gradeName ? ' • ' + subject.gradeName : '' }}
+          </option>
+        }
+      </select>
+      <select [(ngModel)]="selectedDayFilter" (ngModelChange)="onFiltersChanged()" name="lessonDayFilter">
+        <option [ngValue]="'ALL'">All Days</option>
+        @for (day of dayFilterOptions; track day) {
+          <option [ngValue]="day">{{ day }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedStatusFilter" (ngModelChange)="onFiltersChanged()" name="lessonStatusFilter">
+        @for (status of lessonStatusOptions; track status) {
+          <option [ngValue]="status">
+            {{ status === 'ALL' ? 'All Statuses' : getStatusLabel(status) }}
+          </option>
+        }
+      </select>
+      <select [(ngModel)]="selectedSort" (ngModelChange)="onFiltersChanged()" name="lessonSort">
+        <option value="date-asc">Date Earliest</option>
+        <option value="date-desc">Date Latest</option>
+        <option value="subject-asc">Subject A-Z</option>
+        <option value="subject-desc">Subject Z-A</option>
+        <option value="status-asc">Status A-Z</option>
+        <option value="status-desc">Status Z-A</option>
+      </select>
+    </div>
+
+    <div class="bulk-toolbar">
+      <span>{{ selectedLessonIds.length }} selected</span>
+      <div class="bulk-actions">
+        <button type="button" class="action-btn primary" [disabled]="!canBulkSubmit" (click)="bulkSubmitLessons()">
+          {{ isBulkSaving ? 'Saving...' : 'Submit Selected' }}
+        </button>
+        <button type="button" class="action-btn" [disabled]="!canBulkReopen" (click)="bulkReopenLessons()">
+          {{ isBulkSaving ? 'Saving...' : 'Reopen Selected' }}
+        </button>
+      </div>
+    </div>
+
+    @if (actionMessage) {
+      <div class="success-banner">{{ actionMessage }}</div>
+    }
+
+    @if (isLoading) {
+      <div class="state-card">Loading your lessons...</div>
+    } @else if (filteredLessons.length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  [checked]="allVisibleLessonsSelected"
+                  (change)="toggleAllVisibleLessons($any($event.target).checked)"
+                />
+              </th>
+              <th>Session</th>
+              <th>Subject</th>
+              <th>Grade</th>
+              <th>Status</th>
+              <th>Learners</th>
+              <th>Attendance</th>
+              <th>Homework</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (lesson of paginatedLessons; track lesson.id ?? lesson.timetableId ?? lesson.startTime) {
+              <tr>
+                <td>
+                  <input
+                    type="checkbox"
+                    [checked]="isLessonSelected(lesson.id)"
+                    (change)="toggleLessonSelection(lesson.id, $any($event.target).checked)"
+                  />
+                </td>
+                <td>{{ formatLessonSession(lesson) }}</td>
+                <td>
+                  <div class="subject-name">{{ lesson.subjectName || 'Unknown Subject' }}</div>
+                  <div class="meta-note">{{ lesson.dayOfWeek || 'No day set' }}</div>
+                </td>
+                <td>{{ lesson.gradeName || 'N/A' }}</td>
+                <td>
+                  <span class="status-badge" [class]="getStatusClass(lesson.status)">
+                    {{ getStatusLabel(lesson.status) }}
+                  </span>
+                </td>
+                <td>{{ lesson.studentCount ?? 0 }}</td>
+                <td>{{ getAttendanceCompletion(lesson) }}</td>
+                <td>{{ getHomeworkCompletion(lesson) }}</td>
+                <td>
+                  <div class="action-stack">
+                    <button type="button" class="action-btn" (click)="openSubject(lesson)">Subject</button>
+                    <button type="button" class="action-btn primary" (click)="viewLesson(lesson)">View</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination-bar">
+        <div class="pagination-summary">
+          Showing {{ lessonPageStart }}-{{ lessonPageEnd }} of {{ filteredLessons.length }}
+        </div>
+        <div class="pagination-controls">
+          <label class="page-size">
+            <span>Rows</span>
+            <select [(ngModel)]="lessonPageSize" (ngModelChange)="onPageSizeChanged()" name="lessonPageSize">
+              @for (size of pageSizeOptions; track size) {
+                <option [ngValue]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
+            Previous
+          </button>
+          <span class="page-indicator">Page {{ safeCurrentPage }} of {{ lessonTotalPages }}</span>
+          <button type="button" class="page-btn" [disabled]="safeCurrentPage === lessonTotalPages" (click)="goToNextPage()">
+            Next
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="state-card">
+        @if (lessons.length > 0) {
+          No lessons match the current filters.
+        } @else {
+          No lessons are scheduled for you in this school yet.
+        }
+      </div>
+    }
+  </div>
+</div>
