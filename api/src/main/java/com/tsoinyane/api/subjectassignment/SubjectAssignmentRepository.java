@@ -15,8 +15,8 @@ public interface SubjectAssignmentRepository extends JpaRepository<SubjectAssign
             join fetch sa.subject subject
             join fetch subject.school
             join fetch sa.grade
-            join fetch sa.teacher teacher
-            join fetch teacher.user
+            left join fetch sa.teacher teacher
+            left join fetch teacher.user
             where (:schoolId is null or subject.school.id = :schoolId)
             order by sa.id asc
             """)
@@ -27,8 +27,8 @@ public interface SubjectAssignmentRepository extends JpaRepository<SubjectAssign
             join fetch sa.subject subject
             join fetch subject.school
             join fetch sa.grade
-            join fetch sa.teacher teacher
-            join fetch teacher.user
+            left join fetch sa.teacher teacher
+            left join fetch teacher.user
             where sa.id = :id
             """)
     Optional<SubjectAssignment> findWithAssociationsById(@Param("id") Long id);
@@ -38,8 +38,8 @@ public interface SubjectAssignmentRepository extends JpaRepository<SubjectAssign
             join fetch sa.subject subject
             join fetch subject.school
             join fetch sa.grade
-            join fetch sa.teacher teacher
-            join fetch teacher.user
+            left join fetch sa.teacher teacher
+            left join fetch teacher.user
             left join fetch sa.students students
             where sa.id = :id
             """)
@@ -50,8 +50,8 @@ public interface SubjectAssignmentRepository extends JpaRepository<SubjectAssign
             join fetch sa.subject subject
             join fetch subject.school
             join fetch sa.grade
-            join fetch sa.teacher teacher
-            join fetch teacher.user
+            left join fetch sa.teacher teacher
+            left join fetch teacher.user
             left join fetch sa.students students
             where sa.subject.id = :subjectId
             order by sa.id asc

@@ -15,12 +15,12 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
             select s from Student s
             join fetch s.user
             join fetch s.school
-            join fetch s.grade
+            left join fetch s.grade
             where s.id = :id
             """)
     Optional<Student> findWithAssociationsById(@Param("id") Long id);
 
-    @Query("select s from Student s join fetch s.grade join fetch s.school join fetch s.user where s.user.id = :userId")
+    @Query("select s from Student s left join fetch s.grade join fetch s.school join fetch s.user where s.user.id = :userId")
     Optional<Student> findByUser_Id(@Param("userId") Long userId);
 
     @Query("select count(s) from Student s where (:schoolId is null or s.school.id = :schoolId)")
@@ -30,7 +30,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
             select s from Student s
             join fetch s.user
             join fetch s.school
-            join fetch s.grade
+            left join fetch s.grade
             where (:schoolId is null or s.school.id = :schoolId)
             order by s.createdAt desc
             """)
@@ -40,7 +40,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
             select s from Student s
             join fetch s.user
             join fetch s.school
-            join fetch s.grade
+            left join fetch s.grade
             where (:schoolId is null or s.school.id = :schoolId)
             order by s.studentNumber asc
             """)

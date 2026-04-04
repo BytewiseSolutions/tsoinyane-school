@@ -197,7 +197,7 @@ public class SubjectAssignmentService {
 
     private Teacher resolveTeacher(Long teacherId, Long schoolId) {
         if (teacherId == null || teacherId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Teacher is required");
+            return null;
         }
 
         Teacher teacher = teacherRepository.findWithUserAndSchoolById(teacherId)

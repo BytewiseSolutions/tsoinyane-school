@@ -1,15 +1,12 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Subject, catchError, finalize, forkJoin, map, of, switchMap, takeUntil } from 'rxjs';
+import { Subject, finalize, takeUntil } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { BackendService } from '../../util/backend.service';
 import { SchoolContextService } from '../layout/school-context';
-import { Grade } from '../grades/grade';
 import { Status } from '../users/status';
 import { SchoolSubject } from './subject';
-import { SubjectTeacherOption } from './subject-teacher-option';
-import { Teacher } from '../teachers/teacher';
 
 @Component({
   selector: 'app-admin-subjects',
@@ -36,16 +33,11 @@ export class AdminSubjects implements OnInit, OnDestroy {
   errorMessage = '';
   searchTerm = '';
   selectedStatusFilter: Status | 'ALL' = 'ALL';
-  selectedGradeFilter: number | null = null;
-  selectedTeacherFilter: number | null = null;
   selectedSort = 'code-asc';
   pageSize = 10;
   currentPage = 1;
-  availableGrades: Grade[] = [];
-  teacherOptions: SubjectTeacherOption[] = [];
 
   subjects: SchoolSubject[] = [];
-  subjectCatalog: SchoolSubject[] = [];
 
   constructor(
     private backendService: BackendService,
@@ -60,7 +52,7 @@ export class AdminSubjects implements OnInit, OnDestroy {
         this.selectedSchoolId = school?.id ?? null;
         this.selectedSchoolName = school?.name ?? '';
         this.resetFilters();
-        this.loadReferenceData();
+        this.loadSubjects();
       });
   }
 
@@ -74,8 +66,6 @@ export class AdminSubjects implements OnInit, OnDestroy {
     return [...this.subjects]
       .filter(subject => this.matchesSearch(subject, query))
       .filter(subject => this.selectedStatusFilter === 'ALL' || subject.status === this.selectedStatusFilter)
-      .filter(subject => this.selectedGradeFilter === null || Number(subject.gradeId ?? 0) === Number(this.selectedGradeFilter))
-      .filter(subject => this.selectedTeacherFilter === null || Number(subject.teacherId ?? 0) === Number(this.selectedTeacherFilter))
       .sort((left, right) => this.compareSubjects(left, right));
   }
 
@@ -105,21 +95,7 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   get totalSubjects(): number {
-    return new Set(
-      this.subjects
-        .map(subject => Number(subject.subjectId ?? subject.id ?? 0))
-        .filter(subjectId => subjectId > 0)
-    ).size;
-  }
-
-  get teacherFilterOptions(): SubjectTeacherOption[] {
-    const teacherIdsWithSubjects = new Set(
-      this.subjects
-        .map(subject => Number(subject.teacherId ?? 0))
-        .filter(teacherId => teacherId > 0)
-    );
-
-    return this.teacherOptions.filter(teacher => teacherIdsWithSubjects.has(Number(teacher.id)));
+    return this.subjects.length;
   }
 
   get activeSubjectsCount(): number {
@@ -147,7 +123,8 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   viewSubject(subject: SchoolSubject) {
-    this.router.navigate(['/admin/subjects', subject.id]);
+    const subjectId = Number(subject.subjectId ?? subject.id ?? 0);
+    this.router.navigate(['/admin/subjects', subjectId]);
   }
 
   onSaved(subject: SchoolSubject) {
@@ -157,11 +134,11 @@ export class AdminSubjects implements OnInit, OnDestroy {
     };
 
     if (this.selectedSubject) {
-      this.updateSubjectAssignment(payload);
+      this.updateSubject(payload);
       return;
     }
 
-    this.createSubjectAssignment(payload);
+    this.createSubject(payload);
   }
 
   deleteSubject(subject: SchoolSubject) {
@@ -177,27 +154,28 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   confirmDeleteSubject() {
-    if (!this.subjectToDelete?.assignmentId || this.isProcessing) return;
-
-    const targetSubject = this.subjectToDelete;
+    const targetSubjectId = Number(this.subjectToDelete?.subjectId ?? this.subjectToDelete?.id ?? 0);
+    if (!targetSubjectId || this.isProcessing) return;
 
     this.isProcessing = true;
     this.errorMessage = '';
 
-    this.backendService.delete(`subject-assignment/${targetSubject.assignmentId}`)
+    this.backendService.delete(`subject/${targetSubjectId}`)
       .pipe(finalize(() => {
         this.isProcessing = false;
       }))
       .subscribe({
-      next: () => {
-        this.subjects = this.subjects.filter(subject => subject.id !== targetSubject.id);
-        this.cancelDeleteSubject();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to delete subject.';
-        this.cancelDeleteSubject();
-      },
-    });
+        next: () => {
+          this.subjects = this.subjects.filter(subject =>
+            Number(subject.subjectId ?? subject.id ?? 0) !== targetSubjectId
+          );
+          this.cancelDeleteSubject();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to delete subject.';
+          this.cancelDeleteSubject();
+        },
+      });
   }
 
   toggleStatus(subject: SchoolSubject) {
@@ -216,11 +194,12 @@ export class AdminSubjects implements OnInit, OnDestroy {
   }
 
   confirmToggleStatus() {
-    if (!this.subjectToToggleStatus?.id || this.isProcessing) {
+    const targetSubjectId = Number(this.subjectToToggleStatus?.subjectId ?? this.subjectToToggleStatus?.id ?? 0);
+    if (!targetSubjectId || this.isProcessing) {
       return;
     }
 
-    const targetSubject = this.subjectToToggleStatus;
+    const targetSubject = this.subjectToToggleStatus!;
     this.isProcessing = true;
     this.errorMessage = '';
 
@@ -230,22 +209,24 @@ export class AdminSubjects implements OnInit, OnDestroy {
       status: this.pendingStatus,
     };
 
-    this.saveSubjectAssignment(payload, true, targetSubject).pipe(
-      finalize(() => {
+    this.saveSubject(payload, targetSubjectId)
+      .pipe(finalize(() => {
         this.isProcessing = false;
-      })
-    ).subscribe({
-      next: (updatedSubject) => {
-        this.subjects = this.subjects.map(subject =>
-          subject.assignmentId === updatedSubject.assignmentId ? this.mapSavedSubject(updatedSubject) : subject
-        );
-        this.cancelToggleStatus();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to update subject status.';
-        this.cancelToggleStatus();
-      },
-    });
+      }))
+      .subscribe({
+        next: updatedSubject => {
+          this.subjects = this.subjects.map(subject =>
+            Number(subject.subjectId ?? subject.id ?? 0) === targetSubjectId
+              ? this.mapSavedSubject(updatedSubject)
+              : subject
+          );
+          this.cancelToggleStatus();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = error.error?.message || 'Failed to update subject status.';
+          this.cancelToggleStatus();
+        },
+      });
   }
 
   getStatusLabel(status: Status | null | undefined): string {
@@ -261,9 +242,6 @@ export class AdminSubjects implements OnInit, OnDestroy {
     const rows = this.filteredSubjects.map(subject => ({
       'Subject Code': subject.code,
       'Subject Name': subject.name,
-      Grade: subject.gradeName ?? '',
-      Teacher: subject.teacherName ?? '',
-      'Student Count': subject.studentCount ?? 0,
       Status: this.getStatusLabel(subject.status),
     }));
 
@@ -303,9 +281,7 @@ export class AdminSubjects implements OnInit, OnDestroy {
     }
 
     return subject.code.toLowerCase().includes(query)
-      || subject.name.toLowerCase().includes(query)
-      || (subject.gradeName ?? '').toLowerCase().includes(query)
-      || (subject.teacherName ?? '').toLowerCase().includes(query);
+      || subject.name.toLowerCase().includes(query);
   }
 
   private compareSubjects(left: SchoolSubject, right: SchoolSubject): number {
@@ -316,14 +292,6 @@ export class AdminSubjects implements OnInit, OnDestroy {
         return this.compareText(left.name, right.name);
       case 'name-desc':
         return this.compareText(right.name, left.name);
-      case 'grade-asc':
-        return this.compareText(left.gradeName, right.gradeName);
-      case 'grade-desc':
-        return this.compareText(right.gradeName, left.gradeName);
-      case 'teacher-asc':
-        return this.compareText(left.teacherName, right.teacherName);
-      case 'teacher-desc':
-        return this.compareText(right.teacherName, left.teacherName);
       case 'code-asc':
       default:
         return this.compareText(left.code, right.code);
@@ -334,10 +302,8 @@ export class AdminSubjects implements OnInit, OnDestroy {
     return (left ?? '').localeCompare(right ?? '', undefined, { sensitivity: 'base' });
   }
 
-  private loadReferenceData() {
+  private loadSubjects() {
     if (!this.selectedSchoolId) {
-      this.availableGrades = [];
-      this.teacherOptions = [];
       this.subjects = [];
       this.isLoading = false;
       this.errorMessage = '';
@@ -346,120 +312,75 @@ export class AdminSubjects implements OnInit, OnDestroy {
 
     this.isLoading = true;
     this.errorMessage = '';
-    const errorMessages: string[] = [];
 
-    forkJoin({
-      subjects: this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId }).pipe(
-        catchError((error: HttpErrorResponse) => {
-          errorMessages.push(error.error?.message || 'Failed to load subjects.');
-          return of([] as SchoolSubject[]);
-        })
-      ),
-      grades: this.backendService.get<Grade[]>('grade').pipe(
-        catchError(() => of([] as Grade[]))
-      ),
-      catalogSubjects: this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId }).pipe(
-        catchError(() => of([] as SchoolSubject[]))
-      ),
-      assignments: this.backendService.get<any[]>('subject-assignment', { schoolId: this.selectedSchoolId }).pipe(
-        catchError((error: HttpErrorResponse) => {
-          errorMessages.push(error.error?.message || 'Failed to load subject assignments.');
-          return of([] as any[]);
-        })
-      ),
-      teachers: this.backendService.get<Teacher[]>('teacher', { schoolId: this.selectedSchoolId }).pipe(
-        catchError((error: HttpErrorResponse) => {
-          errorMessages.push(error.error?.message || 'Failed to load teachers for subjects.');
-          return of([] as Teacher[]);
-        })
-      ),
-    })
+    this.backendService.get<SchoolSubject[]>('subject', { schoolId: this.selectedSchoolId })
       .pipe(finalize(() => {
         this.isLoading = false;
       }))
-      .subscribe(({ grades, catalogSubjects, assignments, teachers }) => {
-        this.availableGrades = (grades ?? []).filter(grade => grade.schoolId === this.selectedSchoolId);
-        this.teacherOptions = (teachers ?? []).map(teacher => ({
-          id: Number(teacher.id ?? 0),
-          name: teacher.userFullName || teacher.userEmail || 'Unknown Teacher',
-          schoolId: teacher.schoolId ?? null,
-          gradeIds: (teacher.gradeIds ?? []).map(id => Number(id)),
-        })).filter(teacher => teacher.id > 0);
-        this.subjectCatalog = (catalogSubjects ?? []).map(subject => ({
-          ...subject,
-          id: Number(subject.id ?? 0),
-          subjectId: Number(subject.id ?? 0),
-        }));
-        this.subjects = (assignments ?? []).map(assignment => this.mapAssignmentToSubject(assignment));
-        this.ensureValidFilters();
-        this.errorMessage = errorMessages.join(' ');
+      .subscribe({
+        next: subjects => {
+          this.subjects = (subjects ?? []).map(subject => this.mapSavedSubject(subject));
+        },
+        error: (error: HttpErrorResponse) => {
+          this.subjects = [];
+          this.errorMessage = error.error?.message || 'Failed to load subjects.';
+        },
       });
   }
 
   private mapSavedSubject(subject: SchoolSubject): SchoolSubject {
-    const gradeId = subject.gradeId != null ? Number(subject.gradeId) : null;
-    const teacherId = subject.teacherId != null ? Number(subject.teacherId) : null;
-    const gradeName = this.availableGrades.find(grade => Number(grade.id) === gradeId)?.name ?? subject.gradeName ?? null;
-    const teacherName = this.teacherOptions.find(teacher => teacher.id === teacherId)?.name ?? subject.teacherName ?? null;
-
     return {
       ...subject,
+      id: Number(subject.id ?? subject.subjectId ?? 0),
+      subjectId: Number(subject.subjectId ?? subject.id ?? 0),
       schoolId: subject.schoolId ?? this.selectedSchoolId,
       schoolName: subject.schoolName ?? (this.selectedSchoolName || null),
-      gradeId,
-      gradeName,
-      teacherId,
-      teacherName,
-      studentCount: Number(subject.studentCount ?? 0),
+      gradeId: null,
+      gradeName: null,
+      teacherId: null,
+      teacherName: null,
+      studentCount: null,
+      assignmentId: null,
+      assignmentCount: Number(subject.assignmentCount ?? 0),
+      status: subject.status ?? Status.ACTIVE,
     };
   }
 
-  private mapAssignmentToSubject(assignment: any): SchoolSubject {
-    return this.mapSavedSubject({
-      id: Number(assignment.subjectId ?? 0),
-      subjectId: Number(assignment.subjectId ?? 0),
-      assignmentId: Number(assignment.id ?? 0),
-      code: assignment.subjectCode ?? '',
-      name: assignment.subjectName ?? '',
-      schoolId: assignment.schoolId ?? this.selectedSchoolId,
-      schoolName: assignment.schoolName ?? this.selectedSchoolName,
-      gradeId: assignment.gradeId ?? null,
-      gradeName: assignment.gradeName ?? null,
-      teacherId: assignment.teacherId ?? null,
-      teacherName: assignment.teacherName ?? null,
-      studentCount: assignment.studentCount ?? 0,
-      status: assignment.status ?? Status.ACTIVE,
-    });
-  }
-
-  private createSubjectAssignment(subject: SchoolSubject): void {
-    this.saveSubjectAssignment(subject, false).subscribe({
-      next: (savedSubject) => {
+  private createSubject(subject: SchoolSubject): void {
+    this.saveSubject(subject).subscribe({
+      next: savedSubject => {
         this.subjects = [this.mapSavedSubject(savedSubject), ...this.subjects];
         this.closeForm();
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to create subject assignment.';
+        this.errorMessage = error.error?.message || 'Failed to create subject.';
       },
     });
   }
 
-  private updateSubjectAssignment(subject: SchoolSubject): void {
-    this.saveSubjectAssignment(subject, true, this.selectedSubject ?? undefined).subscribe({
-      next: (updated) => {
+  private updateSubject(subject: SchoolSubject): void {
+    const targetSubjectId = Number(this.selectedSubject?.subjectId ?? this.selectedSubject?.id ?? 0);
+    if (!targetSubjectId) {
+      this.errorMessage = 'Failed to update subject.';
+      return;
+    }
+
+    this.saveSubject(subject, targetSubjectId).subscribe({
+      next: updatedSubject => {
         this.subjects = this.subjects.map(item =>
-          item.assignmentId === updated.assignmentId ? this.mapSavedSubject(updated) : item
+          Number(item.subjectId ?? item.id ?? 0) === targetSubjectId
+            ? this.mapSavedSubject(updatedSubject)
+            : item
         );
         this.closeForm();
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = error.error?.message || 'Failed to update subject assignment.';
+        this.errorMessage = error.error?.message || 'Failed to update subject.';
       },
     });
   }
 
-  private saveSubjectAssignment(subject: SchoolSubject, isEdit: boolean, existing?: SchoolSubject) {
-    const catalogSubject = this.findCatalogSubjectByCode(subject.code, existing?.subjectId ?? null);
+  private saveSubject(subject: SchoolSubject, subjectId?: number) {
     const subjectPayload: SchoolSubject = {
       code: subject.code,
       name: subject.name,
@@ -469,66 +390,20 @@ export class AdminSubjects implements OnInit, OnDestroy {
       gradeName: null,
       teacherId: null,
       teacherName: null,
-      status: subject.status,
+      status: subjectId ? (subject.status ?? Status.ACTIVE) : (subject.status ?? null),
     };
 
-    const subjectRequest$ = existing?.subjectId
-      ? this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${existing.subjectId}`, {
+    return subjectId
+      ? this.backendService.put<SchoolSubject, SchoolSubject>(`subject/${subjectId}`, {
           ...subjectPayload,
-          id: existing.subjectId,
+          id: subjectId,
         })
-      : catalogSubject?.subjectId
-        ? of(catalogSubject)
-        : this.backendService.post<SchoolSubject, SchoolSubject>('subject', subjectPayload);
-
-    return subjectRequest$.pipe(
-      switchMap((savedCatalog: SchoolSubject) => {
-        const assignmentPayload = {
-          subjectId: savedCatalog.subjectId ?? savedCatalog.id ?? null,
-          schoolId: this.selectedSchoolId,
-          gradeId: subject.gradeId,
-          teacherId: subject.teacherId,
-          status: subject.status,
-        };
-
-        const assignmentRequest$ = isEdit && existing?.assignmentId
-          ? this.backendService.put<any, any>(`subject-assignment/${existing.assignmentId}`, assignmentPayload)
-          : this.backendService.post<any, any>('subject-assignment', assignmentPayload);
-
-        return assignmentRequest$.pipe(
-          map(assignment => this.mapAssignmentToSubject(assignment))
-        );
-      })
-    );
-  }
-
-  private findCatalogSubjectByCode(code: string, excludeSubjectId: number | null): SchoolSubject | null {
-    const normalizedCode = code.trim().toLowerCase();
-    return this.subjectCatalog.find(subject =>
-      (subject.code ?? '').trim().toLowerCase() === normalizedCode
-      && Number(subject.subjectId ?? subject.id ?? 0) !== Number(excludeSubjectId ?? 0)
-    ) ?? null;
-  }
-
-  private ensureValidFilters(): void {
-    const hasSelectedGrade = this.selectedGradeFilter != null
-      && this.availableGrades.some(grade => Number(grade.id) === Number(this.selectedGradeFilter));
-    if (!hasSelectedGrade) {
-      this.selectedGradeFilter = null;
-    }
-
-    const hasSelectedTeacher = this.selectedTeacherFilter != null
-      && this.teacherFilterOptions.some(teacher => teacher.id === Number(this.selectedTeacherFilter));
-    if (!hasSelectedTeacher) {
-      this.selectedTeacherFilter = null;
-    }
+      : this.backendService.post<SchoolSubject, SchoolSubject>('subject', subjectPayload);
   }
 
   private resetFilters(): void {
     this.searchTerm = '';
     this.selectedStatusFilter = 'ALL';
-    this.selectedGradeFilter = null;
-    this.selectedTeacherFilter = null;
     this.selectedSort = 'code-asc';
     this.currentPage = 1;
   }

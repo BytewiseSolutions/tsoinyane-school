@@ -2,10 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import * as XLSX from 'xlsx';
+import { firstValueFrom } from 'rxjs';
 import { BackendService } from '../../../util/backend.service';
 import { SchoolSubject } from '../subject';
 import { TimetableEntry } from '../timetable-entry';
 import { Status } from '../../users/status';
+import { Grade } from '../../grades/grade';
+import { Teacher } from '../../teachers/teacher';
 
 interface StudentOption {
   id: number;
@@ -14,6 +17,28 @@ interface StudentOption {
   phone: string | null;
   studentId: string | null;
   gradeId?: number | null;
+}
+
+interface GradeChoiceOption {
+  id: number;
+  name: string;
+  isSelectAll?: boolean;
+}
+
+interface SubjectGradeRow {
+  gradeId: number | null;
+  gradeName: string;
+  assignmentCount: number;
+  teacherCount: number;
+  studentCount: number;
+}
+
+interface SubjectTeacherRow {
+  teacherId: number | null;
+  teacherName: string;
+  assignmentCount: number;
+  gradeCount: number;
+  studentCount: number;
 }
 
 const SELECT_ALL_ID = -1;
@@ -40,7 +65,17 @@ export class SubjectDetail implements OnInit {
   activeAssignmentId: number | null = null;
   isLoading = true;
   errorMessage = '';
-  activeTab: 'students' | 'timetable' = 'students';
+  activeTab: 'grade' | 'teacher' | 'students' | 'timetable' = 'grade';
+  availableGrades: Grade[] = [];
+  selectableGrades: GradeChoiceOption[] = [];
+  availableTeachers: Teacher[] = [];
+  selectedGradesToAdd: GradeChoiceOption[] = [];
+  selectedAssignmentIdForTeacher: number | null = null;
+  selectedTeacherIdForAssignment: number | null = null;
+  gradeTabError = '';
+  teacherTabError = '';
+  isSavingGradeAssignment = false;
+  isSavingTeacherAssignment = false;
 
   availableStudents: StudentOption[] = [];
   selectableStudents: StudentOption[] = [];
@@ -108,6 +143,17 @@ export class SubjectDetail implements OnInit {
       ?? null;
   }
 
+  get teacherAssignments(): SchoolSubject[] {
+    return [...this.subjectAssignments].sort((left, right) =>
+      (left.gradeName ?? '').localeCompare(right.gradeName ?? '', undefined, { sensitivity: 'base' })
+    );
+  }
+
+  get availableTeachersForSelectedAssignment(): Teacher[] {
+    const assignment = this.teacherAssignments.find(item => item.assignmentId === this.selectedAssignmentIdForTeacher);
+    return this.getTeachersForGrade(assignment?.gradeId ?? null);
+  }
+
   onItemAdded(item: StudentOption) {
     if (item.id === SELECT_ALL_ID) {
       this.selectedStudents = [...this.selectableStudents];
@@ -119,6 +165,24 @@ export class SubjectDetail implements OnInit {
       this.selectedStudents = [];
     } else {
       this.selectedStudents = this.selectedStudents.filter(s => s.id !== SELECT_ALL_ID);
+    }
+  }
+
+  onGradeItemAdded(item: GradeChoiceOption) {
+    this.gradeTabError = '';
+
+    if (item.id === SELECT_ALL_ID) {
+      this.selectedGradesToAdd = this.selectableGrades.filter(option => option.id !== SELECT_ALL_ID);
+    }
+  }
+
+  onGradeItemRemoved(item: GradeChoiceOption) {
+    this.gradeTabError = '';
+
+    if (item.id === SELECT_ALL_ID) {
+      this.selectedGradesToAdd = [];
+    } else {
+      this.selectedGradesToAdd = this.selectedGradesToAdd.filter(grade => grade.id !== SELECT_ALL_ID);
     }
   }
 
@@ -195,6 +259,82 @@ export class SubjectDetail implements OnInit {
 
   get totalTimetables(): number {
     return this.timetables.length;
+  }
+
+  get gradeRows(): SubjectGradeRow[] {
+    const grouped = new Map<string, SubjectGradeRow & { teacherIds: Set<number> }>();
+
+    this.subjectAssignments.forEach(assignment => {
+      const gradeId = assignment.gradeId != null ? Number(assignment.gradeId) : null;
+      const key = `${gradeId ?? 'none'}::${assignment.gradeName ?? 'Unassigned Grade'}`;
+      const existing = grouped.get(key);
+
+      if (existing) {
+        existing.assignmentCount += 1;
+        existing.studentCount += Number(assignment.studentCount ?? 0);
+        if (assignment.teacherId != null) {
+          existing.teacherIds.add(Number(assignment.teacherId));
+          existing.teacherCount = existing.teacherIds.size;
+        }
+        return;
+      }
+
+      const teacherIds = new Set<number>();
+      if (assignment.teacherId != null) {
+        teacherIds.add(Number(assignment.teacherId));
+      }
+
+      grouped.set(key, {
+        gradeId,
+        gradeName: assignment.gradeName || 'Unassigned Grade',
+        assignmentCount: 1,
+        teacherCount: teacherIds.size,
+        studentCount: Number(assignment.studentCount ?? 0),
+        teacherIds,
+      });
+    });
+
+    return [...grouped.values()]
+      .map(({ teacherIds, ...row }) => row)
+      .sort((left, right) => left.gradeName.localeCompare(right.gradeName, undefined, { sensitivity: 'base' }));
+  }
+
+  get teacherRows(): SubjectTeacherRow[] {
+    const grouped = new Map<string, SubjectTeacherRow & { gradeIds: Set<number> }>();
+
+    this.subjectAssignments.forEach(assignment => {
+      const teacherId = assignment.teacherId != null ? Number(assignment.teacherId) : null;
+      const key = `${teacherId ?? 'none'}::${assignment.teacherName ?? 'Unassigned Teacher'}`;
+      const existing = grouped.get(key);
+
+      if (existing) {
+        existing.assignmentCount += 1;
+        existing.studentCount += Number(assignment.studentCount ?? 0);
+        if (assignment.gradeId != null) {
+          existing.gradeIds.add(Number(assignment.gradeId));
+          existing.gradeCount = existing.gradeIds.size;
+        }
+        return;
+      }
+
+      const gradeIds = new Set<number>();
+      if (assignment.gradeId != null) {
+        gradeIds.add(Number(assignment.gradeId));
+      }
+
+      grouped.set(key, {
+        teacherId,
+        teacherName: assignment.teacherName || 'Unassigned Teacher',
+        assignmentCount: 1,
+        gradeCount: gradeIds.size,
+        studentCount: Number(assignment.studentCount ?? 0),
+        gradeIds,
+      });
+    });
+
+    return [...grouped.values()]
+      .map(({ gradeIds, ...row }) => row)
+      .sort((left, right) => left.teacherName.localeCompare(right.teacherName, undefined, { sensitivity: 'base' }));
   }
 
   get totalTimetableLessons(): number {
@@ -601,6 +741,144 @@ export class SubjectDetail implements OnInit {
     this.loadAssignedStudents(assignment?.assignmentId ?? null);
   }
 
+  onTeacherAssignmentSelectionChanged(): void {
+    this.teacherTabError = '';
+    const assignment = this.teacherAssignments.find(item => item.assignmentId === this.selectedAssignmentIdForTeacher);
+
+    if (!assignment) {
+      this.selectedTeacherIdForAssignment = null;
+      return;
+    }
+
+    const currentTeacherId = assignment.teacherId != null ? Number(assignment.teacherId) : null;
+    const availableTeachers = this.availableTeachersForSelectedAssignment;
+
+    if (currentTeacherId && availableTeachers.some(teacher => Number(teacher.id ?? 0) === currentTeacherId)) {
+      this.selectedTeacherIdForAssignment = currentTeacherId;
+      return;
+    }
+
+    if (this.selectedTeacherIdForAssignment != null) {
+      const stillAvailable = availableTeachers.some(
+        teacher => Number(teacher.id ?? 0) === Number(this.selectedTeacherIdForAssignment)
+      );
+
+      if (!stillAvailable) {
+        this.selectedTeacherIdForAssignment = null;
+      }
+    }
+  }
+
+  async addGradeAssignment(): Promise<void> {
+    if (!this.subject?.id || !this.subject.schoolId || this.isSavingGradeAssignment) {
+      return;
+    }
+
+    const gradeIdsToAdd = [...new Set(this.selectedGradesToAdd
+      .map(grade => Number(grade.id ?? 0))
+      .filter(gradeId => gradeId > 0))];
+
+    if (!gradeIdsToAdd.length) {
+      this.gradeTabError = 'Select at least one grade to add.';
+      return;
+    }
+
+    this.isSavingGradeAssignment = true;
+    this.gradeTabError = '';
+
+    const createdAssignments: SchoolSubject[] = [];
+    const failedGradeIds: number[] = [];
+    let lastErrorMessage = 'Failed to add the selected grades to the subject.';
+
+    for (const gradeId of gradeIdsToAdd) {
+      try {
+        const savedAssignment = await firstValueFrom(this.backendService.post<any, any>('subject-assignment', {
+          subjectId: this.subject.id,
+          schoolId: this.subject.schoolId,
+          gradeId,
+          teacherId: null,
+          status: Status.ACTIVE,
+        }));
+        createdAssignments.push(this.mapAssignmentToSubject(savedAssignment));
+      } catch (error) {
+        failedGradeIds.push(gradeId);
+        if (error instanceof HttpErrorResponse) {
+          lastErrorMessage = error.error?.message || lastErrorMessage;
+        }
+      }
+    }
+
+    if (createdAssignments.length) {
+      this.subjectAssignments = this.sortSubjectAssignments([...this.subjectAssignments, ...createdAssignments]);
+      this.refreshSelectableGrades();
+
+      const lastCreatedAssignment = createdAssignments[createdAssignments.length - 1];
+      this.activeAssignmentId = lastCreatedAssignment.assignmentId ?? this.activeAssignmentId;
+      this.selectedAssignmentIdForTeacher = lastCreatedAssignment.assignmentId ?? this.selectedAssignmentIdForTeacher;
+      this.selectedTeacherIdForAssignment = null;
+      this.onTeacherAssignmentSelectionChanged();
+      this.onAssignmentChanged();
+    }
+
+    if (failedGradeIds.length) {
+      this.selectedGradesToAdd = this.selectableGrades.filter(option => failedGradeIds.includes(option.id));
+      const failedGradeNames = failedGradeIds.map(gradeId => this.getGradeName(gradeId));
+      this.gradeTabError = createdAssignments.length
+        ? `Added ${createdAssignments.length} grade${createdAssignments.length === 1 ? '' : 's'}. Failed to add ${failedGradeNames.join(', ')}.`
+        : lastErrorMessage;
+    } else {
+      this.selectedGradesToAdd = [];
+    }
+
+    this.isSavingGradeAssignment = false;
+  }
+
+  assignTeacherToGrade(): void {
+    if (!this.subject?.id || !this.subject.schoolId || this.isSavingTeacherAssignment) {
+      return;
+    }
+
+    const assignment = this.teacherAssignments.find(item => item.assignmentId === this.selectedAssignmentIdForTeacher);
+    if (!assignment?.assignmentId) {
+      this.teacherTabError = 'Select a grade assignment first.';
+      return;
+    }
+
+    if (!this.selectedTeacherIdForAssignment) {
+      this.teacherTabError = 'Select a teacher to assign.';
+      return;
+    }
+
+    this.isSavingTeacherAssignment = true;
+    this.teacherTabError = '';
+
+    this.backendService.put<any, any>(`subject-assignment/${assignment.assignmentId}`, {
+      subjectId: this.subject.id,
+      schoolId: this.subject.schoolId,
+      gradeId: assignment.gradeId,
+      teacherId: this.selectedTeacherIdForAssignment,
+      status: assignment.status ?? Status.ACTIVE,
+    }).subscribe({
+      next: updatedAssignment => {
+        const mapped = this.mapAssignmentToSubject(updatedAssignment);
+        this.subjectAssignments = this.subjectAssignments.map(item =>
+          item.assignmentId === mapped.assignmentId ? mapped : item
+        );
+        this.selectedAssignmentIdForTeacher = mapped.assignmentId ?? this.selectedAssignmentIdForTeacher;
+        if (this.activeAssignmentId === mapped.assignmentId) {
+          this.onAssignmentChanged();
+        }
+        this.onTeacherAssignmentSelectionChanged();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.teacherTabError = error.error?.message || 'Failed to assign teacher.';
+      },
+      complete: () => {
+        this.isSavingTeacherAssignment = false;
+      },
+    });
+  }
+
   private loadAssignments(subject: SchoolSubject): void {
     if (!subject.schoolId || !subject.id) {
       this.errorMessage = 'Subject assignments could not be loaded.';
@@ -608,13 +886,21 @@ export class SubjectDetail implements OnInit {
       return;
     }
 
+    this.loadReferenceOptions(subject.schoolId);
+
     this.backendService.get<any[]>('subject-assignment', { schoolId: subject.schoolId }).subscribe({
       next: (assignments) => {
+        const previousActiveAssignmentId = this.activeAssignmentId;
         this.subjectAssignments = (assignments ?? [])
           .map(assignment => this.mapAssignmentToSubject(assignment))
           .filter(assignment => assignment.subjectId === subject.id);
+        this.refreshSelectableGrades();
 
-        this.activeAssignmentId = this.subjectAssignments[0]?.assignmentId ?? null;
+        this.activeAssignmentId = this.subjectAssignments.some(assignment => assignment.assignmentId === previousActiveAssignmentId)
+          ? previousActiveAssignmentId
+          : this.subjectAssignments[0]?.assignmentId ?? null;
+        this.selectedAssignmentIdForTeacher = this.activeAssignmentId;
+        this.onTeacherAssignmentSelectionChanged();
         this.onAssignmentChanged();
         this.loadTimetables(subject.id!);
       },
@@ -624,6 +910,30 @@ export class SubjectDetail implements OnInit {
       },
       complete: () => {
         this.isLoading = false;
+      },
+    });
+  }
+
+  private loadReferenceOptions(schoolId: number): void {
+    this.backendService.get<Grade[]>('grade').subscribe({
+      next: grades => {
+        this.availableGrades = (grades ?? []).filter(grade => grade.schoolId === schoolId);
+        this.refreshSelectableGrades();
+      },
+      error: () => {
+        this.availableGrades = [];
+        this.selectableGrades = [];
+        this.gradeTabError = 'Failed to load grades.';
+      },
+    });
+
+    this.backendService.get<Teacher[]>('teacher', { schoolId }).subscribe({
+      next: teachers => {
+        this.availableTeachers = teachers ?? [];
+      },
+      error: () => {
+        this.availableTeachers = [];
+        this.teacherTabError = 'Failed to load teachers.';
       },
     });
   }
@@ -782,6 +1092,52 @@ export class SubjectDetail implements OnInit {
       assignmentCount: null,
       status: assignment.status ?? this.subject?.status ?? null,
     };
+  }
+
+  private sortSubjectAssignments(assignments: SchoolSubject[]): SchoolSubject[] {
+    return [...assignments].sort((left, right) =>
+      (left.gradeName ?? '').localeCompare(right.gradeName ?? '', undefined, { sensitivity: 'base' })
+    );
+  }
+
+  private getGradeName(gradeId: number): string {
+    return this.availableGrades.find(grade => Number(grade.id ?? 0) === gradeId)?.name || `Grade ${gradeId}`;
+  }
+
+  private refreshSelectableGrades(): void {
+    const assignedGradeIds = new Set(
+      this.subjectAssignments
+        .map(assignment => Number(assignment.gradeId ?? 0))
+        .filter(gradeId => gradeId > 0)
+    );
+
+    const availableGradeOptions = this.availableGrades
+      .filter(grade => !assignedGradeIds.has(Number(grade.id ?? 0)))
+      .map(grade => ({
+        id: Number(grade.id ?? 0),
+        name: grade.name || 'Unnamed Grade',
+      }))
+      .filter(grade => grade.id > 0);
+
+    this.selectableGrades = availableGradeOptions.length
+      ? [{ id: SELECT_ALL_ID, name: 'Select All', isSelectAll: true }, ...availableGradeOptions]
+      : [];
+
+    const selectableGradeIds = new Set(this.selectableGrades.map(grade => grade.id));
+    this.selectedGradesToAdd = this.selectedGradesToAdd.filter(grade => selectableGradeIds.has(grade.id));
+  }
+
+  private getTeachersForGrade(gradeId: number | null | undefined): Teacher[] {
+    const normalizedGradeId = Number(gradeId ?? 0);
+
+    if (!normalizedGradeId) {
+      return [];
+    }
+
+    return this.availableTeachers.filter(teacher => {
+      const gradeIds = (teacher.gradeIds ?? []).map(id => Number(id));
+      return gradeIds.length === 0 || gradeIds.includes(normalizedGradeId);
+    });
   }
 
   private getSortValue(student: StudentOption, sortBy: 'firstName' | 'lastName'): string {

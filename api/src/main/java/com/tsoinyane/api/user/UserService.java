@@ -445,20 +445,21 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student must belong to a school");
         }
 
-        if (gradeId == null || gradeId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Grade is required for students");
-        }
-
         School school = user.getSchools().stream()
                 .sorted(Comparator.comparing(School::getId))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student must belong to a school"));
 
-        Grade grade = gradeRepository.findById(gradeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gradeId: " + gradeId));
+        Grade grade = null;
+        if (gradeId != null && gradeId > 0) {
+            grade = gradeRepository.findById(gradeId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gradeId: " + gradeId));
 
-        if (grade.getSchool() == null || !grade.getSchool().getId().equals(school.getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected grade does not belong to the student's school");
+            if (grade.getSchool() == null || !grade.getSchool().getId().equals(school.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selected grade does not belong to the student's school");
+            }
+        } else if (existingStudent != null) {
+            grade = existingStudent.getGrade();
         }
 
         Student student = existingStudent != null ? existingStudent : Student.builder().build();

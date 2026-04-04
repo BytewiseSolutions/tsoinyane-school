@@ -1,8 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { Grade } from '../../grades/grade';
-import { Status } from '../../users/status';
 import { SchoolSubject } from '../subject';
-import { SubjectTeacherOption } from '../subject-teacher-option';
 
 @Component({
   selector: 'app-subject-form',
@@ -14,14 +11,10 @@ export class SubjectForm implements OnInit {
   @Input() existingSubject: SchoolSubject | null = null;
   @Input() schoolId: number | null = null;
   @Input() schoolName = '';
-  @Input() gradeOptions: Grade[] = [];
-  @Input() teacherOptions: SubjectTeacherOption[] = [];
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<SchoolSubject>();
 
   isEdit = false;
-  readonly statusOptions = [Status.ACTIVE, Status.INACTIVE];
-
   subject: SchoolSubject = {
     code: '',
     name: '',
@@ -31,28 +24,16 @@ export class SubjectForm implements OnInit {
     gradeName: null,
     teacherId: null,
     teacherName: null,
-    status: Status.ACTIVE,
+    status: null,
   };
-
-  get availableTeachers(): SubjectTeacherOption[] {
-    if (!this.subject.gradeId) {
-      return [];
-    }
-    
-    return this.teacherOptions.filter(teacher => 
-      teacher.gradeIds && teacher.gradeIds.includes(this.subject.gradeId!)
-    );
-  }
-
-  onGradeChange() {
-    // Reset teacher selection when grade changes
-    this.subject.teacherId = null;
-  }
 
   ngOnInit() {
     if (this.existingSubject) {
       this.isEdit = true;
-      this.subject = { ...this.existingSubject };
+      this.subject = {
+        ...this.existingSubject,
+        gradeId: this.toNumberOrNull(this.existingSubject.gradeId),
+      };
       return;
     }
 
@@ -64,26 +45,26 @@ export class SubjectForm implements OnInit {
     const code = this.subject.code.trim();
     const name = this.subject.name.trim();
 
-    if (!code || !name || !this.subject.gradeId || !this.subject.teacherId) {
+    if (!code || !name) {
       return;
     }
-
-    const selectedGrade = this.gradeOptions.find(grade => grade.id === this.subject.gradeId);
-    const selectedTeacher = this.availableTeachers.find(teacher => teacher.id === this.subject.teacherId);
 
     this.saved.emit({
       ...this.subject,
       code,
       name,
-      schoolId: this.schoolId,
-      schoolName: this.schoolName || null,
-      gradeName: selectedGrade?.name ?? null,
-      teacherName: selectedTeacher?.name ?? null,
+      schoolId: this.subject.schoolId ?? this.schoolId,
+      schoolName: this.subject.schoolName ?? (this.schoolName || null),
     });
     this.close();
   }
 
   close() {
     this.closed.emit();
+  }
+
+  private toNumberOrNull(value: number | string | null | undefined): number | null {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 }

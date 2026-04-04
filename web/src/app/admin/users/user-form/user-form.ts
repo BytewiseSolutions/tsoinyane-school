@@ -3,10 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { BackendService } from '../../../util/backend.service';
 import { User } from '../user';
 import { Role } from '../role';
-import { Status } from '../status';
 import { Title } from '../title';
 import { SchoolContextService } from '../../layout/school-context';
-import { Grade } from '../../grades/grade';
 import { hasRole } from '../../../auth/auth-session';
 
 @Component({
@@ -17,6 +15,7 @@ import { hasRole } from '../../../auth/auth-session';
 })
 export class UserForm implements OnInit {
   @Input() existingUser: User | null = null;
+  @Input() presetRoles: Role[] = [];
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<User>();
 
@@ -25,10 +24,54 @@ export class UserForm implements OnInit {
   successMessage = '';
 
   readonly titleOptions = Object.values(Title);
-  readonly statusOptions = Object.values(Status);
-  selectedRoles: Role[] = [Role.STUDENT];
+  selectedRoles: Role[] = [];
   isEdit = false;
-  availableGrades: Grade[] = [];
+
+  get formTitle(): string {
+    if (this.isEdit) {
+      return 'Edit User';
+    }
+
+    const primaryRole = this.selectedRoles[0] ?? this.presetRoles[0] ?? null;
+
+    switch (primaryRole) {
+      case Role.SYSTEM_ADMIN:
+        return 'Add System Admin';
+      case Role.SCHOOL_ADMIN:
+        return 'Add School Admin';
+      case Role.TEACHER:
+        return 'Add Teacher';
+      case Role.STUDENT:
+        return 'Add Student';
+      default:
+        return 'Add User';
+    }
+  }
+
+  get submitButtonLabel(): string {
+    if (this.isSubmitting) {
+      return 'Saving...';
+    }
+
+    if (this.isEdit) {
+      return 'Update User';
+    }
+
+    const primaryRole = this.selectedRoles[0] ?? this.presetRoles[0] ?? null;
+
+    switch (primaryRole) {
+      case Role.SYSTEM_ADMIN:
+        return 'Create System Admin';
+      case Role.SCHOOL_ADMIN:
+        return 'Create School Admin';
+      case Role.TEACHER:
+        return 'Create Teacher';
+      case Role.STUDENT:
+        return 'Create Student';
+      default:
+        return 'Add User';
+    }
+  }
 
   get roleOptions(): Role[] {
     const isSystemAdmin = hasRole('SYSTEM_ADMIN');
@@ -49,8 +92,7 @@ export class UserForm implements OnInit {
     email: '',
     phone: null,
     password: '',
-    roles: [Role.STUDENT],
-    status: Status.ACTIVE,
+    roles: [],
     schoolIds: [],
     gradeId: null,
     teacherGradeIds: [],
@@ -68,8 +110,9 @@ export class UserForm implements OnInit {
       const selectedSchool = this.schoolContext.selectedSchool;
       if (selectedSchool) {
         this.form.schoolIds = [selectedSchool.id];
-        this.loadGradesForSchool(selectedSchool.id);
       }
+
+      this.selectedRoles = this.presetRoles.filter(role => this.roleOptions.includes(role));
       return;
     }
 
@@ -98,12 +141,8 @@ export class UserForm implements OnInit {
 
     this.selectedRoles = this.existingUser.roles?.length
       ? this.existingUser.roles.filter(role => this.roleOptions.includes(role))
-      : (this.existingUser.role ? [this.existingUser.role] : [Role.STUDENT]);
+      : (this.existingUser.role ? [this.existingUser.role] : []);
 
-    const schoolId = this.form.schoolIds?.[0];
-    if (schoolId) {
-      this.loadGradesForSchool(schoolId);
-    }
   }
 
   onSubmit() {
@@ -127,13 +166,8 @@ export class UserForm implements OnInit {
       return;
     }
 
-    if (this.isStudentRoleSelected() && !this.form.gradeId) {
-      this.errorMessage = 'Please select a grade for the student.';
-      return;
-    }
-
-    if (this.isTeacherRoleSelected() && !(this.form.teacherGradeIds?.length ?? 0)) {
-      this.errorMessage = 'Please select at least one grade for the teacher.';
+    if (this.selectedRoles.length > 1) {
+      this.errorMessage = 'Choose one role per user. Edit older mixed-role users to clean them up.';
       return;
     }
 
@@ -152,6 +186,7 @@ export class UserForm implements OnInit {
       schoolIds: this.form.schoolIds ?? [],
       gradeId: this.isStudentRoleSelected() ? (this.form.gradeId ?? null) : null,
       teacherGradeIds: this.isTeacherRoleSelected() ? (this.form.teacherGradeIds ?? []) : [],
+      status: this.isEdit ? (this.form.status ?? null) : null,
     };
 
     const request$ = this.isEdit
@@ -193,16 +228,5 @@ export class UserForm implements OnInit {
 
   isTeacherRoleSelected(): boolean {
     return this.selectedRoles.includes(Role.TEACHER);
-  }
-
-  private loadGradesForSchool(schoolId: number): void {
-    this.backendService.get<Grade[]>('grade').subscribe({
-      next: (grades) => {
-        this.availableGrades = (grades ?? []).filter(grade => grade.schoolId === schoolId);
-      },
-      error: () => {
-        this.availableGrades = [];
-      },
-    });
   }
 }
