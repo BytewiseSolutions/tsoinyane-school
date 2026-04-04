@@ -1,0 +1,117 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <h2>My Students</h2>
+      <p>View learners linked to your assigned subjects for {{ selectedSchoolName }}.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  }
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>Total Students</h4>
+      <p>{{ isLoading ? '...' : totalStudents }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Filtered Students</h4>
+      <p>{{ isLoading ? '...' : filteredStudentCount }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Grades Covered</h4>
+      <p>{{ isLoading ? '...' : totalGrades }}</p>
+    </div>
+    <div class="summary-card">
+      <h4>Subject Assignments</h4>
+      <p>{{ isLoading ? '...' : totalAssignments }}</p>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        name="studentSearch"
+        placeholder="Search by student, number, grade, or subject..."
+      />
+      <select [(ngModel)]="selectedSubjectAssignmentFilter" name="subjectAssignmentFilter">
+        <option [ngValue]="'ALL'">All Subjects</option>
+        @for (subject of subjectFilterOptions; track subject.assignmentId) {
+          <option [ngValue]="subject.assignmentId">
+            {{ subject.name }}{{ subject.gradeName ? ' • ' + subject.gradeName : '' }}
+          </option>
+        }
+      </select>
+      <select [(ngModel)]="selectedGradeFilter" name="gradeFilter">
+        <option [ngValue]="'ALL'">All Grades</option>
+        @for (grade of gradeFilterOptions; track grade.id) {
+          <option [ngValue]="grade.id">{{ grade.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedSort" name="studentSort">
+        <option value="name-asc">Name A-Z</option>
+        <option value="name-desc">Name Z-A</option>
+        <option value="student-number-asc">Student Number</option>
+        <option value="grade-asc">Grade A-Z</option>
+      </select>
+    </div>
+
+    @if (isLoading) {
+      <div class="state-card">Loading your students...</div>
+    } @else if (filteredStudents.length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student Number</th>
+              <th>Name</th>
+              <th>Grade</th>
+              <th>Subjects</th>
+              <th>Contact</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (student of filteredStudents; track student.studentId) {
+              <tr>
+                <td>{{ student.studentNumber || 'No student number' }}</td>
+                <td>
+                  <div class="student-name">{{ student.displayName }}</div>
+                </td>
+                <td>{{ student.gradeName || 'No grade assigned' }}</td>
+                <td>
+                  <div class="subject-list">{{ getSubjectsLabel(student) }}</div>
+                </td>
+                <td>
+                  <div>{{ student.email || 'No email' }}</div>
+                  <div class="meta-note">{{ student.phone || 'No phone' }}</div>
+                </td>
+                <td>
+                  <div class="action-stack">
+                    <button type="button" class="action-btn primary" (click)="viewStudent(student)">
+                      View
+                    </button>
+                    <button type="button" class="action-btn" [disabled]="!student.userId" (click)="openReport(student)">
+                      Report
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="state-card">
+        @if (students.length > 0) {
+          No students match the current filters.
+        } @else {
+          No learners are linked to your assigned subjects in this school yet.
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -55,7 +55,7 @@
 
 .table-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr);
+  grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) minmax(180px, 1fr);
   gap: 12px;
   padding: 16px 20px;
   border-bottom: 1px solid #e0e7f0;
@@ -109,46 +109,6 @@ table {
   color: #1f3152;
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-
-  &.active {
-    background: #e8f7ec;
-    color: #1e7b34;
-  }
-
-  &.inactive {
-    background: #fdecec;
-    color: #c73b3b;
-  }
-
-  &.pending {
-    background: #fff6e5;
-    color: #b26a00;
-  }
-
-  &.neutral {
-    background: #eef2f7;
-    color: #52627e;
-  }
-}
-
-.action-btn {
-  border: 1px solid #ccd6f0;
-  background: #fff;
-  color: #2f3f63;
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 .state-card {
   padding: 24px;
   text-align: center;
@@ -163,16 +123,84 @@ table {
   }
 }
 
-@media (max-width: 768px) {
-  .admin-page {
-    padding: 16px;
-  }
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid #edf2fa;
+  background: #fbfcff;
+}
 
+.pagination-summary,
+.page-indicator,
+.page-size span {
+  color: #5f6e8f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  select {
+    border: 1px solid #ccd6f0;
+    border-radius: 6px;
+    padding: 7px 10px;
+    background: #fff;
+    color: #2f3f63;
+    font-size: 13px;
+    outline: none;
+  }
+}
+
+.page-btn {
+  border: 1px solid #ccd7ee;
+  background: #fff;
+  color: #2b3f66;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.page-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .table-toolbar {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-page {
+    padding: 16px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

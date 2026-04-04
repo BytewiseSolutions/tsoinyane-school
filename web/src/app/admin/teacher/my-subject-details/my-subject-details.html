@@ -1,0 +1,204 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <button type="button" class="back-link" (click)="goBack()">
+        <i class="fa-solid fa-arrow-left"></i> Back to My Subjects
+      </button>
+      <h2>{{ subjectTitle }}</h2>
+      <p>View your assigned subject details for {{ selectedSchoolName }}.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  }
+
+  @if (isLoading) {
+    <div class="state-card">Loading subject details...</div>
+  } @else if (subjectAssignment) {
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>Subject Code</h4>
+        <p>{{ codeLabel }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Grade</h4>
+        <p>{{ gradeLabel }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Learners</h4>
+        <p>{{ learnerCount }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Status</h4>
+        <p>{{ statusLabel }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Timetable Slots</h4>
+        <p>{{ timetableSlotCount }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Lessons</h4>
+        <p>{{ lessonCount }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Attendance</h4>
+        <p>{{ averageAttendanceRate }}%</p>
+      </div>
+      <div class="summary-card">
+        <h4>Homework</h4>
+        <p>{{ averageHomeworkRate }}%</p>
+      </div>
+    </div>
+
+    <div class="detail-tabs" role="tablist" aria-label="My subject details tabs">
+      <button
+        type="button"
+        class="detail-tab"
+        [class.active]="activeTab === 'overview'"
+        (click)="setActiveTab('overview')"
+      >
+        Overview
+      </button>
+      <button
+        type="button"
+        class="detail-tab"
+        [class.active]="activeTab === 'students'"
+        (click)="setActiveTab('students')"
+      >
+        Students
+      </button>
+      <button
+        type="button"
+        class="detail-tab"
+        [class.active]="activeTab === 'performance'"
+        (click)="setActiveTab('performance')"
+      >
+        Performance
+      </button>
+    </div>
+
+    @if (activeTab === 'overview') {
+      <div class="detail-grid">
+        <div class="detail-card">
+          <h3>Assignment Overview</h3>
+          <div class="detail-row">
+            <span>Subject</span>
+            <strong>{{ subjectAssignment.name || 'N/A' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Teacher</span>
+            <strong>{{ subjectAssignment.teacherName || 'N/A' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>School</span>
+            <strong>{{ subjectAssignment.schoolName || selectedSchoolName }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Assignment ID</span>
+            <strong>{{ subjectAssignment.assignmentId }}</strong>
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <h3>Quick Actions</h3>
+          <div class="action-stack">
+            <button type="button" class="action-btn primary" (click)="openTimetable()">
+              Open Timetable
+            </button>
+            <button type="button" class="action-btn primary" (click)="openLessons()">
+              Open Lessons
+            </button>
+            <button type="button" class="action-btn" (click)="openReports()">
+              Open Reports
+            </button>
+            <button type="button" class="action-btn" (click)="openNotifications()">
+              Announcements
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else if (activeTab === 'students') {
+      <div class="detail-card">
+        <h3>Assigned Students</h3>
+        @if (hasAssignedStudents) {
+          <div class="table-wrap">
+            <table class="students-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Student Number</th>
+                  <th>Student Name</th>
+                  <th>Grade</th>
+                  <th>Contact</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (student of assignedStudents; track student.id; let index = $index) {
+                  <tr>
+                    <td>{{ index + 1 }}</td>
+                    <td>{{ student.studentNumber || 'No student number' }}</td>
+                    <td>{{ student.displayName }}</td>
+                    <td>{{ student.gradeName || 'No grade assigned' }}</td>
+                    <td>{{ student.email || student.phone || 'No contact' }}</td>
+                    <td>
+                      <div class="action-stack compact">
+                        <button type="button" class="action-btn primary" (click)="viewStudent(student)">
+                          View
+                        </button>
+                        <button type="button" class="action-btn" [disabled]="!student.userId" (click)="openStudentReport(student)">
+                          Report
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-note">No students are assigned to this subject yet.</div>
+        }
+      </div>
+    } @else {
+      <div class="detail-card">
+        <h3>Subject Performance</h3>
+        @if (hasStudentPerformance) {
+          <div class="table-wrap">
+            <table class="students-table">
+              <thead>
+                <tr>
+                  <th>Student Number</th>
+                  <th>Student Name</th>
+                  <th>Lessons</th>
+                  <th>Present</th>
+                  <th>Absent</th>
+                  <th>Late</th>
+                  <th>Attendance</th>
+                  <th>Homework</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (student of studentPerformance; track student.studentId) {
+                  <tr>
+                    <td>{{ student.studentNumber || 'No student number' }}</td>
+                    <td>{{ student.displayName }}</td>
+                    <td>{{ student.totalLessons }}</td>
+                    <td>{{ student.present }}</td>
+                    <td>{{ student.absent }}</td>
+                    <td>{{ student.late }}</td>
+                    <td>{{ student.attendanceRate }}%</td>
+                    <td>{{ student.homeworkRate }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-note">No subject performance data has been recorded yet.</div>
+        }
+      </div>
+    }
+  }
+</div>

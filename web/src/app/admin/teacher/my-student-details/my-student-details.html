@@ -1,0 +1,167 @@
+<div class="admin-page">
+  <div class="page-header">
+    <div>
+      <button type="button" class="back-link" (click)="goBack()">
+        <i class="fa-solid fa-arrow-left"></i> Back to My Students
+      </button>
+      <h2>{{ title }}</h2>
+      <p>View learner details linked to your teaching assignments for {{ selectedSchoolName }}.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="state-card error">{{ errorMessage }}</div>
+  }
+
+  @if (isLoading) {
+    <div class="state-card">Loading student details...</div>
+  } @else if (student) {
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>Student Number</h4>
+        <p>{{ student.studentNumber || 'No student number' }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Grade</h4>
+        <p>{{ student.gradeName || 'No grade assigned' }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Linked Subjects</h4>
+        <p>{{ linkedSubjects.length }}</p>
+      </div>
+      <div class="summary-card">
+        <h4>Attendance</h4>
+        <p>{{ report?.attendanceRate ?? 0 }}%</p>
+      </div>
+    </div>
+
+    <div class="detail-tabs" role="tablist" aria-label="My student detail tabs">
+      <button type="button" class="detail-tab" [class.active]="activeTab === 'overview'" (click)="setActiveTab('overview')">
+        Overview
+      </button>
+      <button type="button" class="detail-tab" [class.active]="activeTab === 'subjects'" (click)="setActiveTab('subjects')">
+        Subjects
+      </button>
+      <button type="button" class="detail-tab" [class.active]="activeTab === 'report'" (click)="setActiveTab('report')">
+        Report
+      </button>
+    </div>
+
+    @if (activeTab === 'overview') {
+      <div class="detail-grid">
+        <div class="detail-card">
+          <h3>Learner Overview</h3>
+          <div class="detail-row">
+            <span>Name</span>
+            <strong>{{ student.displayName }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Email</span>
+            <strong>{{ student.email || 'No email' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Phone</span>
+            <strong>{{ student.phone || 'No phone' }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>School</span>
+            <strong>{{ selectedSchoolName }}</strong>
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <h3>Performance Snapshot</h3>
+          <div class="detail-row">
+            <span>Total Lessons</span>
+            <strong>{{ report?.totalLessons ?? 0 }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Present</span>
+            <strong>{{ report?.totalPresent ?? 0 }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Absent</span>
+            <strong>{{ report?.totalAbsent ?? 0 }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Homework Rate</span>
+            <strong>{{ report?.homeworkRate ?? 0 }}%</strong>
+          </div>
+          <button type="button" class="action-btn primary" [disabled]="!student.userId" (click)="openReport()">
+            Open Full Report
+          </button>
+        </div>
+      </div>
+    } @else if (activeTab === 'subjects') {
+      <div class="detail-card">
+        <h3>Linked Subjects</h3>
+        @if (linkedSubjects.length) {
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Code</th>
+                  <th>Grade</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (subject of linkedSubjects; track subject.assignmentId) {
+                  <tr>
+                    <td>{{ subject.subjectName }}</td>
+                    <td>{{ subject.subjectCode || 'N/A' }}</td>
+                    <td>{{ subject.gradeName || 'N/A' }}</td>
+                    <td>
+                      <button type="button" class="action-btn" (click)="openSubject(subject)">
+                        Open Subject
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-note">No teacher-linked subjects were found for this learner.</div>
+        }
+      </div>
+    } @else {
+      <div class="detail-card">
+        <h3>Report Summary</h3>
+        @if (filteredReportSubjects.length) {
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Lessons</th>
+                  <th>Present</th>
+                  <th>Absent</th>
+                  <th>Late</th>
+                  <th>Attendance</th>
+                  <th>Homework</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (subject of filteredReportSubjects; track subject.subjectId) {
+                  <tr>
+                    <td>{{ subject.subjectName }}</td>
+                    <td>{{ subject.totalLessons }}</td>
+                    <td>{{ subject.present }}</td>
+                    <td>{{ subject.absent }}</td>
+                    <td>{{ subject.late }}</td>
+                    <td>{{ subject.attendanceRate }}%</td>
+                    <td>{{ subject.homeworkRate }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-note">No teacher-facing report data is available for this learner yet.</div>
+        }
+      </div>
+    }
+  }
+</div>

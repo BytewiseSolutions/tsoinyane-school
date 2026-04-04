@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Subject, forkJoin, takeUntil } from 'rxjs';
 import { BackendService } from '../../../util/backend.service';
 import { SchoolContextService } from '../../layout/school-context';
@@ -46,7 +47,8 @@ export class MySubjects implements OnInit, OnDestroy {
 
   constructor(
     private backendService: BackendService,
-    private schoolContext: SchoolContextService
+    private schoolContext: SchoolContextService,
+    private router: Router
   ) {}
 
   get filteredSubjects(): SchoolSubject[] {
@@ -97,6 +99,14 @@ export class MySubjects implements OnInit, OnDestroy {
       default:
         return 'neutral';
     }
+  }
+
+  viewSubject(subject: SchoolSubject): void {
+    if (!subject.assignmentId) {
+      return;
+    }
+
+    this.router.navigate(['/admin/my-subjects', subject.assignmentId]);
   }
 
   private loadMySubjects(): void {

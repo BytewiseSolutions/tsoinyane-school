@@ -97,6 +97,11 @@
         @if (!collapsed) { <span>My Subjects</span> }
         @if (collapsed) { <span class="tooltip">My Subjects</span> }
       </a>
+      <a routerLink="/admin/my-students" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-user-graduate"></i>
+        @if (!collapsed) { <span>My Students</span> }
+        @if (collapsed) { <span class="tooltip">My Students</span> }
+      </a>
       <a routerLink="/admin/my-timetable" routerLinkActive="active" (click)="closeOnMobile()">
         <i class="fa-solid fa-calendar-week"></i>
         @if (!collapsed) { <span>My Timetable</span> }

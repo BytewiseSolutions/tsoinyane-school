@@ -58,6 +58,7 @@
               <th>Grade</th>
               <th>Learners</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -73,6 +74,11 @@
                   <span class="status-badge" [class]="getStatusClass(subject.status)">
                     {{ getStatusLabel(subject.status) }}
                   </span>
+                </td>
+                <td>
+                  <button type="button" class="action-btn" (click)="viewSubject(subject)">
+                    View
+                  </button>
                 </td>
               </tr>
             }

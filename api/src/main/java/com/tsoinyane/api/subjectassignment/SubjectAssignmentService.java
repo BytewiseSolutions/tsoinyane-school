@@ -258,10 +258,15 @@ public class SubjectAssignmentService {
 
         return StudentDto.builder()
                 .id(student.getId())
+                .userId(user != null ? user.getId() : null)
                 .studentNumber(student.getStudentNumber())
                 .userFullName(displayName)
                 .userEmail(user != null ? user.getEmail() : null)
                 .userPhone(user != null ? user.getPhone() : null)
+                .schoolId(student.getSchool() != null ? student.getSchool().getId() : null)
+                .schoolName(student.getSchool() != null ? student.getSchool().getName() : null)
+                .gradeId(student.getGrade() != null ? student.getGrade().getId() : null)
+                .gradeName(student.getGrade() != null ? student.getGrade().getName() : null)
                 .build();
     }
 

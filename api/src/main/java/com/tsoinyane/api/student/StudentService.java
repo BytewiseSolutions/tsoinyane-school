@@ -27,11 +27,13 @@ public class StudentService {
 
         return StudentDto.builder()
                 .id(student.getId())
+                .userId(student.getUser() != null ? student.getUser().getId() : null)
                 .studentNumber(student.getStudentNumber())
                 .userFullName(displayName)
                 .userEmail(student.getUser() != null ? student.getUser().getEmail() : null)
                 .userPhone(student.getUser() != null ? student.getUser().getPhone() : null)
                 .schoolId(student.getSchool() != null ? student.getSchool().getId() : null)
+                .schoolName(student.getSchool() != null ? student.getSchool().getName() : null)
                 .gradeId(student.getGrade() != null ? student.getGrade().getId() : null)
                 .gradeName(student.getGrade() != null ? student.getGrade().getName() : null)
                 .build();
