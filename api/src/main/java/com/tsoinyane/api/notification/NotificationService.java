@@ -82,9 +82,7 @@ public class NotificationService {
         }
 
         boolean systemAdmin = senderRoles.contains(Role.SYSTEM_ADMIN);
-        if (!systemAdmin && audienceRoles.contains(Role.SYSTEM_ADMIN)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "School administrators cannot send notifications to system administrators.");
-        }
+        validateAudienceRoles(senderRoles, audienceRoles, systemAdmin);
 
         List<Long> senderSchoolIds = accessibleSchoolIds(currentUser.getId());
         Long targetSchoolId = resolveTargetSchoolId(request.schoolId(), systemAdmin, senderSchoolIds);
@@ -127,9 +125,7 @@ public class NotificationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one recipient role is required.");
         }
 
-        if (!systemAdmin && audienceRoles.contains(Role.SYSTEM_ADMIN)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "School administrators cannot send notifications to system administrators.");
-        }
+        validateAudienceRoles(senderRoles, audienceRoles, systemAdmin);
 
         List<Long> senderSchoolIds = accessibleSchoolIds(currentUser.getId());
         Long targetSchoolId = resolveTargetSchoolId(request.schoolId(), systemAdmin, senderSchoolIds);
@@ -272,7 +268,20 @@ public class NotificationService {
     }
 
     private boolean canSendNotifications(Set<Role> roles) {
-        return roles.contains(Role.SYSTEM_ADMIN) || roles.contains(Role.SCHOOL_ADMIN);
+        return roles.contains(Role.SYSTEM_ADMIN) || roles.contains(Role.SCHOOL_ADMIN) || roles.contains(Role.TEACHER);
+    }
+
+    private void validateAudienceRoles(Set<Role> senderRoles, Set<Role> audienceRoles, boolean systemAdmin) {
+        boolean schoolAdmin = senderRoles.contains(Role.SCHOOL_ADMIN);
+        boolean teacher = senderRoles.contains(Role.TEACHER);
+
+        if (!systemAdmin && audienceRoles.contains(Role.SYSTEM_ADMIN)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only system administrators can send notifications to system administrators.");
+        }
+
+        if (teacher && !systemAdmin && !schoolAdmin && !audienceRoles.equals(Set.of(Role.STUDENT))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Teachers can only send notifications to students.");
+        }
     }
 
     private boolean canEditNotification(Notification n, Long currentUserId, boolean systemAdmin) {

@@ -112,8 +112,13 @@
         @if (!collapsed) { <span>My Lessons</span> }
         @if (collapsed) { <span class="tooltip">My Lessons</span> }
       </a>
+      <a routerLink="/admin/my-assessments" routerLinkActive="active" (click)="closeOnMobile()">
+        <i class="fa-solid fa-clipboard-check"></i>
+        @if (!collapsed) { <span>My Assessments</span> }
+        @if (collapsed) { <span class="tooltip">My Assessments</span> }
+      </a>
 
-      @if (!collapsed) { <span class="nav-section-label">Communication</span> }
+      @if (!collapsed) { <span class="nav-section-label">Communication & Reports</span> }
 
       <a routerLink="/admin/notifications" routerLinkActive="active" (click)="closeOnMobile()">
         <i class="fa-solid fa-bell"></i>

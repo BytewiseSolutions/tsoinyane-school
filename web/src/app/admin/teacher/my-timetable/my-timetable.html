@@ -38,6 +38,14 @@
         name="timetableSearch"
         placeholder="Search by subject, grade, time, or day..."
       />
+      <select [(ngModel)]="selectedSubjectAssignmentFilter" (ngModelChange)="onFiltersChanged()" name="subjectFilter">
+        <option [ngValue]="'ALL'">All Subjects</option>
+        @for (subject of subjectFilterOptions; track subject.assignmentId) {
+          <option [ngValue]="subject.assignmentId">
+            {{ subject.name }}{{ subject.gradeName ? ' • ' + subject.gradeName : '' }}
+          </option>
+        }
+      </select>
       <select [(ngModel)]="selectedDayFilter" (ngModelChange)="onFiltersChanged()" name="dayFilter">
         <option value="ALL">All Days</option>
         @for (day of dayOfWeekOptions; track day) {
@@ -56,60 +64,104 @@
       </select>
     </div>
 
+    <div class="view-switcher">
+      <button type="button" class="view-btn" [class.active]="selectedView === 'table'" (click)="setView('table')">
+        Table View
+      </button>
+      <button type="button" class="view-btn" [class.active]="selectedView === 'grid'" (click)="setView('grid')">
+        Weekly Grid
+      </button>
+    </div>
+
     @if (isLoading) {
       <div class="state-card">Loading your timetable...</div>
     } @else if (filteredTimetables.length > 0) {
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Time</th>
-              <th>Subject</th>
-              <th>Grade</th>
-              <th>Learners</th>
-              <th>Lessons</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (entry of paginatedTimetables; track entry.id ?? entry.subjectAssignmentId ?? entry.subjectId ?? entry.startTime) {
+      @if (selectedView === 'table') {
+        <div class="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td>{{ getDayLabel(entry.dayOfWeek) }}</td>
-                <td>{{ formatTimeRange(entry) }}</td>
-                <td>
-                  <div class="subject-name">{{ entry.subjectName || 'Unknown Subject' }}</div>
-                </td>
-                <td>{{ entry.gradeName || 'N/A' }}</td>
-                <td>{{ entry.studentCount ?? entry.studentIds?.length ?? 0 }}</td>
-                <td>{{ entry.lessonCount ?? 0 }}</td>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Duration</th>
+                <th>Subject</th>
+                <th>Grade</th>
+                <th>Learners</th>
+                <th>Lessons</th>
+                <th>Actions</th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <div class="pagination-bar">
-        <div class="pagination-summary">
-          Showing {{ timetablePageStart }}-{{ timetablePageEnd }} of {{ filteredTimetables.length }}
-        </div>
-        <div class="pagination-controls">
-          <label class="page-size">
-            <span>Rows</span>
-            <select [(ngModel)]="timetablePageSize" (ngModelChange)="onPageSizeChanged()" name="timetablePageSize">
-              @for (size of pageSizeOptions; track size) {
-                <option [ngValue]="size">{{ size }}</option>
+            </thead>
+            <tbody>
+              @for (entry of paginatedTimetables; track entry.id ?? entry.subjectAssignmentId ?? entry.subjectId ?? entry.startTime) {
+                <tr>
+                  <td>{{ getDayLabel(entry.dayOfWeek) }}</td>
+                  <td>{{ formatTimeRange(entry) }}</td>
+                  <td>{{ getDurationLabel(entry) }}</td>
+                  <td>
+                    <div class="subject-name">{{ entry.subjectName || 'Unknown Subject' }}</div>
+                  </td>
+                  <td>{{ entry.gradeName || 'N/A' }}</td>
+                  <td>{{ entry.studentCount ?? entry.studentIds?.length ?? 0 }}</td>
+                  <td>{{ entry.lessonCount ?? 0 }}</td>
+                  <td>
+                    <div class="action-stack">
+                      <button type="button" class="action-btn" (click)="openSubject(entry)">Subject</button>
+                      <button type="button" class="action-btn primary" (click)="openLessons(entry)">Lessons</button>
+                    </div>
+                  </td>
+                </tr>
               }
-            </select>
-          </label>
-          <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
-            Previous
-          </button>
-          <span class="page-indicator">Page {{ safeCurrentPage }} of {{ timetableTotalPages }}</span>
-          <button type="button" class="page-btn" [disabled]="safeCurrentPage === timetableTotalPages" (click)="goToNextPage()">
-            Next
-          </button>
+            </tbody>
+          </table>
         </div>
-      </div>
+
+        <div class="pagination-bar">
+          <div class="pagination-summary">
+            Showing {{ timetablePageStart }}-{{ timetablePageEnd }} of {{ filteredTimetables.length }}
+          </div>
+          <div class="pagination-controls">
+            <label class="page-size">
+              <span>Rows</span>
+              <select [(ngModel)]="timetablePageSize" (ngModelChange)="onPageSizeChanged()" name="timetablePageSize">
+                @for (size of pageSizeOptions; track size) {
+                  <option [ngValue]="size">{{ size }}</option>
+                }
+              </select>
+            </label>
+            <button type="button" class="page-btn" [disabled]="safeCurrentPage === 1" (click)="goToPreviousPage()">
+              Previous
+            </button>
+            <span class="page-indicator">Page {{ safeCurrentPage }} of {{ timetableTotalPages }}</span>
+            <button type="button" class="page-btn" [disabled]="safeCurrentPage === timetableTotalPages" (click)="goToNextPage()">
+              Next
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="grid-view">
+          @for (day of weeklyGridDays; track day.day) {
+            <div class="day-column">
+              <div class="day-header">{{ getDayLabel(day.day) }}</div>
+              @if (day.entries.length) {
+                @for (entry of day.entries; track entry.id ?? entry.subjectAssignmentId ?? entry.startTime) {
+                  <div class="slot-card">
+                    <div class="slot-time">{{ formatTimeRange(entry) }}</div>
+                    <div class="slot-subject">{{ entry.subjectName || 'Unknown Subject' }}</div>
+                    <div class="slot-meta">{{ entry.gradeName || 'N/A' }} • {{ getDurationLabel(entry) }}</div>
+                    <div class="slot-meta">{{ entry.studentCount ?? entry.studentIds?.length ?? 0 }} learners</div>
+                    <div class="action-stack">
+                      <button type="button" class="action-btn" (click)="openSubject(entry)">Subject</button>
+                      <button type="button" class="action-btn primary" (click)="openLessons(entry)">Lessons</button>
+                    </div>
+                  </div>
+                }
+              } @else {
+                <div class="empty-slot">No slots</div>
+              }
+            </div>
+          }
+        </div>
+      }
     } @else {
       <div class="state-card">
         @if (timetables.length > 0) {

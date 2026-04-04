@@ -260,25 +260,37 @@ export class Notifications implements OnInit, OnDestroy {
   private loadCurrentUser(): void {
     const user = getStoredUser();
     this.isSystemAdmin = hasRole('SYSTEM_ADMIN');
-    this.canSendNotifications = this.isSystemAdmin || hasRole('SCHOOL_ADMIN');
+    const isSchoolAdmin = hasRole('SCHOOL_ADMIN');
+    const isTeacher = hasRole('TEACHER');
+    this.canSendNotifications = this.isSystemAdmin || isSchoolAdmin || isTeacher;
 
     if (!user) {
       this.availableRecipientOptions = [];
       return;
     }
 
-    this.availableRecipientOptions = this.isSystemAdmin
-      ? [
-          { value: 'SYSTEM_ADMIN', label: 'System Admins' },
-          { value: 'SCHOOL_ADMIN', label: 'School Admins' },
-          { value: 'TEACHER', label: 'Teachers' },
-          { value: 'STUDENT', label: 'Students' },
-        ]
-      : [
-          { value: 'SCHOOL_ADMIN', label: 'School Admins' },
-          { value: 'TEACHER', label: 'Teachers' },
-          { value: 'STUDENT', label: 'Students' },
-        ];
+    if (this.isSystemAdmin) {
+      this.availableRecipientOptions = [
+        { value: 'SYSTEM_ADMIN', label: 'System Admins' },
+        { value: 'SCHOOL_ADMIN', label: 'School Admins' },
+        { value: 'TEACHER', label: 'Teachers' },
+        { value: 'STUDENT', label: 'Students' },
+      ];
+      return;
+    }
+
+    if (isSchoolAdmin) {
+      this.availableRecipientOptions = [
+        { value: 'SCHOOL_ADMIN', label: 'School Admins' },
+        { value: 'TEACHER', label: 'Teachers' },
+        { value: 'STUDENT', label: 'Students' },
+      ];
+      return;
+    }
+
+    this.availableRecipientOptions = isTeacher
+      ? [{ value: 'STUDENT', label: 'Students' }]
+      : [];
   }
 
   private loadNotifications(): void {

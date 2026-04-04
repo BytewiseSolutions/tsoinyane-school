@@ -74,13 +74,16 @@ export class NotificationForm implements OnInit {
     if (this.existingNotification) {
       this.form.title = this.existingNotification.title;
       this.form.message = this.existingNotification.message;
-      this.form.audienceRoles = [...(this.existingNotification.audienceRoles ?? ['TEACHER', 'STUDENT'])];
+      this.form.audienceRoles = this.normalizeAudienceRoles(
+        this.existingNotification.audienceRoles ?? this.getDefaultAudienceRoles()
+      );
       this.form.sendToAllSchools = this.isSystemAdmin && this.existingNotification.schoolId == null;
       this.form.targetSchoolId = this.existingNotification.schoolId ?? this.selectedSchoolId;
       this.form.targetSchoolName = this.existingNotification.schoolName ?? this.selectedSchoolName;
       this.form.scheduledAt = this.toDateTimeLocal(this.existingNotification.scheduledAt);
       this.form.expiresAt = this.toDateTimeLocal(this.existingNotification.expiresAt);
     } else {
+      this.form.audienceRoles = this.getDefaultAudienceRoles();
       this.form.targetSchoolId = this.selectedSchoolId;
       this.form.targetSchoolName = this.selectedSchoolName;
     }
@@ -168,6 +171,31 @@ export class NotificationForm implements OnInit {
 
   close(): void {
     this.closed.emit();
+  }
+
+  private getDefaultAudienceRoles(): string[] {
+    const availableRoles = this.availableRecipientOptions.map(option => option.value);
+
+    if (!availableRoles.length) {
+      return [];
+    }
+
+    if (availableRoles.length === 1) {
+      return [availableRoles[0]];
+    }
+
+    if (this.isSystemAdmin) {
+      return availableRoles.filter(role => role === 'TEACHER' || role === 'STUDENT');
+    }
+
+    return ['TEACHER', 'STUDENT'].filter(role => availableRoles.includes(role));
+  }
+
+  private normalizeAudienceRoles(roles: string[]): string[] {
+    const availableRoles = new Set(this.availableRecipientOptions.map(option => option.value));
+    const normalized = roles.filter(role => availableRoles.has(role));
+
+    return normalized.length ? normalized : this.getDefaultAudienceRoles();
   }
 
   private toIsoDateTime(value: string): string | undefined {

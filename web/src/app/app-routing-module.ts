@@ -41,6 +41,8 @@ import { MySubjectDetails } from './admin/teacher/my-subject-details/my-subject-
 import { MyLessonDetails } from './admin/teacher/my-lesson-details';
 import { MyTimetable } from './admin/teacher/my-timetable';
 import { MyLessons } from './admin/teacher/my-lessons';
+import { MyAssessments } from './admin/teacher/my-assessments';
+import { MyAssessmentDetails } from './admin/teacher/my-assessment-details';
 import { Settings } from './admin/settings/settings';
 import { NotFound } from './pages/not-found/not-found';
 import { AuthGuard } from './auth/auth-guard';
@@ -95,6 +97,8 @@ const routes: Routes = [
       { path: 'my-timetable', component: MyTimetable, data: { roles: ['TEACHER'] } },
       { path: 'my-lessons', component: MyLessons, data: { roles: ['TEACHER'] } },
       { path: 'my-lessons/:lessonId', component: MyLessonDetails, data: { roles: ['TEACHER'] } },
+      { path: 'my-assessments', component: MyAssessments, data: { roles: ['TEACHER'] } },
+      { path: 'my-assessments/:assessmentId', component: MyAssessmentDetails, data: { roles: ['TEACHER'] } },
     ]
   },
   { path: '**', component: NotFound },

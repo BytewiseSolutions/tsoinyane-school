@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin, of, takeUntil } from 'rxjs';
 import { BackendService } from '../../../util/backend.service';
 import { SchoolContextService } from '../../layout/school-context';
@@ -39,11 +39,16 @@ export class MyLessons implements OnInit, OnDestroy {
   selectedSchoolName = 'No school selected';
   isLoading = false;
   errorMessage = '';
+  actionMessage = '';
   searchTerm = '';
+  selectedSubjectAssignmentFilter: number | 'ALL' = 'ALL';
+  selectedDayFilter: string | 'ALL' = 'ALL';
   selectedStatusFilter: LessonStatus | 'ALL' = 'ALL';
   selectedSort = 'date-asc';
   lessonPageSize = 10;
   lessonCurrentPage = 1;
+  isBulkSaving = false;
+  selectedLessonIds: number[] = [];
 
   teacherProfile: Teacher | null = null;
   teacherSubjects: SchoolSubject[] = [];
@@ -53,11 +58,25 @@ export class MyLessons implements OnInit, OnDestroy {
   constructor(
     private backendService: BackendService,
     private schoolContext: SchoolContextService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     this.currentUserId = getStoredUser()?.id ?? null;
+
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const assignmentId = Number(params.get('assignmentId'));
+        const day = params.get('day');
+
+        this.selectedSubjectAssignmentFilter = Number.isFinite(assignmentId) && assignmentId > 0
+          ? assignmentId
+          : 'ALL';
+        this.selectedDayFilter = day ? day.toUpperCase() : 'ALL';
+        this.onFiltersChanged();
+      });
 
     this.schoolContext.selectedSchool$
       .pipe(takeUntil(this.destroy$))
@@ -78,8 +97,28 @@ export class MyLessons implements OnInit, OnDestroy {
 
     return [...this.lessons]
       .filter(lesson => this.matchesLessonSearch(lesson, query))
+      .filter(lesson =>
+        this.selectedSubjectAssignmentFilter === 'ALL'
+          || Number(lesson.subjectAssignmentId ?? 0) === Number(this.selectedSubjectAssignmentFilter)
+      )
+      .filter(lesson => this.selectedDayFilter === 'ALL' || String(lesson.dayOfWeek ?? '').toUpperCase() === this.selectedDayFilter)
       .filter(lesson => this.selectedStatusFilter === 'ALL' || lesson.status === this.selectedStatusFilter)
       .sort((left, right) => this.compareLessons(left, right));
+  }
+
+  get subjectFilterOptions(): SchoolSubject[] {
+    return [...this.teacherSubjects].sort((left, right) =>
+      (left.name ?? '').localeCompare(right.name ?? '', undefined, { sensitivity: 'base' })
+      || (left.gradeName ?? '').localeCompare(right.gradeName ?? '', undefined, { sensitivity: 'base' })
+    );
+  }
+
+  get dayFilterOptions(): string[] {
+    return [...new Set(
+      this.lessons
+        .map(lesson => String(lesson.dayOfWeek ?? '').toUpperCase())
+        .filter(Boolean)
+    )];
   }
 
   get paginatedLessons(): MyLessonRow[] {
@@ -101,6 +140,28 @@ export class MyLessons implements OnInit, OnDestroy {
 
   get cancelledLessonsCount(): number {
     return this.lessons.filter(lesson => lesson.status === LessonStatus.CANCELLED).length;
+  }
+
+  get selectedLessons(): MyLessonRow[] {
+    const selectedIds = new Set(this.selectedLessonIds);
+    return this.lessons.filter(lesson => selectedIds.has(Number(lesson.id ?? 0)));
+  }
+
+  get canBulkSubmit(): boolean {
+    return this.selectedLessonIds.length > 0
+      && !this.isBulkSaving
+      && this.selectedLessons.every(lesson => lesson.status !== LessonStatus.SUBMITTED);
+  }
+
+  get canBulkReopen(): boolean {
+    return this.selectedLessonIds.length > 0
+      && !this.isBulkSaving
+      && this.selectedLessons.every(lesson => lesson.status === LessonStatus.CANCELLED);
+  }
+
+  get allVisibleLessonsSelected(): boolean {
+    return this.filteredLessons.length > 0
+      && this.filteredLessons.every(lesson => this.selectedLessonIds.includes(Number(lesson.id ?? 0)));
   }
 
   get lessonTotalPages(): number {
@@ -231,6 +292,58 @@ export class MyLessons implements OnInit, OnDestroy {
     this.router.navigate(['/admin/my-lessons', lesson.id]);
   }
 
+  openSubject(lesson: MyLessonRow): void {
+    if (!lesson.subjectAssignmentId) {
+      return;
+    }
+
+    this.router.navigate(['/admin/my-subjects', lesson.subjectAssignmentId]);
+  }
+
+  isLessonSelected(lessonId: number | null | undefined): boolean {
+    return this.selectedLessonIds.includes(Number(lessonId ?? 0));
+  }
+
+  toggleLessonSelection(lessonId: number | null | undefined, checked: boolean): void {
+    const normalizedLessonId = Number(lessonId ?? 0);
+    if (!normalizedLessonId) {
+      return;
+    }
+
+    if (checked) {
+      if (!this.selectedLessonIds.includes(normalizedLessonId)) {
+        this.selectedLessonIds = [...this.selectedLessonIds, normalizedLessonId];
+      }
+      return;
+    }
+
+    this.selectedLessonIds = this.selectedLessonIds.filter(id => id !== normalizedLessonId);
+  }
+
+  toggleAllVisibleLessons(checked: boolean): void {
+    this.selectedLessonIds = checked
+      ? this.filteredLessons
+          .map(lesson => Number(lesson.id ?? 0))
+          .filter(lessonId => lessonId > 0)
+      : [];
+  }
+
+  bulkSubmitLessons(): void {
+    this.bulkUpdateLessons({
+      status: LessonStatus.SUBMITTED,
+      submitted: true,
+      cancellationReason: null,
+    }, 'Selected lessons submitted successfully.');
+  }
+
+  bulkReopenLessons(): void {
+    this.bulkUpdateLessons({
+      status: LessonStatus.PENDING,
+      submitted: false,
+      cancellationReason: null,
+    }, 'Selected lessons reopened successfully.');
+  }
+
   private loadMyLessons(): void {
     if (!this.selectedSchoolId || !this.currentUserId) {
       this.teacherProfile = null;
@@ -243,6 +356,7 @@ export class MyLessons implements OnInit, OnDestroy {
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.actionMessage = '';
 
     forkJoin({
       teachers: this.backendService.get<Teacher[]>('teacher', { schoolId: this.selectedSchoolId }),
@@ -321,6 +435,7 @@ export class MyLessons implements OnInit, OnDestroy {
                       studentCount: lesson.studentCount ?? timetable?.studentCount ?? 0,
                     };
                   });
+                this.selectedLessonIds = [];
                 this.lessonCurrentPage = 1;
               },
               error: (error: HttpErrorResponse) => {
@@ -408,6 +523,47 @@ export class MyLessons implements OnInit, OnDestroy {
     const leftTime = left ? new Date(left).getTime() : 0;
     const rightTime = right ? new Date(right).getTime() : 0;
     return leftTime - rightTime;
+  }
+
+  private bulkUpdateLessons(overrides: Partial<Lesson>, successMessage: string): void {
+    if (!this.selectedLessons.length || this.isBulkSaving) {
+      return;
+    }
+
+    this.isBulkSaving = true;
+    this.errorMessage = '';
+    this.actionMessage = '';
+
+    const requests = this.selectedLessons.map(lesson =>
+      this.backendService.put<Lesson, Lesson>(`lesson/${lesson.id}`, {
+        ...lesson,
+        ...overrides,
+        timetableId: lesson.timetableId ?? null,
+        subjectAssignmentId: lesson.subjectAssignmentId ?? null,
+        subjectId: lesson.subjectId ?? null,
+        teacherId: lesson.teacherId ?? this.teacherProfile?.id ?? null,
+        submitted: overrides.submitted ?? lesson.submitted ?? false,
+        status: overrides.status ?? lesson.status ?? LessonStatus.PENDING,
+        cancellationReason: Object.prototype.hasOwnProperty.call(overrides, 'cancellationReason')
+          ? (overrides.cancellationReason ?? null)
+          : (lesson.cancellationReason ?? null),
+      })
+    );
+
+    forkJoin(requests).subscribe({
+      next: updatedLessons => {
+        const updatedMap = new Map(updatedLessons.map(lesson => [lesson.id, lesson]));
+        this.lessons = this.lessons.map(lesson => updatedMap.get(lesson.id) ?? lesson);
+        this.selectedLessonIds = [];
+        this.actionMessage = successMessage;
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage = error.error?.message || 'Failed to update the selected lessons.';
+      },
+      complete: () => {
+        this.isBulkSaving = false;
+      },
+    });
   }
 
   private toPercent(value: number | null | undefined, total: number): number {

@@ -38,6 +38,20 @@
         name="lessonSearch"
         placeholder="Search by subject, grade, day, session, or status..."
       />
+      <select [(ngModel)]="selectedSubjectAssignmentFilter" (ngModelChange)="onFiltersChanged()" name="lessonSubjectFilter">
+        <option [ngValue]="'ALL'">All Subjects</option>
+        @for (subject of subjectFilterOptions; track subject.assignmentId) {
+          <option [ngValue]="subject.assignmentId">
+            {{ subject.name }}{{ subject.gradeName ? ' • ' + subject.gradeName : '' }}
+          </option>
+        }
+      </select>
+      <select [(ngModel)]="selectedDayFilter" (ngModelChange)="onFiltersChanged()" name="lessonDayFilter">
+        <option [ngValue]="'ALL'">All Days</option>
+        @for (day of dayFilterOptions; track day) {
+          <option [ngValue]="day">{{ day }}</option>
+        }
+      </select>
       <select [(ngModel)]="selectedStatusFilter" (ngModelChange)="onFiltersChanged()" name="lessonStatusFilter">
         @for (status of lessonStatusOptions; track status) {
           <option [ngValue]="status">
@@ -55,6 +69,22 @@
       </select>
     </div>
 
+    <div class="bulk-toolbar">
+      <span>{{ selectedLessonIds.length }} selected</span>
+      <div class="bulk-actions">
+        <button type="button" class="action-btn primary" [disabled]="!canBulkSubmit" (click)="bulkSubmitLessons()">
+          {{ isBulkSaving ? 'Saving...' : 'Submit Selected' }}
+        </button>
+        <button type="button" class="action-btn" [disabled]="!canBulkReopen" (click)="bulkReopenLessons()">
+          {{ isBulkSaving ? 'Saving...' : 'Reopen Selected' }}
+        </button>
+      </div>
+    </div>
+
+    @if (actionMessage) {
+      <div class="success-banner">{{ actionMessage }}</div>
+    }
+
     @if (isLoading) {
       <div class="state-card">Loading your lessons...</div>
     } @else if (filteredLessons.length > 0) {
@@ -62,6 +92,13 @@
         <table>
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  [checked]="allVisibleLessonsSelected"
+                  (change)="toggleAllVisibleLessons($any($event.target).checked)"
+                />
+              </th>
               <th>Session</th>
               <th>Subject</th>
               <th>Grade</th>
@@ -75,6 +112,13 @@
           <tbody>
             @for (lesson of paginatedLessons; track lesson.id ?? lesson.timetableId ?? lesson.startTime) {
               <tr>
+                <td>
+                  <input
+                    type="checkbox"
+                    [checked]="isLessonSelected(lesson.id)"
+                    (change)="toggleLessonSelection(lesson.id, $any($event.target).checked)"
+                  />
+                </td>
                 <td>{{ formatLessonSession(lesson) }}</td>
                 <td>
                   <div class="subject-name">{{ lesson.subjectName || 'Unknown Subject' }}</div>
@@ -90,9 +134,10 @@
                 <td>{{ getAttendanceCompletion(lesson) }}</td>
                 <td>{{ getHomeworkCompletion(lesson) }}</td>
                 <td>
-                  <button type="button" class="action-btn" (click)="viewLesson(lesson)">
-                    View
-                  </button>
+                  <div class="action-stack">
+                    <button type="button" class="action-btn" (click)="openSubject(lesson)">Subject</button>
+                    <button type="button" class="action-btn primary" (click)="viewLesson(lesson)">View</button>
+                  </div>
                 </td>
               </tr>
             }

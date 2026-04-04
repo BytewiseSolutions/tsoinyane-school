@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin, of, takeUntil } from 'rxjs';
 import { BackendService } from '../../../util/backend.service';
 import { SchoolContextService } from '../../layout/school-context';
@@ -34,6 +35,8 @@ export class MyTimetable implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage = '';
   searchTerm = '';
+  selectedView: 'table' | 'grid' = 'table';
+  selectedSubjectAssignmentFilter: number | 'ALL' = 'ALL';
   selectedDayFilter: string | 'ALL' = 'ALL';
   selectedSort = 'day-asc';
   timetablePageSize = 10;
@@ -45,11 +48,22 @@ export class MyTimetable implements OnInit, OnDestroy {
 
   constructor(
     private backendService: BackendService,
-    private schoolContext: SchoolContextService
+    private schoolContext: SchoolContextService,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.currentUserId = getStoredUser()?.id ?? null;
+
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const assignmentId = Number(params.get('assignmentId'));
+        this.selectedSubjectAssignmentFilter = Number.isFinite(assignmentId) && assignmentId > 0
+          ? assignmentId
+          : 'ALL';
+      });
 
     this.schoolContext.selectedSchool$
       .pipe(takeUntil(this.destroy$))
@@ -69,9 +83,27 @@ export class MyTimetable implements OnInit, OnDestroy {
     const query = this.searchTerm.trim().toLowerCase();
 
     return [...this.timetables]
+      .filter(entry =>
+        this.selectedSubjectAssignmentFilter === 'ALL'
+          || Number(entry.subjectAssignmentId ?? 0) === Number(this.selectedSubjectAssignmentFilter)
+      )
       .filter(entry => this.matchesSearch(entry, query))
       .filter(entry => this.selectedDayFilter === 'ALL' || entry.dayOfWeek === this.selectedDayFilter)
       .sort((left, right) => this.compareTimetables(left, right));
+  }
+
+  get subjectFilterOptions(): SchoolSubject[] {
+    return [...this.teacherSubjects].sort((left, right) =>
+      (left.name ?? '').localeCompare(right.name ?? '', undefined, { sensitivity: 'base' })
+      || (left.gradeName ?? '').localeCompare(right.gradeName ?? '', undefined, { sensitivity: 'base' })
+    );
+  }
+
+  get weeklyGridDays(): Array<{ day: string; entries: TimetableEntry[] }> {
+    return this.dayOfWeekOptions.map(day => ({
+      day,
+      entries: this.filteredTimetables.filter(entry => entry.dayOfWeek === day),
+    }));
   }
 
   get paginatedTimetables(): TimetableEntry[] {
@@ -154,6 +186,23 @@ export class MyTimetable implements OnInit, OnDestroy {
     return `${this.normalizeTime(entry.startTime)} - ${this.normalizeTime(entry.endTime)}`;
   }
 
+  getDurationLabel(entry: TimetableEntry): string {
+    const minutes = this.getTimetableDurationMinutes(entry);
+    if (!minutes) {
+      return 'N/A';
+    }
+
+    if (minutes % 60 === 0) {
+      return `${minutes / 60} hr`;
+    }
+
+    return `${minutes} min`;
+  }
+
+  setView(view: 'table' | 'grid'): void {
+    this.selectedView = view;
+  }
+
   onFiltersChanged(): void {
     this.timetableCurrentPage = 1;
   }
@@ -172,6 +221,23 @@ export class MyTimetable implements OnInit, OnDestroy {
     if (this.safeCurrentPage < this.timetableTotalPages) {
       this.timetableCurrentPage = this.safeCurrentPage + 1;
     }
+  }
+
+  openSubject(entry: TimetableEntry): void {
+    if (!entry.subjectAssignmentId) {
+      return;
+    }
+
+    this.router.navigate(['/admin/my-subjects', entry.subjectAssignmentId]);
+  }
+
+  openLessons(entry: TimetableEntry): void {
+    this.router.navigate(['/admin/my-lessons'], {
+      queryParams: {
+        assignmentId: entry.subjectAssignmentId ?? undefined,
+        day: entry.dayOfWeek ?? undefined,
+      },
+    });
   }
 
   private loadMyTimetable(): void {

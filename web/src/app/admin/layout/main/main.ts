@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Subject, forkJoin, of, takeUntil } from 'rxjs';
 import { SchoolContextService } from '../school-context';
 import { BackendService } from '../../../util/backend.service';
@@ -10,11 +11,21 @@ import { Teacher } from '../../teachers/teacher';
 import { SchoolSubject } from '../../subjects/subject';
 import { TimetableEntry } from '../../subjects/timetable-entry';
 import { Lesson } from '../../subjects/lesson';
+import { NotificationItem } from '../header/notification-item';
+import { Assessment } from '../../teacher/assessment';
 
 interface DashboardStatCard {
   icon: string;
   label: string;
   value: number;
+  route?: string;
+}
+
+interface DashboardAttentionItem {
+  label: string;
+  count: number;
+  description: string;
+  route: string;
 }
 
 @Component({
@@ -33,13 +44,16 @@ export class AdminMain implements OnInit, OnDestroy {
   recentStudents: DashboardRecentStudent[] = [];
   teacherSubjects: SchoolSubject[] = [];
   upcomingLessons: Lesson[] = [];
+  upcomingAssessments: Assessment[] = [];
+  needsAttention: DashboardAttentionItem[] = [];
   upcomingEvents: SchoolEvent[] = [];
   isLoading = false;
   errorMessage = '';
 
   constructor(
     private schoolContext: SchoolContextService,
-    private backendService: BackendService
+    private backendService: BackendService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -83,6 +97,8 @@ export class AdminMain implements OnInit, OnDestroy {
         this.recentStudents = response.recentStudents ?? [];
         this.teacherSubjects = [];
         this.upcomingLessons = [];
+        this.upcomingAssessments = [];
+        this.needsAttention = [];
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = error.error?.message || 'Failed to load dashboard statistics.';
@@ -90,6 +106,8 @@ export class AdminMain implements OnInit, OnDestroy {
         this.recentStudents = [];
         this.teacherSubjects = [];
         this.upcomingLessons = [];
+        this.upcomingAssessments = [];
+        this.needsAttention = [];
       },
       complete: () => {
         this.isLoading = false;
@@ -119,6 +137,38 @@ export class AdminMain implements OnInit, OnDestroy {
     return lesson.id ?? `${lesson.subjectName ?? 'lesson'}-${this.getLessonDate(lesson) ?? 'unscheduled'}`;
   }
 
+  getAssessmentTrackKey(assessment: Assessment): string | number {
+    return assessment.id ?? `${assessment.title ?? 'assessment'}-${assessment.assessmentDate ?? 'unscheduled'}`;
+  }
+
+  getAssessmentDate(value: string | null | undefined): string | null {
+    return value ?? null;
+  }
+
+  openCard(card: DashboardStatCard): void {
+    if (!card.route || !this.isTeacherDashboard) {
+      return;
+    }
+
+    this.router.navigate([card.route]);
+  }
+
+  openPanel(route: string): void {
+    this.router.navigate([route]);
+  }
+
+  openAssessment(assessment: Assessment): void {
+    if (!assessment.id) {
+      return;
+    }
+
+    this.router.navigate(['/admin/my-assessments', assessment.id]);
+  }
+
+  openAttentionItem(item: DashboardAttentionItem): void {
+    this.router.navigate([item.route]);
+  }
+
   private loadUpcomingEvents(schoolId: number | null): void {
     this.backendService.get<SchoolEvent[]>('event', {
       ...(schoolId ? { schoolId } : {}),
@@ -138,6 +188,8 @@ export class AdminMain implements OnInit, OnDestroy {
       this.statCards = [];
       this.teacherSubjects = [];
       this.upcomingLessons = [];
+      this.upcomingAssessments = [];
+      this.needsAttention = [];
       this.recentStudents = [];
       this.isLoading = false;
       return;
@@ -153,6 +205,8 @@ export class AdminMain implements OnInit, OnDestroy {
           this.statCards = [];
           this.teacherSubjects = [];
           this.upcomingLessons = [];
+          this.upcomingAssessments = [];
+          this.needsAttention = [];
           this.recentStudents = [];
           this.errorMessage = 'No teacher profile was found for the selected school.';
           this.isLoading = false;
@@ -191,6 +245,8 @@ export class AdminMain implements OnInit, OnDestroy {
           .map(subject => this.backendService.get<TimetableEntry[]>('timetable', { subjectId: subject.subjectId ?? subject.id! }));
 
         const timetables$ = subjectRequests.length ? forkJoin(subjectRequests) : of([] as TimetableEntry[][]);
+        const assessments$ = this.backendService.get<Assessment[]>('assessment', { schoolId, teacherId: teacher.id });
+        const notifications$ = this.backendService.get<NotificationItem[]>('notification', { schoolId });
 
         timetables$.subscribe({
           next: (timetableGroups) => {
@@ -201,8 +257,12 @@ export class AdminMain implements OnInit, OnDestroy {
 
             const lessons$ = lessonRequests.length ? forkJoin(lessonRequests) : of([] as Lesson[][]);
 
-            lessons$.subscribe({
-              next: (lessonGroups) => {
+            forkJoin({
+              lessonGroups: lessons$,
+              assessments: assessments$,
+              notifications: notifications$,
+            }).subscribe({
+              next: ({ lessonGroups, assessments, notifications }) => {
                 const allLessons = lessonGroups.flat();
                 const upcomingLessons = allLessons
                   .filter(lesson => {
@@ -214,20 +274,58 @@ export class AdminMain implements OnInit, OnDestroy {
                     const rightTime = new Date(this.getLessonDate(right) ?? 0).getTime();
                     return leftTime - rightTime;
                   })
-                  .slice(0, 5);
+                  .slice(0, 3);
+                const upcomingAssessments = (assessments ?? [])
+                  .filter(assessment =>
+                    !!assessment.assessmentDate
+                    && new Date(assessment.assessmentDate).getTime() >= Date.now()
+                  )
+                  .sort((left, right) =>
+                    new Date(left.assessmentDate ?? 0).getTime() - new Date(right.assessmentDate ?? 0).getTime()
+                  )
+                  .slice(0, 3);
+                const pendingLessonsCount = allLessons.filter(lesson => !lesson.status || lesson.status === 'PENDING').length;
+                const unmarkedAssessmentsCount = (assessments ?? []).filter(assessment =>
+                  Number(assessment.markedCount ?? 0) < Number(assessment.studentCount ?? 0)
+                ).length;
+                const unreadNotificationsCount = (notifications ?? []).filter(notification => !notification.read).length;
 
                 this.statCards = [
-                  { icon: 'fa-book-open', label: 'My Subjects', value: teacherSubjects.length },
+                  { icon: 'fa-book-open', label: 'My Subjects', value: teacherSubjects.length, route: '/admin/my-subjects' },
                   { icon: 'fa-layer-group', label: 'My Grades', value: gradeCount },
-                  { icon: 'fa-calendar-week', label: 'Timetable Slots', value: timetables.length },
-                  { icon: 'fa-chalkboard', label: 'Lessons Scheduled', value: allLessons.length },
+                  { icon: 'fa-calendar-week', label: 'Timetable Slots', value: timetables.length, route: '/admin/my-timetable' },
+                  { icon: 'fa-chalkboard', label: 'Lessons Scheduled', value: allLessons.length, route: '/admin/my-lessons' },
+                  { icon: 'fa-clipboard-check', label: 'Assessments', value: (assessments ?? []).length, route: '/admin/my-assessments' },
                 ];
                 this.upcomingLessons = upcomingLessons;
+                this.upcomingAssessments = upcomingAssessments;
+                this.needsAttention = [
+                  {
+                    label: 'Pending Lessons',
+                    count: pendingLessonsCount,
+                    description: 'Lessons still waiting to be submitted.',
+                    route: '/admin/my-lessons',
+                  },
+                  {
+                    label: 'Unmarked Assessments',
+                    count: unmarkedAssessmentsCount,
+                    description: 'Assessments with learners still missing scores.',
+                    route: '/admin/my-assessments',
+                  },
+                  {
+                    label: 'Unread Notifications',
+                    count: unreadNotificationsCount,
+                    description: 'Announcements you have not read yet.',
+                    route: '/admin/notifications',
+                  },
+                ];
               },
               error: () => {
                 this.errorMessage = 'Failed to load your lesson dashboard.';
                 this.statCards = [];
                 this.upcomingLessons = [];
+                this.upcomingAssessments = [];
+                this.needsAttention = [];
               },
               complete: () => {
                 this.isLoading = false;
@@ -238,6 +336,8 @@ export class AdminMain implements OnInit, OnDestroy {
             this.errorMessage = 'Failed to load your timetable dashboard.';
             this.statCards = [];
             this.upcomingLessons = [];
+            this.upcomingAssessments = [];
+            this.needsAttention = [];
             this.isLoading = false;
           },
         });
@@ -247,6 +347,8 @@ export class AdminMain implements OnInit, OnDestroy {
         this.statCards = [];
         this.teacherSubjects = [];
         this.upcomingLessons = [];
+        this.upcomingAssessments = [];
+        this.needsAttention = [];
         this.recentStudents = [];
         this.isLoading = false;
       },

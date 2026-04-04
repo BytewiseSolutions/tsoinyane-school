@@ -210,8 +210,9 @@ export class MyStudentDetails implements OnInit, OnDestroy {
               left.subjectName.localeCompare(right.subjectName, undefined, { sensitivity: 'base' })
             );
 
-            const report$ = matchingStudent.userId
-              ? this.backendService.get<StudentReport>(`report/student/${matchingStudent.userId}`)
+            const selectedStudent = matchingStudent as TeacherStudentDetail;
+            const report$ = selectedStudent.userId
+              ? this.backendService.get<StudentReport>(`report/student/${selectedStudent.userId}`)
               : of<StudentReport | null>(null);
 
             report$.subscribe({

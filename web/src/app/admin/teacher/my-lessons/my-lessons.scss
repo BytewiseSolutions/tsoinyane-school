@@ -55,7 +55,7 @@
 
 .table-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 2fr) minmax(180px, 1fr) minmax(180px, 1fr);
+  grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(160px, 1fr));
   gap: 12px;
   padding: 16px 20px;
   border-bottom: 1px solid #e0e7f0;
@@ -72,6 +72,36 @@
     color: #243553;
     width: 100%;
   }
+}
+
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e8eef8;
+  background: #fbfcff;
+  color: #5f6e8f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.success-banner {
+  margin: 16px 20px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #cce6d4;
+  background: #e8f7ec;
+  color: #1e7b34;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .table-wrap {
@@ -149,6 +179,17 @@ table {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.action-btn.primary {
+  border-color: #c8d8ff;
+  color: #1f4db6;
+}
+
+.action-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .state-card {
@@ -229,6 +270,11 @@ table {
 
   .table-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .bulk-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

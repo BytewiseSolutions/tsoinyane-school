@@ -164,6 +164,16 @@ export class MySubjectDetails implements OnInit, OnDestroy {
     });
   }
 
+  openAssessments(): void {
+    if (!this.subjectAssignment?.assignmentId) {
+      return;
+    }
+
+    this.router.navigate(['/admin/my-assessments'], {
+      queryParams: { assignmentId: this.subjectAssignment.assignmentId },
+    });
+  }
+
   openReports(): void {
     this.router.navigate(['/admin/reports']);
   }
@@ -293,7 +303,7 @@ export class MySubjectDetails implements OnInit, OnDestroy {
                 const subjectId = Number(subjectAssignment.subjectId ?? subjectAssignment.id ?? 0);
 
                 this.studentPerformance = reports
-                  .map(report => {
+                  .map<SubjectStudentPerformance | null>(report => {
                     const subjectReport = (report.subjects ?? []).find(subject => Number(subject.subjectId) === subjectId);
                     if (!subjectReport) {
                       return null;
@@ -305,7 +315,7 @@ export class MySubjectDetails implements OnInit, OnDestroy {
                       studentId: student?.id ?? 0,
                       userId: student?.userId ?? null,
                       displayName: student?.displayName || report.studentName,
-                      studentNumber: student?.studentNumber || report.studentNumber,
+                      studentNumber: student?.studentNumber ?? report.studentNumber ?? null,
                       attendanceRate: subjectReport.attendanceRate,
                       homeworkRate: subjectReport.homeworkRate,
                       totalLessons: subjectReport.totalLessons,

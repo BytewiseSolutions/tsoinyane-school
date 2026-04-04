@@ -56,6 +56,8 @@ import { MySubjectDetails } from './admin/teacher/my-subject-details/my-subject-
 import { MyLessonDetails } from './admin/teacher/my-lesson-details';
 import { MyTimetable } from './admin/teacher/my-timetable';
 import { MyLessons } from './admin/teacher/my-lessons';
+import { MyAssessments } from './admin/teacher/my-assessments';
+import { MyAssessmentDetails } from './admin/teacher/my-assessment-details';
 import { Settings } from './admin/settings/settings';
 import { SubjectForm } from './admin/subjects/subject-form/subject-form';
 import { SubjectDetail } from './admin/subjects/subject-detail/subject-detail';
@@ -119,6 +121,8 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     MyLessonDetails,
     MyTimetable,
     MyLessons,
+    MyAssessments,
+    MyAssessmentDetails,
     Settings,
     SubjectForm,
     SubjectDetail,
