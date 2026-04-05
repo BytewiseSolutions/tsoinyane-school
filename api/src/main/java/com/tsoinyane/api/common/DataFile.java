@@ -25,7 +25,7 @@ public class DataFile extends BaseEntity {
     private String type;
 
     @Lob
-    @Column(columnDefinition = "MEDIUMBLOB")
+    @Column
     private byte[] contents;
 
     @Column(name = "file_size")
