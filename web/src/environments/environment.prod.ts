@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: "https://tsoinyane-school.onrender.com/api/"
+  apiUrl: "https://tsoinyane-school-api.onrender.com/api/"
 };
