@@ -43,32 +43,38 @@ public class FeeStructureSchemaCleanup implements ApplicationRunner {
         dropLegacyColumns(existingLegacyColumns);
     }
 
+    private boolean isPostgres() {
+        try {
+            String url = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
+            return url != null && url.startsWith("jdbc:postgresql");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private boolean tableExists(String tableName) {
+        if (isPostgres()) {
+            Integer count = jdbcTemplate.queryForObject(
+                    "select count(*) from information_schema.tables where table_schema = current_schema() and table_name = ?",
+                    Integer.class, tableName);
+            return count != null && count > 0;
+        }
         Integer count = jdbcTemplate.queryForObject(
-                """
-                        select count(*)
-                        from information_schema.tables
-                        where table_schema = database()
-                          and table_name = ?
-                        """,
-                Integer.class,
-                tableName
-        );
+                "select count(*) from information_schema.tables where table_schema = database() and table_name = ?",
+                Integer.class, tableName);
         return count != null && count > 0;
     }
 
     private boolean columnExists(String columnName) {
+        if (isPostgres()) {
+            Integer count = jdbcTemplate.queryForObject(
+                    "select count(*) from information_schema.columns where table_schema = current_schema() and table_name = 'fee_structure' and column_name = ?",
+                    Integer.class, columnName);
+            return count != null && count > 0;
+        }
         Integer count = jdbcTemplate.queryForObject(
-                """
-                        select count(*)
-                        from information_schema.columns
-                        where table_schema = database()
-                          and table_name = 'fee_structure'
-                          and column_name = ?
-                        """,
-                Integer.class,
-                columnName
-        );
+                "select count(*) from information_schema.columns where table_schema = database() and table_name = 'fee_structure' and column_name = ?",
+                Integer.class, columnName);
         return count != null && count > 0;
     }
 
