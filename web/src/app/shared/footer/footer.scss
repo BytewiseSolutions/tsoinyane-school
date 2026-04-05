@@ -72,6 +72,16 @@
         align-items: center;
         gap: 10px;
 
+        a {
+          color: rgba(255, 255, 255, 0.8);
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: var(--white);
+          text-decoration: underline;
+        }
+
         i {
           color: var(--white);
           width: 16px;

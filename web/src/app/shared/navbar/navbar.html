@@ -3,9 +3,9 @@
 
     <div class="contact-info">
       @if (selectedSchool) {
-        <p><i class="fa-solid fa-phone"></i> {{ selectedSchool.phone }}</p>
-        <p><i class="fa-solid fa-envelope"></i> {{ selectedSchool.email }}</p>
-        <p><i class="fa-solid fa-location-dot"></i> {{ selectedSchool.location }}</p>
+        <p><i class="fa-solid fa-phone"></i> <a [href]="phoneLink">{{ selectedSchool.phone }}</a></p>
+        <p><i class="fa-solid fa-envelope"></i> <a [href]="emailLink">{{ selectedSchool.email }}</a></p>
+        <p><i class="fa-solid fa-location-dot"></i> <a [href]="locationLink" target="_blank" rel="noopener noreferrer">{{ selectedSchool.location }}</a></p>
       }
     </div>
 

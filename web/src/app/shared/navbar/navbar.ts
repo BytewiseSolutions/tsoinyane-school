@@ -45,4 +45,21 @@ export class Navbar implements OnInit {
     this.schoolService.setSchool(school);
     this.dropdownOpen = false;
   }
+
+  get phoneLink(): string {
+    const phone = this.selectedSchool?.phone ?? '';
+    return `tel:${phone.replace(/\s+/g, '')}`;
+  }
+
+  get emailLink(): string {
+    return `mailto:${this.selectedSchool?.email ?? ''}`;
+  }
+
+  get locationLink(): string {
+    if (this.selectedSchool?.mapLatitude != null && this.selectedSchool?.mapLongitude != null) {
+      return `https://www.google.com/maps/search/?api=1&query=${this.selectedSchool.mapLatitude},${this.selectedSchool.mapLongitude}`;
+    }
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(this.selectedSchool?.location ?? '')}`;
+  }
 }

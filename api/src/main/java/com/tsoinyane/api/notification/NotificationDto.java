@@ -26,4 +26,8 @@ public class NotificationDto {
     Instant readAt;
     Boolean read;
     Boolean editable;
+
+    public boolean isRead() {
+        return Boolean.TRUE.equals(read);
+    }
 }

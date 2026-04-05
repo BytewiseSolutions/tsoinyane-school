@@ -11,9 +11,9 @@
   overflow: hidden;
   padding: 84px 40px 56px;
   min-height: 620px;
-  background:
-    linear-gradient(120deg, rgba(7, 24, 54, 0.84), rgba(14, 38, 78, 0.72)),
-    url('/assets/image1.png') center/cover no-repeat;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .hero-backdrop {
@@ -140,6 +140,16 @@
 
   i {
     color: #f2d27b;
+  }
+
+  a {
+    color: rgba(255, 251, 242, 0.9);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: #fffdf7;
+    text-decoration: underline;
   }
 }
 

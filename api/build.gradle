@@ -37,3 +37,11 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+tasks.named('bootJar') {
+	archiveFileName = 'api.jar'
+}
+
+tasks.named('jar') {
+	enabled = false
+}

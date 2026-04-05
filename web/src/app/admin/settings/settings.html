@@ -35,6 +35,87 @@
       </form>
     </div>
 
+    <div class="settings-card full-width">
+      <h3><i class="fa-solid fa-globe"></i> Public Content</h3>
+      <form class="settings-form" (ngSubmit)="savePublicContent()">
+        <div class="form-group">
+          <label>About Headline</label>
+          <input type="text" [(ngModel)]="schoolInfo.aboutHeadline" name="aboutHeadline" placeholder="A strong beginning for young learners" />
+        </div>
+        <div class="form-group">
+          <label>About Description</label>
+          <textarea [(ngModel)]="schoolInfo.aboutDescription" name="aboutDescription" placeholder="Public school story shown on the About page"></textarea>
+        </div>
+        <div class="form-group">
+          <label>About Supporting Text</label>
+          <textarea [(ngModel)]="schoolInfo.aboutSupportingText" name="aboutSupportingText" placeholder="Second paragraph for the About page"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mission</label>
+            <textarea [(ngModel)]="schoolInfo.missionText" name="missionText" placeholder="School mission"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Vision</label>
+            <textarea [(ngModel)]="schoolInfo.visionText" name="visionText" placeholder="School vision"></textarea>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Values</label>
+          <textarea [(ngModel)]="schoolInfo.valuesText" name="valuesText" placeholder="School values"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Hero Image</label>
+            <div class="image-upload-card">
+              <img [src]="heroImagePreviewUrl" alt="Hero preview" />
+              <input type="file" accept="image/*" (change)="onImageSelected('hero', $event)" />
+              <div class="inline-actions">
+                <button type="button" class="secondary-btn" (click)="uploadImage('hero')" [disabled]="uploadingHeroImage || !selectedHeroImage || !schoolInfo.id">
+                  {{ uploadingHeroImage ? 'Uploading...' : (hasHeroImage ? 'Replace Hero Image' : 'Upload Hero Image') }}
+                </button>
+                <button type="button" class="danger-btn" (click)="deleteImage('hero')" [disabled]="uploadingHeroImage || !hasHeroImage || !schoolInfo.id">
+                  Delete Hero Image
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>About Image</label>
+            <div class="image-upload-card">
+              <img [src]="aboutImagePreviewUrl" alt="About preview" />
+              <input type="file" accept="image/*" (change)="onImageSelected('about', $event)" />
+              <div class="inline-actions">
+                <button type="button" class="secondary-btn" (click)="uploadImage('about')" [disabled]="uploadingAboutImage || !selectedAboutImage || !schoolInfo.id">
+                  {{ uploadingAboutImage ? 'Uploading...' : (hasAboutImage ? 'Replace About Image' : 'Upload About Image') }}
+                </button>
+                <button type="button" class="danger-btn" (click)="deleteImage('about')" [disabled]="uploadingAboutImage || !hasAboutImage || !schoolInfo.id">
+                  Delete About Image
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Map Latitude</label>
+            <input type="number" step="0.000001" [(ngModel)]="schoolInfo.mapLatitude" name="mapLatitude" />
+          </div>
+          <div class="form-group">
+            <label>Map Longitude</label>
+            <input type="number" step="0.000001" [(ngModel)]="schoolInfo.mapLongitude" name="mapLongitude" />
+          </div>
+        </div>
+        <small class="form-hint">Upload images here and save exact map coordinates so the public Home, About, and Contact pages can show school-specific content.</small>
+        @if (publicContentError) {
+          <p class="form-message error">{{ publicContentError }}</p>
+        }
+        <button type="submit" class="save-btn" [disabled]="savingPublicContent || !schoolInfo.id">
+          {{ savingPublicContent ? 'Saving...' : 'Save Public Content' }}
+        </button>
+      </form>
+    </div>
+
     <div class="settings-card">
       <h3><i class="fa-solid fa-lock"></i> Password & Access</h3>
       <form class="settings-form" (ngSubmit)="updatePassword()">

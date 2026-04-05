@@ -3,6 +3,7 @@ import { SchoolService, PublicSchool } from '../../shared/school';
 import { BackendService } from '../../util/backend.service';
 import { Subject, takeUntil } from 'rxjs';
 import { Status } from '../../admin/users/status';
+import { environment } from '../../../environments/environment';
 
 interface HomeStat {
   icon: string;
@@ -39,6 +40,8 @@ interface HomeSubject {
 })
 export class Home implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
+  private subjectLoadVersion = 0;
+  private readonly apiUrl = environment.apiUrl.replace(/\/+$/, '');
 
   selectedSchool: PublicSchool | null = null;
   schoolName = 'Tsoinyane Government Combined School';
@@ -206,19 +209,63 @@ export class Home implements OnInit, OnDestroy {
       .slice(0, 6);
   }
 
+  get heroImageUrl(): string {
+    if (this.selectedSchool?.heroImageFileId) {
+      return `${this.apiUrl}/public/files/${this.selectedSchool.heroImageFileId}`;
+    }
+
+    return this.selectedSchool?.heroImageUrl?.trim() || '/image1.png';
+  }
+
+  get heroBackgroundStyle(): Record<string, string> {
+    return {
+      backgroundImage: `linear-gradient(120deg, rgba(7, 24, 54, 0.84), rgba(14, 38, 78, 0.72)), url('${this.heroImageUrl}')`
+    };
+  }
+
+  get phoneLink(): string {
+    const phone = this.selectedSchool?.phone ?? '';
+    return `tel:${phone.replace(/\s+/g, '')}`;
+  }
+
+  get emailLink(): string {
+    return `mailto:${this.selectedSchool?.email ?? ''}`;
+  }
+
+  get locationLink(): string {
+    if (this.selectedSchool?.mapLatitude != null && this.selectedSchool?.mapLongitude != null) {
+      return `https://www.google.com/maps/search/?api=1&query=${this.selectedSchool.mapLatitude},${this.selectedSchool.mapLongitude}`;
+    }
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(this.selectedSchool?.location ?? 'Pitseng, Leribe')}`;
+  }
+
   private loadSubjects(schoolId: number | null): void {
+    const loadVersion = ++this.subjectLoadVersion;
     this.isLoadingSubjects = true;
     this.subjectError = '';
 
     this.backendService.get<HomeSubject[]>('subject', schoolId ? { schoolId } : undefined).subscribe({
       next: subjects => {
+        if (loadVersion !== this.subjectLoadVersion) {
+          return;
+        }
+
         this.subjects = (subjects ?? []).filter(subject => subject.status !== Status.INACTIVE);
       },
       error: () => {
+        if (loadVersion !== this.subjectLoadVersion) {
+          return;
+        }
+
         this.subjects = [];
         this.subjectError = 'Subjects could not be loaded right now.';
       },
       complete: () => {
+        if (loadVersion !== this.subjectLoadVersion) {
+          return;
+        }
+
         this.isLoadingSubjects = false;
       },
     });
