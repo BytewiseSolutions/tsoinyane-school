@@ -17,6 +17,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
+@Table(name = "app_user")
 @SuperBuilder
 @ToString(callSuper = true, exclude = "schools")
 @EqualsAndHashCode(callSuper = true, exclude = "schools")
