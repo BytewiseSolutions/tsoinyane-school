@@ -27,6 +27,9 @@ public class FeeStructureSchemaCleanup implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        if (isPostgres()) {
+            return;
+        }
         if (!tableExists("fee_structure") || !tableExists("fee_term_window")) {
             return;
         }
