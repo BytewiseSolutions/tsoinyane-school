@@ -10,6 +10,18 @@ export interface PublicSchool {
   email: string;
   phone: string;
   location: string;
+  aboutHeadline?: string | null;
+  aboutDescription?: string | null;
+  aboutSupportingText?: string | null;
+  missionText?: string | null;
+  visionText?: string | null;
+  valuesText?: string | null;
+  heroImageUrl?: string | null;
+  aboutImageUrl?: string | null;
+  heroImageFileId?: number | null;
+  aboutImageFileId?: number | null;
+  mapLatitude?: number | null;
+  mapLongitude?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -2,82 +2,34 @@
 <section class="page-hero">
   <div class="page-hero-content">
     <h1>Subjects</h1>
-    <p>Explore the subjects offered at Tsoinyane Government Combined School</p>
+    <p>Explore the subjects offered at {{ schoolName }}</p>
   </div>
 </section>
 
-@if (showPrimary) {
-  <section class="subjects-section">
-    <h2>Primary School Subjects</h2>
-    <div class="subjects-grid">
-      <div class="subject-card">
-        <i class="fa-solid fa-calculator"></i>
-        <h3>Mathematics</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-book"></i>
-        <h3>English</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-language"></i>
-        <h3>Sesotho</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-flask"></i>
-        <h3>Science</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-earth-africa"></i>
-        <h3>Social Studies</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-music"></i>
-        <h3>Arts & Music</h3>
-      </div>
-    </div>
-  </section>
-}
+<section class="subjects-section">
+  <div class="subjects-heading">
+    <h2>Subjects Offered</h2>
+    <p>{{ subjects.length }} subject{{ subjects.length === 1 ? '' : 's' }} available for the selected school.</p>
+  </div>
 
-@if (showHigh) {
-  <section class="subjects-section alt">
-    <h2>High School Subjects</h2>
+  @if (isLoadingSubjects) {
+    <div class="subjects-state">Loading subjects...</div>
+  } @else if (subjectError) {
+    <div class="subjects-state error">{{ subjectError }}</div>
+  } @else if (subjects.length > 0) {
     <div class="subjects-grid">
-      <div class="subject-card">
-        <i class="fa-solid fa-calculator"></i>
-        <h3>Mathematics</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-book"></i>
-        <h3>English</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-language"></i>
-        <h3>Sesotho</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-flask"></i>
-        <h3>Chemistry</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-atom"></i>
-        <h3>Physics</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-seedling"></i>
-        <h3>Biology</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-earth-africa"></i>
-        <h3>Geography</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-landmark"></i>
-        <h3>History</h3>
-      </div>
-      <div class="subject-card">
-        <i class="fa-solid fa-computer"></i>
-        <h3>Computer Science</h3>
-      </div>
+      @for (subject of subjects; track subject.id ?? subject.code) {
+        <div class="subject-card">
+          <i class="fa-solid {{ getSubjectIcon(subject.name) }}"></i>
+          <div class="subject-card-meta">
+            <span class="subject-code">{{ subject.code }}</span>
+            <span class="subject-badge">{{ subject.assignmentCount ?? 0 }} grade{{ (subject.assignmentCount ?? 0) === 1 ? '' : 's' }}</span>
+          </div>
+          <h3>{{ subject.name }}</h3>
+        </div>
+      }
     </div>
-  </section>
-}
+  } @else {
+    <div class="subjects-state">No subjects are available for the selected school yet.</div>
+  }
+</section>

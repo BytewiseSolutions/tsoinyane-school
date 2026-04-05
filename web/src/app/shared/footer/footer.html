@@ -36,9 +36,15 @@
       <h3>Contact Us</h3>
       @for (school of schools; track school.id) {
         <p class="school-contact-label">{{ school.name }}</p>
-        @if (school.phone) { <p><i class="fa-solid fa-phone"></i> {{ school.phone }}</p> }
-        @if (school.email) { <p><i class="fa-solid fa-envelope"></i> {{ school.email }}</p> }
-        @if (school.location) { <p><i class="fa-solid fa-location-dot"></i> {{ school.location }}</p> }
+        @if (school.phone) {
+          <p><i class="fa-solid fa-phone"></i> <a [href]="getPhoneLink(school.phone)">{{ school.phone }}</a></p>
+        }
+        @if (school.email) {
+          <p><i class="fa-solid fa-envelope"></i> <a [href]="getEmailLink(school.email)">{{ school.email }}</a></p>
+        }
+        @if (school.location) {
+          <p><i class="fa-solid fa-location-dot"></i> <a [href]="getLocationLink(school)" target="_blank" rel="noopener noreferrer">{{ school.location }}</a></p>
+        }
       }
     </div>
 

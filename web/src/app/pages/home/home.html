@@ -1,5 +1,5 @@
 <section class="home-shell">
-  <section class="hero">
+  <section class="hero" [ngStyle]="heroBackgroundStyle">
     <div class="hero-backdrop"></div>
     <div class="hero-grid">
       <div class="hero-copy">
@@ -15,15 +15,15 @@
         <div class="hero-points">
           <div class="hero-point">
             <i class="fa-solid fa-location-dot"></i>
-            <span>{{ selectedSchool?.location || 'Pitseng, Leribe' }}</span>
+            <a [href]="locationLink" target="_blank" rel="noopener noreferrer">{{ selectedSchool?.location || 'Pitseng, Leribe' }}</a>
           </div>
           <div class="hero-point">
             <i class="fa-solid fa-phone"></i>
-            <span>{{ selectedSchool?.phone || 'School contact available above' }}</span>
+            <a [href]="phoneLink">{{ selectedSchool?.phone || 'School contact available above' }}</a>
           </div>
           <div class="hero-point">
             <i class="fa-solid fa-envelope"></i>
-            <span>{{ selectedSchool?.email || 'School email available above' }}</span>
+            <a [href]="emailLink">{{ selectedSchool?.email || 'School email available above' }}</a>
           </div>
         </div>
       </div>

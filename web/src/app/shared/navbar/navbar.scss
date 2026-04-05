@@ -18,6 +18,15 @@
       p {
         font-size: 13px;
 
+        a {
+          color: var(--white);
+          text-decoration: none;
+        }
+
+        a:hover {
+          text-decoration: underline;
+        }
+
         i {
           margin-right: 6px;
           color: var(--white);

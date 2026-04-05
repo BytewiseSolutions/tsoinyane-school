@@ -309,6 +309,26 @@ CREATE TABLE `notification_read_by` (
   CONSTRAINT `FK22as2o4qw6o4gbinccdmllfsy` FOREIGN KEY (`notification_id`) REFERENCES `notification` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `data_file`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `data_file` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `type` varchar(255) DEFAULT NULL,
+  `contents` mediumblob,
+  `file_size` bigint DEFAULT NULL,
+  `created_by_id` bigint DEFAULT NULL,
+  `updated_by_id` bigint DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FK_data_file_created_by` (`created_by_id`),
+  KEY `FK_data_file_updated_by` (`updated_by_id`),
+  CONSTRAINT `FK_data_file_created_by` FOREIGN KEY (`created_by_id`) REFERENCES `user` (`id`),
+  CONSTRAINT `FK_data_file_updated_by` FOREIGN KEY (`updated_by_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `school`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -317,21 +337,37 @@ CREATE TABLE `school` (
   `created_at` datetime(6) NOT NULL,
   `updated_at` datetime(6) NOT NULL,
   `academic_year` varchar(10) DEFAULT NULL,
+  `about_description` text,
+  `about_headline` varchar(255) DEFAULT NULL,
+  `about_image_file_id` bigint DEFAULT NULL,
+  `about_image_url` varchar(500) DEFAULT NULL,
+  `about_supporting_text` text,
   `attendance_threshold` int DEFAULT NULL,
   `code` varchar(255) DEFAULT NULL,
   `current_term` enum('TERM_1','TERM_2','TERM_3','TERM_4') DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
+  `hero_image_file_id` bigint DEFAULT NULL,
+  `hero_image_url` varchar(500) DEFAULT NULL,
   `language` varchar(20) DEFAULT NULL,
   `location` varchar(255) DEFAULT NULL,
+  `map_latitude` double DEFAULT NULL,
+  `map_longitude` double DEFAULT NULL,
+  `mission_text` text,
   `name` varchar(255) DEFAULT NULL,
   `passing_mark` int DEFAULT NULL,
   `phone` varchar(255) DEFAULT NULL,
   `type` enum('HIGH','PRIMARY') DEFAULT NULL,
+  `values_text` text,
+  `vision_text` text,
   `created_by_id` bigint DEFAULT NULL,
   `updated_by_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `FK_school_about_image_file` (`about_image_file_id`),
+  KEY `FK_school_hero_image_file` (`hero_image_file_id`),
   KEY `FKs4h4dmiyw5tedpchd7cg5hlbn` (`created_by_id`),
   KEY `FKfb6wy3wg96y9h553cmfok6io7` (`updated_by_id`),
+  CONSTRAINT `FK_school_about_image_file` FOREIGN KEY (`about_image_file_id`) REFERENCES `data_file` (`id`),
+  CONSTRAINT `FK_school_hero_image_file` FOREIGN KEY (`hero_image_file_id`) REFERENCES `data_file` (`id`),
   CONSTRAINT `FKfb6wy3wg96y9h553cmfok6io7` FOREIGN KEY (`updated_by_id`) REFERENCES `user` (`id`),
   CONSTRAINT `FKs4h4dmiyw5tedpchd7cg5hlbn` FOREIGN KEY (`created_by_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -600,4 +636,3 @@ CREATE TABLE `user_school` (
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-

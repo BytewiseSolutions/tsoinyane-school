@@ -23,6 +23,10 @@ export class BackendService {
     return this.http.post<T>(this.buildUrl(endpoint), body, { headers: this.buildHeaders() });
   }
 
+  postFormData<T>(endpoint: string, body: FormData): Observable<T> {
+    return this.http.post<T>(this.buildUrl(endpoint), body, { headers: this.buildHeaders() });
+  }
+
   put<T, B = unknown>(endpoint: string, body: B): Observable<T> {
     return this.http.put<T>(this.buildUrl(endpoint), body, { headers: this.buildHeaders() });
   }
